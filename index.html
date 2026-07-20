@@ -3,31 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escuela de Ajedrez - IPEM 146</title>
+    <title>Escuela de Ajedrez - IPEM 146 (Edición Madera)</title>
     <style>
         :root {
-            --bg-dark: #161512;
-            --panel-bg: #262421;
-            --square-light: #f0d9b5;
-            --square-dark: #b58863;
-            --selected-sq: #7b9762;
-            --last-move-sq: rgba(205, 210, 106, 0.8);
-            --check-sq: #cc3333;
-            --text-color: #ffffff;
-            --accent: #81b64c;
-            --accent-hover: #a3d168;
+            /* Paleta de Madera */
+            --bg-dark: #120e0b;
+            --panel-bg: #211914;
+            --board-border: #3b281a;
+            
+            /* Casillas de Madera */
+            --square-light: #e3c193;
+            --square-dark: #9e6b43;
+            
+            /* Detecciones e Highlights */
+            --selected-sq: #6a8e4e;
+            --last-move-sq: rgba(188, 172, 79, 0.75);
+            --check-sq: #b23b3b;
+            
+            --text-color: #f1e7d0;
+            --accent: #b8860b;
+            --accent-hover: #d49b13;
         }
 
         * {
             box-sizing: border-box;
             margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Georgia', 'Times New Roman', serif;
             user-select: none;
             -webkit-user-select: none;
         }
 
         body {
             background-color: var(--bg-dark);
+            background-image: radial-gradient(circle, #1c1510 0%, #0c0806 100%);
             color: var(--text-color);
             display: flex;
             flex-direction: column;
@@ -40,20 +48,22 @@
         /* Encabezado Institucional IPEM 146 */
         .school-header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .school-header h1 {
-            font-size: 2rem;
-            color: #ffffff;
+            font-size: 2.2rem;
+            color: #e5c185;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
         .school-header h2 {
             font-size: 1.1rem;
-            color: var(--accent);
-            font-weight: 500;
+            color: #a38258;
+            font-weight: normal;
+            letter-spacing: 1px;
         }
 
         .container {
@@ -63,14 +73,15 @@
             max-width: 980px;
             width: 100%;
             background: var(--panel-bg);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            padding: 22px;
+            border-radius: 12px;
+            border: 2px solid #362519;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.8);
         }
 
         @media (max-width: 850px) {
             .container { flex-direction: column; align-items: center; }
-            .school-header h1 { font-size: 1.6rem; }
+            .school-header h1 { font-size: 1.7rem; }
         }
 
         .game-wrapper {
@@ -84,9 +95,9 @@
         .captured-panel {
             display: flex;
             align-items: center;
-            height: 30px;
+            height: 32px;
             font-size: 1.1rem;
-            color: #bababa;
+            color: #cbb494;
             gap: 5px;
             padding: 0 5px;
         }
@@ -98,14 +109,14 @@
         }
 
         .captured-pieces .piece-symbol {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             line-height: 1;
         }
 
         .material-advantage {
             font-weight: bold;
             margin-left: 10px;
-            color: #fff;
+            color: #e5c185;
             font-size: 0.95rem;
         }
 
@@ -113,6 +124,11 @@
             position: relative;
             width: 100%;
             aspect-ratio: 1;
+            padding: 12px;
+            background: var(--board-border);
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.6);
+            border: 1px solid #4a3322;
         }
 
         #chess-board {
@@ -121,9 +137,9 @@
             grid-template-rows: repeat(8, 1fr);
             width: 100%;
             height: 100%;
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .square {
@@ -134,8 +150,9 @@
             cursor: pointer;
         }
 
-        .square.light { background-color: var(--square-light); color: var(--square-dark); }
-        .square.dark { background-color: var(--square-dark); color: var(--square-light); }
+        .square.light { background-color: var(--square-light); }
+        .square.dark { background-color: var(--square-dark); }
+        
         .square.selected { background-color: var(--selected-sq) !important; }
         .square.last-move { background-color: var(--last-move-sq) !important; }
         .square.in-check { background-color: var(--check-sq) !important; }
@@ -145,7 +162,11 @@
             font-size: 0.75rem;
             font-weight: bold;
             pointer-events: none;
+            font-family: sans-serif;
         }
+
+        .square.light .coord { color: var(--square-dark); }
+        .square.dark .coord { color: var(--square-light); }
 
         .coord-rank { top: 2px; left: 4px; }
         .coord-file { bottom: 2px; right: 4px; }
@@ -153,36 +174,51 @@
         .hint::after {
             content: '';
             position: absolute;
-            width: 28%;
-            height: 28%;
-            background-color: rgba(0, 0, 0, 0.25);
+            width: 26%;
+            height: 26%;
+            background-color: rgba(0, 0, 0, 0.3);
             border-radius: 50%;
             pointer-events: none;
         }
 
+        /* PIEZAS ESTILO MADERA */
         .piece {
             width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 3.2rem;
+            font-size: 3.3rem;
             cursor: grab;
             z-index: 2;
             line-height: 1;
+            filter: drop-shadow(2px 4px 5px rgba(0, 0, 0, 0.5));
+            transition: transform 0.1s ease;
         }
 
+        .piece:active {
+            transform: scale(1.1);
+        }
+
+        /* Piezas de Madera Clara (Boj / Maple) */
         .piece.white-piece {
-            color: #ffffff;
-            text-shadow: 0 0 2px #000, 0 2px 4px rgba(0,0,0,0.4);
+            color: #fff3db;
+            text-shadow: 
+                0 1px 0 #d1b180,
+                0 2px 0 #a88858,
+                0 0 2px rgba(0,0,0,0.8);
         }
 
+        /* Piezas de Madera Oscura (Nogal / Ébano) */
         .piece.black-piece {
-            color: #111111;
-            text-shadow: 0 0 1px #fff, 0 2px 4px rgba(0,0,0,0.4);
+            color: #2b1a10;
+            text-shadow: 
+                0 1px 0 #543928,
+                0 0 2px #ffdfb3,
+                0 0 1px rgba(0,0,0,0.9);
         }
 
-        .piece.dragging { opacity: 0.3; cursor: grabbing; }
+        .piece.dragging { opacity: 0.4; cursor: grabbing; }
 
         .sidebar {
             flex: 1;
@@ -195,70 +231,77 @@
         }
 
         .welcome-card {
-            background: #1e1d1b;
+            background: #18120e;
             padding: 10px 15px;
             border-radius: 6px;
-            font-size: 0.85rem;
-            color: #aaa;
+            font-size: 0.9rem;
+            color: #bfa588;
             text-align: center;
-            border-bottom: 2px solid #333;
+            border: 1px solid #332317;
         }
 
         .status-panel {
-            background: #1e1d1b;
-            padding: 15px;
+            background: #18120e;
+            padding: 14px;
             border-radius: 6px;
             text-align: center;
             font-size: 1.1rem;
-            font-weight: 600;
+            font-weight: bold;
             border-left: 4px solid var(--accent);
+            color: #e5c185;
+            border-top: 1px solid #2d1d12;
+            border-right: 1px solid #2d1d12;
+            border-bottom: 1px solid #2d1d12;
         }
 
         .pgn-container {
             flex: 1;
-            background: #1e1d1b;
+            background: #18120e;
             border-radius: 6px;
             padding: 12px;
-            min-height: 200px;
-            max-height: 300px;
+            min-height: 190px;
+            max-height: 280px;
             overflow-y: auto;
             font-family: 'Courier New', Courier, monospace;
             font-size: 0.95rem;
+            border: 1px solid #2d1d12;
         }
 
         .pgn-row {
             display: grid;
             grid-template-columns: 40px 1fr 1fr;
             padding: 4px 0;
-            border-bottom: 1px solid #2a2825;
+            border-bottom: 1px solid #281c14;
         }
 
-        .pgn-num { color: #8b8987; }
+        .pgn-num { color: #826852; }
 
         .controls { display: flex; gap: 10px; }
 
         button {
             flex: 1;
             padding: 12px;
-            background-color: var(--accent);
-            border: none;
-            color: white;
+            background: linear-gradient(180deg, #c49318 0%, #8c6100 100%);
+            border: 1px solid #5e4100;
+            color: #fff;
             font-weight: bold;
             font-size: 0.95rem;
             border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            transition: all 0.2s;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
         }
 
-        button:hover { background-color: var(--accent-hover); }
-        button:active { transform: scale(0.98); }
+        button:hover { background: linear-gradient(180deg, #d4a01c 0%, #a17000 100%); }
+        button:active { transform: translateY(1px); box-shadow: 0 2px 3px rgba(0,0,0,0.4); }
 
         /* Modal Promoción */
         .modal {
             display: none;
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.8);
             z-index: 10;
             justify-content: center;
             align-items: center;
@@ -270,29 +313,30 @@
             border-radius: 8px;
             display: flex;
             gap: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            border: 2px solid var(--accent);
+            box-shadow: 0 5px 25px rgba(0,0,0,0.9);
         }
 
         .promotion-option {
-            width: 60px;
-            height: 60px;
+            width: 65px;
+            height: 65px;
             cursor: pointer;
             padding: 5px;
             border-radius: 6px;
-            background: #1e1d1b;
+            background: #18120e;
+            border: 1px solid #3d291c;
             transition: background 0.2s;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 2.5rem;
+            font-size: 2.8rem;
         }
 
-        .promotion-option:hover { background: #363431; }
+        .promotion-option:hover { background: #362519; }
     </style>
 </head>
 <body>
 
-<!-- Encabezado IPEM 146 -->
 <div class="school-header">
     <h1>Escuela de Ajedrez</h1>
     <h2>IPEM N° 146</h2>
@@ -320,7 +364,7 @@
 
     <div class="sidebar">
         <div class="welcome-card">
-            ♟️ Tablero de Práctica y Torneos Escolares
+            🪵 Edición de Madera Tradicional
         </div>
         <div class="status-panel" id="game-status">Turno de las Blancas</div>
         <div class="pgn-container">
@@ -365,9 +409,9 @@ const AudioEngine = {
             osc.stop(this.ctx.currentTime + duration);
         } catch (e) {}
     },
-    move() { this.play(320, 'sine', 0.08); },
-    capture() { this.play(180, 'triangle', 0.12); },
-    check() { this.play(550, 'square', 0.18); }
+    move() { this.play(280, 'triangle', 0.08); },
+    capture() { this.play(150, 'triangle', 0.12); },
+    check() { this.play(480, 'square', 0.18); }
 };
 
 class ChessGame {
