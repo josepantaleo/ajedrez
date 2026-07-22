@@ -1,3 +1,5 @@
+
+
 <!doctype html>
 <html lang="es">
   <head>
@@ -48,6 +50,193 @@
         background: linear-gradient(135deg, #f8fafc, #dfe7f1);
       }
 
+      /* =========================
+         SISTEMA DE TEMAS
+      ========================== */
+      body[data-theme="wood"] {
+        --bg: #1b120d;
+        --surface: #2a1b12;
+        --surface2: #3b2618;
+        --text: #fff4df;
+        --muted: #c9a982;
+        --accent: #d9a441;
+        --accent2: #c98245;
+        --board-frame: #5a3820;
+        --light: #f0d9b5;
+        --dark: #b58863;
+        background: radial-gradient(circle at 50% 0%, #4a2e1d, #160c08 70%);
+      }
+
+      body[data-theme="green"] {
+        --bg: #07140f;
+        --surface: #0d2419;
+        --surface2: #153523;
+        --text: #effff4;
+        --muted: #9ac2a6;
+        --accent: #72d572;
+        --accent2: #55c7a0;
+        --board-frame: #1c5037;
+        --light: #eeeed2;
+        --dark: #769656;
+        background: radial-gradient(circle at 50% 0%, #174c35, #06110c 70%);
+      }
+
+      body[data-theme="purple"] {
+        --bg: #10091d;
+        --surface: #1d1230;
+        --surface2: #2b1b45;
+        --text: #fbf6ff;
+        --muted: #c0add7;
+        --accent: #d69cff;
+        --accent2: #8db4ff;
+        --board-frame: #45266b;
+        --light: #ead8c0;
+        --dark: #8f6b9d;
+        background: radial-gradient(circle at 50% 0%, #38205d, #0d0717 70%);
+      }
+
+      body[data-theme="red"] {
+        --bg: #1b0909;
+        --surface: #2a1111;
+        --surface2: #421a1a;
+        --text: #fff5f5;
+        --muted: #d0a3a3;
+        --accent: #ff9a76;
+        --accent2: #ff6b7a;
+        --board-frame: #632525;
+        --light: #f0d9b5;
+        --dark: #a85d5d;
+        background: radial-gradient(circle at 50% 0%, #5a1e25, #150606 70%);
+      }
+
+      body[data-theme="ocean"] {
+        --bg: #06131c;
+        --surface: #0b2533;
+        --surface2: #103b50;
+        --text: #effcff;
+        --muted: #9cc7d5;
+        --accent: #5ce1e6;
+        --accent2: #65a9ff;
+        --board-frame: #15516a;
+        --light: #d8e9ed;
+        --dark: #5790a0;
+        background: radial-gradient(circle at 50% 0%, #124b63, #041018 70%);
+      }
+
+      body[data-theme="midnight"] {
+        --bg: #02040a;
+        --surface: #080c16;
+        --surface2: #111827;
+        --text: #f5f7ff;
+        --muted: #8d99ad;
+        --accent: #f5c451;
+        --accent2: #7298ff;
+        --board-frame: #202b43;
+        background: radial-gradient(circle at 50% 0%, #17223b, #010207 75%);
+      }
+
+      body[data-theme="light"] {
+        --bg: #f4f7fb;
+        --surface: #ffffff;
+        --surface2: #e9eef6;
+        --text: #172235;
+        --muted: #5f6d80;
+        --accent: #d88b16;
+        --accent2: #367ee8;
+        --board-frame: #c5d0df;
+        --light: #f0d9b5;
+        --dark: #b58863;
+        background: linear-gradient(135deg, #ffffff, #dce6f2);
+      }
+
+      body[data-theme] .theme-card {
+        transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      }
+
+      body[data-theme] .theme-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .theme-card.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), 0 16px 35px rgba(0,0,0,.22);
+      }
+
+      .theme-preview {
+        height: 90px;
+        border-radius: 14px;
+        margin: -4px -4px 16px;
+        padding: 12px;
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+        background: var(--preview-bg);
+      }
+
+      .theme-preview::before {
+        content: "♞";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -55%);
+        font-size: 3.6rem;
+        color: var(--preview-piece);
+        text-shadow: 0 3px 5px rgba(0,0,0,.35);
+      }
+
+      .theme-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 2px solid rgba(255,255,255,.45);
+      }
+
+      .theme-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .theme-status {
+        color: var(--accent);
+        font-size: .78rem;
+        font-weight: 800;
+        opacity: 0;
+      }
+
+      .theme-card.active .theme-status {
+        opacity: 1;
+      }
+
+      .theme-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+      }
+
+      .theme-current {
+        color: var(--muted);
+        font-size: .95rem;
+      }
+
+      @media (max-width: 800px) {
+        .theme-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 500px) {
+        .theme-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       button,
       input,
       select {
@@ -85,22 +274,52 @@
         display: flex;
         gap: 12px;
         align-items: center;
-        margin-bottom: 28px;
+        margin: -6px -8px 28px;
+        padding: 16px 12px;
+        border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+        border-radius: 18px;
+        background: linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--accent) 18%, transparent),
+          color-mix(in srgb, var(--accent2) 8%, transparent)
+        );
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2),
+          inset 0 1px rgba(255, 255, 255, 0.08);
       }
 
       .logo {
-        font-size: 2.8rem;
+        display: grid;
+        place-items: center;
+        flex: 0 0 58px;
+        width: 58px;
+        height: 58px;
+        border-radius: 16px;
+        background: linear-gradient(145deg, var(--accent), var(--accent2));
+        color: #07111f;
+        font-size: 2.45rem;
+        line-height: 1;
+        box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 35%, transparent);
       }
 
       .brand h1 {
-        font-size: 1.05rem;
+        color: var(--text);
+        font-size: 1.16rem;
+        line-height: 1.15;
+        letter-spacing: 0.01em;
         margin: 0;
       }
 
       .brand p {
-        margin: 4px 0 0;
-        color: var(--muted);
-        font-size: 0.82rem;
+        display: inline-block;
+        margin: 8px 0 0;
+        padding: 4px 9px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #07111f;
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        box-shadow: 0 4px 10px color-mix(in srgb, var(--accent) 25%, transparent);
       }
 
       .nav {
@@ -780,6 +999,10 @@
         grid-template-columns: repeat(3, 1fr);
       }
 
+      .learning-path {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .badge {
         display: inline-block;
         padding: 5px 9px;
@@ -898,6 +1121,484 @@
           display: block;
         }
       }
+
+      /* =========================
+         APRENDER · EXPERIENCIA MEJORADA
+      ========================== */
+      .learning-hero {
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 85% 15%, rgba(92, 200, 255, .18), transparent 32%),
+          linear-gradient(135deg, var(--surface), var(--surface2));
+      }
+
+      .learning-hero::after {
+        content: "♞";
+        position: absolute;
+        right: 34px;
+        bottom: -32px;
+        font-size: 12rem;
+        opacity: .06;
+        pointer-events: none;
+      }
+
+      .learning-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: center;
+      }
+
+      .learning-kicker {
+        color: var(--accent2);
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        font-size: .78rem;
+      }
+
+      .learning-progress-box {
+        min-width: 260px;
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(0,0,0,.14);
+        border: 1px solid rgba(255,255,255,.08);
+      }
+
+      .learning-progress-box strong {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .learning-progress-box small {
+        color: var(--muted);
+      }
+
+      .learning-filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+      }
+
+      .learning-filter.active {
+        background: var(--accent);
+        color: #1e1307;
+        border-color: transparent;
+      }
+
+      .learning-path {
+        position: relative;
+      }
+
+      .learning-path::before {
+        content: "";
+        position: absolute;
+        left: 28px;
+        top: 24px;
+        bottom: 24px;
+        width: 3px;
+        background: linear-gradient(var(--accent), var(--accent2));
+        opacity: .25;
+        border-radius: 10px;
+      }
+
+      .lesson-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 58px 1fr auto;
+        gap: 16px;
+        align-items: center;
+        transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      }
+
+      .lesson-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(92,200,255,.45);
+        box-shadow: 0 18px 38px rgba(0,0,0,.2);
+      }
+
+      .lesson-number {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #111827;
+        font-weight: 900;
+        font-size: 1.15rem;
+        z-index: 1;
+      }
+
+      .lesson-card.completed .lesson-number {
+        background: var(--success);
+        color: #062012;
+      }
+
+      .lesson-card.completed {
+        border-color: rgba(85,209,135,.35);
+      }
+
+      .lesson-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+
+      .lesson-meta .badge {
+        font-size: .72rem;
+      }
+
+      .lesson-description {
+        color: var(--muted);
+        margin: 5px 0 0;
+      }
+
+      .lesson-reward {
+        color: var(--accent);
+        font-weight: 800;
+        font-size: .85rem;
+        margin-top: 8px;
+      }
+
+      .lesson-action {
+        white-space: nowrap;
+      }
+
+      .learning-empty {
+        display: none;
+        text-align: center;
+        padding: 32px;
+        color: var(--muted);
+      }
+
+      .lesson-modal-content {
+        width: min(100%, 760px);
+        max-height: 88vh;
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 22px;
+        padding: 26px;
+        box-shadow: 0 30px 80px rgba(0,0,0,.45);
+      }
+
+      .lesson-modal-content h3 {
+        margin-top: 0;
+        font-size: 1.7rem;
+      }
+
+      .lesson-content {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .lesson-content h4 {
+        color: var(--text);
+        margin: 22px 0 8px;
+      }
+
+      .lesson-tip {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-left: 4px solid var(--accent);
+        border-radius: 10px;
+        background: rgba(242,184,75,.1);
+      }
+
+      .lesson-checklist {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .lesson-checklist label {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(128,150,180,.08);
+      }
+
+      @media (max-width: 800px) {
+        .learning-head {
+          display: block;
+        }
+
+        .learning-progress-box {
+          min-width: 0;
+          margin-top: 18px;
+        }
+
+        .lesson-card {
+          grid-template-columns: 48px 1fr;
+        }
+
+        .lesson-number {
+          width: 44px;
+          height: 44px;
+        }
+
+        .lesson-action {
+          grid-column: 2;
+          justify-self: start;
+        }
+      }
+
+
+      /* =========================
+         EJERCICIOS · EXPERIENCIA MEJORADA
+      ========================== */
+      .exercise-hero {
+        background:
+          radial-gradient(circle at 88% 18%, rgba(242,184,75,.18), transparent 30%),
+          linear-gradient(135deg, var(--surface), var(--surface2));
+      }
+
+      .exercise-dashboard {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .exercise-stat {
+        padding: 16px;
+        border-radius: 14px;
+        background: rgba(128,150,180,.08);
+        border: 1px solid rgba(255,255,255,.08);
+      }
+
+      .exercise-stat strong {
+        display: block;
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+
+      .exercise-stat span {
+        color: var(--muted);
+        font-size: .82rem;
+      }
+
+      .exercise-controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 18px 0;
+      }
+
+      .exercise-filter.active {
+        background: var(--accent);
+        color: #1e1307;
+        border-color: transparent;
+      }
+
+      .exercise-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .exercise-card {
+        display: grid;
+        grid-template-columns: 58px 1fr auto;
+        gap: 16px;
+        align-items: center;
+        transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      }
+
+      .exercise-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(92,200,255,.45);
+        box-shadow: 0 18px 38px rgba(0,0,0,.2);
+      }
+
+      .exercise-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        font-size: 1.45rem;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #111827;
+      }
+
+      .exercise-card.completed .exercise-icon {
+        background: var(--success);
+      }
+
+      .exercise-card h3 {
+        margin: 0 0 5px;
+      }
+
+      .exercise-description {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .exercise-meta {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+        margin-bottom: 7px;
+      }
+
+      .exercise-meta .badge {
+        font-size: .72rem;
+      }
+
+      .exercise-xp {
+        color: var(--accent);
+        font-weight: 800;
+        font-size: .85rem;
+        margin-top: 8px;
+      }
+
+      .exercise-modal-content {
+        width: min(100%, 900px);
+        max-height: 92vh;
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 22px;
+        padding: 24px;
+        box-shadow: 0 30px 80px rgba(0,0,0,.45);
+      }
+
+      .exercise-question {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin: 20px 0;
+      }
+
+      .exercise-options {
+        display: grid;
+        gap: 10px;
+      }
+
+      .exercise-option {
+        width: 100%;
+        text-align: left;
+        padding: 15px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.1);
+        background: rgba(128,150,180,.08);
+        color: var(--text);
+        cursor: pointer;
+        transition: .2s ease;
+      }
+
+      .exercise-option:hover {
+        border-color: var(--accent2);
+        transform: translateX(3px);
+      }
+
+      .exercise-option.correct {
+        border-color: var(--success);
+        background: rgba(85,209,135,.14);
+      }
+
+      .exercise-option.wrong {
+        border-color: var(--danger);
+        background: rgba(235,87,87,.14);
+      }
+
+      .exercise-feedback {
+        display: none;
+        margin-top: 16px;
+        padding: 15px;
+        border-radius: 12px;
+        background: rgba(128,150,180,.08);
+        line-height: 1.6;
+      }
+
+      .exercise-feedback.show {
+        display: block;
+      }
+
+      .exercise-result {
+        text-align: center;
+        padding: 24px 10px 8px;
+      }
+
+      .exercise-result-score {
+        font-size: 3rem;
+        font-weight: 900;
+        color: var(--accent);
+      }
+
+      .exercise-streak {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(242,184,75,.12);
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      @media (max-width: 850px) {
+        .exercise-dashboard {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .exercise-card {
+          grid-template-columns: 48px 1fr;
+        }
+
+        .exercise-action {
+          grid-column: 2;
+          justify-self: start;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .exercise-dashboard {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+
+      /* EXPANSIÓN DE CONTENIDOS */
+      .lesson-card,
+      .exercise-card {
+        min-height: 150px;
+      }
+
+      .lesson-card.completed::after,
+      .exercise-card.completed::after {
+        content: "✓";
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        color: var(--success);
+        font-weight: 900;
+        font-size: 1.1rem;
+      }
+
+      .lesson-card,
+      .exercise-card {
+        position: relative;
+      }
+
+      @media (min-width: 1200px) {
+        .learning-path {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .exercise-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
     </style>
   </head>
 
@@ -1154,136 +1855,420 @@
           </div>
         </section>
 
+        
         <section class="page" id="page-aprender">
-          <div class="card">
-            <div class="panel-title">📚 Ruta de aprendizaje</div>
-            <h2>Aprendé paso a paso</h2>
-            <p style="color: var(--muted)">
-              Completá las lecciones y ganá experiencia.
-            </p>
+          <div class="card learning-hero">
+            <div class="learning-head">
+              <div>
+                <div class="learning-kicker">📚 Escuela de ajedrez</div>
+                <h2>Tu ruta para aprender ajedrez</h2>
+                <p style="color: var(--muted); max-width: 680px">
+                  Avanzá desde los fundamentos hasta las tácticas. Estudiá una lección,
+                  poné en práctica lo aprendido y construí una base sólida.
+                </p>
+              </div>
+
+              <div class="learning-progress-box">
+                <strong>
+                  <span>Progreso del curso</span>
+                  <span id="learning-progress-text">0%</span>
+                </strong>
+                <div class="progress">
+                  <i id="learning-progress-bar"></i>
+                </div>
+                <small id="learning-progress-detail">0 de 20 lecciones completadas</small>
+              </div>
+            </div>
           </div>
 
-          <div class="grid lesson-grid" style="margin-top: 20px">
-            <div class="card lesson">
-              <span class="badge">Nivel 1</span>
-              <h3>♟️ Las piezas</h3>
-              <p>Aprendé cómo se mueve cada pieza.</p>
-              <button class="btn primary lesson-btn" data-xp="25" data-lesson="1">
-                Comenzar
-              </button>
-            </div>
+          <div class="learning-filters" role="tablist" aria-label="Filtrar lecciones">
+            <button class="btn learning-filter active" data-learning-filter="all">📚 Todas</button>
+            <button class="btn learning-filter" data-learning-filter="fundamentos">♟️ Fundamentos</button>
+            <button class="btn learning-filter" data-learning-filter="estrategia">🎯 Estrategia</button>
+            <button class="btn learning-filter" data-learning-filter="tactica">⚡ Táctica</button>
+          </div>
 
-            <div class="card lesson">
-              <span class="badge">Nivel 1</span>
-              <h3>👑 El jaque</h3>
-              <p>Descubrí cómo atacar y defender al rey.</p>
-              <button class="btn primary lesson-btn" data-xp="25" data-lesson="2">
-                Comenzar
-              </button>
-            </div>
+          <div class="learning-path grid">
+            <article class="card lesson-card" data-lesson-card data-category="fundamentos" data-lesson-id="1">
+              <div class="lesson-number">1</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Fundamentos</span><span class="badge">⭐ Inicial</span></div>
+                <h3>♟️ Conocé las piezas</h3>
+                <p class="lesson-description">Aprendé cómo se mueve cada pieza y cuál es su valor.</p>
+                <div class="lesson-reward">🎁 +25 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="1">Comenzar</button>
+            </article>
 
-            <div class="card lesson">
-              <span class="badge">Nivel 2</span>
-              <h3>🏰 El enroque</h3>
-              <p>Protegé tu rey y conectá tus torres.</p>
-              <button class="btn primary lesson-btn" data-xp="25" data-lesson="3">
-                Comenzar
-              </button>
-            </div>
+            <article class="card lesson-card" data-lesson-card data-category="fundamentos" data-lesson-id="2">
+              <div class="lesson-number">2</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Fundamentos</span><span class="badge">⭐ Inicial</span></div>
+                <h3>🎯 Capturas y valor de las piezas</h3>
+                <p class="lesson-description">Aprendé cuándo conviene capturar y cómo comparar material.</p>
+                <div class="lesson-reward">🎁 +30 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="2">Comenzar</button>
+            </article>
 
-            <div class="card lesson">
-              <span class="badge">Nivel 2</span>
-              <h3>🎯 Control del centro</h3>
-              <p>Aprendé la importancia de las casillas centrales.</p>
-              <button class="btn primary lesson-btn" data-xp="25" data-lesson="4">
-                Comenzar
-              </button>
-            </div>
+            <article class="card lesson-card" data-lesson-card data-category="fundamentos" data-lesson-id="3">
+              <div class="lesson-number">3</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Fundamentos</span><span class="badge">⭐ Inicial</span></div>
+                <h3>👑 Jaque, jaque mate y tablas</h3>
+                <p class="lesson-description">Entendé cómo se ataca al rey y cómo termina una partida.</p>
+                <div class="lesson-reward">🎁 +35 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="3">Comenzar</button>
+            </article>
 
-            <div class="card lesson">
-              <span class="badge">Nivel 3</span>
-              <h3>⚡ Ataque doble</h3>
-              <p>Atacá dos objetivos al mismo tiempo.</p>
-              <button class="btn primary lesson-btn" data-xp="25" data-lesson="5">
-                Comenzar
-              </button>
-            </div>
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="4">
+              <div class="lesson-number">4</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐ Básico</span></div>
+                <h3>🌟 El control del centro</h3>
+                <p class="lesson-description">Descubrí por qué las casillas centrales son tan importantes.</p>
+                <div class="lesson-reward">🎁 +40 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="4">Comenzar</button>
+            </article>
 
-            <div class="card lesson">
-              <span class="badge">Nivel 3</span>
-              <h3>📌 La clavada</h3>
-              <p>Inmovilizá una pieza importante.</p>
-              <button class="btn primary lesson-btn" data-xp="25" data-lesson="6">
-                Comenzar
-              </button>
-            </div>
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="5">
+              <div class="lesson-number">5</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐ Básico</span></div>
+                <h3>🚀 Desarrollo y seguridad del rey</h3>
+                <p class="lesson-description">Sacá tus piezas, enrocá y evitá perder tiempos en la apertura.</p>
+                <div class="lesson-reward">🎁 +45 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="5">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="6">
+              <div class="lesson-number">6</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐ Básico</span></div>
+                <h3>🏰 El enroque</h3>
+                <p class="lesson-description">Aprendé cuándo podés enrocar y por qué protege al rey.</p>
+                <div class="lesson-reward">🎁 +45 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="6">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="7">
+              <div class="lesson-number">7</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Intermedio</span></div>
+                <h3>⚡ El ataque doble</h3>
+                <p class="lesson-description">Aprendé a atacar dos objetivos al mismo tiempo.</p>
+                <div class="lesson-reward">🎁 +50 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="7">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="8">
+              <div class="lesson-number">8</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Intermedio</span></div>
+                <h3>📌 La clavada</h3>
+                <p class="lesson-description">Descubrí cómo inmovilizar una pieza detrás de un objetivo importante.</p>
+                <div class="lesson-reward">🎁 +50 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="8">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="9">
+              <div class="lesson-number">9</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Intermedio</span></div>
+                <h3>💥 El ataque descubierto</h3>
+                <p class="lesson-description">Usá una pieza para descubrir el ataque de otra.</p>
+                <div class="lesson-reward">🎁 +55 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="9">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="10">
+              <div class="lesson-number">10</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Avanzado</span></div>
+                <h3>🧲 La desviación</h3>
+                <p class="lesson-description">Obligá a una pieza defensora a abandonar su función.</p>
+                <div class="lesson-reward">🎁 +60 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="10">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="11">
+              <div class="lesson-number">11</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Avanzado</span></div>
+                <h3>🔗 La sobrecarga</h3>
+                <p class="lesson-description">Aprendé a aprovechar una pieza que defiende demasiadas cosas.</p>
+                <div class="lesson-reward">🎁 +60 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="11">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="12">
+              <div class="lesson-number">12</div>
+              <div>
+                <div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">🏆 Desafío final</span></div>
+                <h3>🏆 Pensamiento ajedrecístico</h3>
+                <p class="lesson-description">Aprendé a analizar amenazas, capturas y jugadas candidatas antes de mover.</p>
+                <div class="lesson-reward">🎁 +100 XP</div>
+              </div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="12">Comenzar</button>
+            </article>
+            <article class="card lesson-card" data-lesson-card data-category="fundamentos" data-lesson-id="13">
+              <div class="lesson-number">13</div>
+              <div><div class="lesson-meta"><span class="badge">Fundamentos</span><span class="badge">⭐⭐ Básico</span></div>
+              <h3>🧭 La notación algebraica</h3>
+              <p class="lesson-description">Aprendé a leer y escribir jugadas para poder estudiar tus partidas.</p>
+              <div class="lesson-reward">🎁 +40 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="13">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="fundamentos" data-lesson-id="14">
+              <div class="lesson-number">14</div>
+              <div><div class="lesson-meta"><span class="badge">Fundamentos</span><span class="badge">⭐⭐ Básico</span></div>
+              <h3>🔄 El cambio de piezas</h3>
+              <p class="lesson-description">Descubrí cuándo conviene cambiar piezas y cuándo mantenerlas.</p>
+              <div class="lesson-reward">🎁 +45 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="14">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="15">
+              <div class="lesson-number">15</div>
+              <div><div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐⭐ Intermedio</span></div>
+              <h3>🛣️ Columnas abiertas</h3>
+              <p class="lesson-description">Aprendé a aprovechar columnas abiertas y semiabiertas con tus torres.</p>
+              <div class="lesson-reward">🎁 +55 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="15">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="16">
+              <div class="lesson-number">16</div>
+              <div><div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐⭐ Intermedio</span></div>
+              <h3>🐴 Caballo bueno y caballo malo</h3>
+              <p class="lesson-description">Comprendé la diferencia entre piezas activas y piezas limitadas por la estructura de peones.</p>
+              <div class="lesson-reward">🎁 +55 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="16">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="17">
+              <div class="lesson-number">17</div>
+              <div><div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Intermedio</span></div>
+              <h3>🎯 La doble amenaza</h3>
+              <p class="lesson-description">Aprendé a crear dos problemas distintos que el rival no puede resolver a la vez.</p>
+              <div class="lesson-reward">🎁 +60 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="17">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="18">
+              <div class="lesson-number">18</div>
+              <div><div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Avanzado</span></div>
+              <h3>🪤 La intermedia</h3>
+              <p class="lesson-description">Descubrí cómo insertar una jugada fuerte antes de recuperar material.</p>
+              <div class="lesson-reward">🎁 +70 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="18">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="tactica" data-lesson-id="19">
+              <div class="lesson-number">19</div>
+              <div><div class="lesson-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Avanzado</span></div>
+              <h3>💣 El sacrificio</h3>
+              <p class="lesson-description">Aprendé cuándo entregar material para obtener una ventaja concreta.</p>
+              <div class="lesson-reward">🎁 +80 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="19">Comenzar</button>
+            </article>
+
+            <article class="card lesson-card" data-lesson-card data-category="estrategia" data-lesson-id="20">
+              <div class="lesson-number">20</div>
+              <div><div class="lesson-meta"><span class="badge">Estrategia</span><span class="badge">🏆 Maestro del método</span></div>
+              <h3>🧠 Planificar una partida</h3>
+              <p class="lesson-description">Uní apertura, medio juego y final para construir un plan completo.</p>
+              <div class="lesson-reward">🎁 +120 XP</div></div>
+              <button class="btn primary lesson-action lesson-btn" data-lesson="20">Comenzar</button>
+            </article>
+          </div>
+
+          <div class="card learning-empty" id="learning-empty">
+            No hay lecciones en esta categoría.
           </div>
         </section>
 
         <div id="lesson-modal" class="alert" style="display: none">
-          <div style="background: var(--surface); padding: 25px; border-radius: 16px; max-width: 600px; max-height: 80vh; overflow: auto">
-            <h3 id="lesson-title" style="margin-top: 0">Lección</h3>
-            <p id="lesson-content" style="color: var(--muted); line-height: 1.6"></p>
-            <div style="display: flex; gap: 10px; margin-top: 20px">
-              <button class="btn primary" id="lesson-complete">✓ Completar lección</button>
-              <button class="btn" onclick="document.getElementById('lesson-modal').style.display = 'none'">Cerrar</button>
+          <div class="lesson-modal-content">
+            <div class="panel-title" id="lesson-modal-category">📚 Lección</div>
+            <h3 id="lesson-title">Lección</h3>
+            <div id="lesson-content" class="lesson-content"></div>
+            <div class="lesson-checklist">
+              <label><input type="checkbox" class="lesson-check"> Entendí la idea principal.</label>
+              <label><input type="checkbox" class="lesson-check"> Puedo explicarla con mis propias palabras.</label>
+              <label><input type="checkbox" class="lesson-check"> Estoy listo para practicarla.</label>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px">
+              <button class="btn primary" id="lesson-complete">✓ Marcar como completada</button>
+              <button class="btn" id="lesson-close">Cerrar</button>
             </div>
           </div>
         </div>
 
+        
         <section class="page" id="page-ejercicios">
-          <div class="card">
-            <div class="panel-title">🧩 Desafíos tácticos</div>
-            <h2>Entrená tu visión ajedrecística</h2>
-            <p style="color: var(--muted)">Encontrá la mejor jugada.</p>
+          <div class="card exercise-hero">
+            <div class="learning-kicker">⚡ CENTRO DE ENTRENAMIENTO</div>
+            <h2>Ejercicios de ajedrez</h2>
+            <p style="color: var(--muted); max-width: 720px">
+              Entrená tu cálculo, tu visión táctica y tu toma de decisiones.
+              Resolvé desafíos, recibí explicaciones y acumulá experiencia.
+            </p>
+
+            <div class="exercise-dashboard">
+              <div class="exercise-stat"><strong id="exercise-total-stat">0</strong><span>Ejercicios resueltos</span></div>
+              <div class="exercise-stat"><strong id="exercise-correct-stat">0%</strong><span>Precisión</span></div>
+              <div class="exercise-stat"><strong id="exercise-streak-stat">0 🔥</strong><span>Racha actual</span></div>
+              <div class="exercise-stat"><strong id="exercise-best-stat">0</strong><span>Mejor racha</span></div>
+            </div>
           </div>
 
-          <div class="grid puzzle-grid" style="margin-top: 20px">
-            <div class="card">
-              <span class="badge">⭐ Fácil</span>
-              <h3>Mate en 1</h3>
-              <p>Encontrá una jugada que termine la partida.</p>
-              <button class="btn primary puzzle-btn" data-puzzle="mate1">Resolver</button>
-            </div>
+          <div class="exercise-controls">
+            <button class="btn exercise-filter active" data-exercise-filter="all">📚 Todos</button>
+            <button class="btn exercise-filter" data-exercise-filter="principiante">🌱 Principiante</button>
+            <button class="btn exercise-filter" data-exercise-filter="estrategia">♟️ Estrategia</button>
+            <button class="btn exercise-filter" data-exercise-filter="tactica">⚡ Táctica</button>
+          </div>
 
-            <div class="card">
-              <span class="badge">⭐⭐ Medio</span>
-              <h3>Ataque doble</h3>
-              <p>Atacá dos piezas al mismo tiempo.</p>
-              <button class="btn primary puzzle-btn" data-puzzle="fork">Resolver</button>
-            </div>
+          <div class="exercise-list" id="exercise-list">
+            <article class="card exercise-card" data-exercise-card data-category="principiante" data-exercise-id="1">
+              <div class="exercise-icon">♟️</div>
+              <div><div class="exercise-meta"><span class="badge">Principiante</span><span class="badge">⭐ Fácil</span></div><h3>El valor de las piezas</h3><p class="exercise-description">Aprendé a comparar el valor del material.</p><div class="exercise-xp">🎁 +20 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="1">Resolver</button>
+            </article>
 
-            <div class="card">
-              <span class="badge">⭐⭐⭐ Difícil</span>
-              <h3>Ganancia de material</h3>
-              <p>Encontrá una combinación para ganar material.</p>
-              <button class="btn primary puzzle-btn" data-puzzle="material">Resolver</button>
+            <article class="card exercise-card" data-exercise-card data-category="principiante" data-exercise-id="2">
+              <div class="exercise-icon">🏰</div>
+              <div><div class="exercise-meta"><span class="badge">Principiante</span><span class="badge">⭐ Fácil</span></div><h3>Seguridad del rey</h3><p class="exercise-description">Aprendé a reconocer las mejores decisiones para proteger al rey.</p><div class="exercise-xp">🎁 +20 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="2">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-exercise-id="3">
+              <div class="exercise-icon">🌟</div>
+              <div><div class="exercise-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐ Medio</span></div><h3>La apertura correcta</h3><p class="exercise-description">Elegí el plan más lógico durante la apertura.</p><div class="exercise-xp">🎁 +30 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="3">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="4">
+              <div class="exercise-icon">⚡</div>
+              <div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐ Medio</span></div><h3>Encontrá el ataque doble</h3><p class="exercise-description">Buscá una jugada que cree dos amenazas al mismo tiempo.</p><div class="exercise-xp">🎁 +35 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="4">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="5">
+              <div class="exercise-icon">📌</div>
+              <div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐ Medio</span></div><h3>Reconocé la clavada</h3><p class="exercise-description">Identificá una pieza que no puede moverse libremente.</p><div class="exercise-xp">🎁 +35 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="5">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="6">
+              <div class="exercise-icon">💥</div>
+              <div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Difícil</span></div><h3>Jaque, captura o amenaza</h3><p class="exercise-description">Entrená tu método para encontrar jugadas candidatas.</p><div class="exercise-xp">🎁 +50 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="6">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-exercise-id="7">
+              <div class="exercise-icon">🧠</div>
+              <div><div class="exercise-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐⭐ Difícil</span></div><h3>¿Qué pieza está peor?</h3><p class="exercise-description">Aprendé a mejorar la pieza menos activa.</p><div class="exercise-xp">🎁 +50 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="7">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="8">
+              <div class="exercise-icon">🏆</div>
+              <div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Desafío</span></div><h3>Desafío final</h3><p class="exercise-description">Calculá antes de mover y elegí la mejor respuesta.</p><div class="exercise-xp">🎁 +75 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="8">Resolver</button>
+            </article>
+            <article class="card exercise-card" data-exercise-card data-category="principiante" data-exercise-id="9">
+              <div class="exercise-icon">🧭</div><div><div class="exercise-meta"><span class="badge">Principiante</span><span class="badge">⭐ Fácil</span></div><h3>Leé la posición</h3><p class="exercise-description">Entrená tu capacidad para identificar piezas y amenazas.</p><div class="exercise-xp">🎁 +25 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="9">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="principiante" data-exercise-id="10">
+              <div class="exercise-icon">📝</div><div><div class="exercise-meta"><span class="badge">Principiante</span><span class="badge">⭐ Fácil</span></div><h3>Notación algebraica</h3><p class="exercise-description">Aprendé a reconocer cómo se escribe una jugada.</p><div class="exercise-xp">🎁 +25 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="10">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-exercise-id="11">
+              <div class="exercise-icon">🛣️</div><div><div class="exercise-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐ Medio</span></div><h3>Encontrá la columna abierta</h3><p class="exercise-description">Elegí dónde colocar mejor una torre.</p><div class="exercise-xp">🎁 +35 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="11">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-exercise-id="12">
+              <div class="exercise-icon">🐴</div><div><div class="exercise-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐ Medio</span></div><h3>Mejorá tu peor pieza</h3><p class="exercise-description">Elegí el plan que mejora la pieza menos activa.</p><div class="exercise-xp">🎁 +40 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="12">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-exercise-id="13">
+              <div class="exercise-icon">🏗️</div><div><div class="exercise-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐⭐ Difícil</span></div><h3>Elegí el plan</h3><p class="exercise-description">Aprendé a transformar una ventaja posicional en un plan concreto.</p><div class="exercise-xp">🎁 +50 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="13">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="14">
+              <div class="exercise-icon">🎯</div><div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐ Medio</span></div><h3>La doble amenaza</h3><p class="exercise-description">Encontrá una jugada que ataque dos objetivos.</p><div class="exercise-xp">🎁 +40 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="14">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="15">
+              <div class="exercise-icon">🪤</div><div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Difícil</span></div><h3>La intermedia</h3><p class="exercise-description">Encontrá una jugada intermedia antes de recapturar.</p><div class="exercise-xp">🎁 +50 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="15">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="16">
+              <div class="exercise-icon">💣</div><div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Difícil</span></div><h3>¿Conviene sacrificar?</h3><p class="exercise-description">Aprendé a evaluar si un sacrificio tiene compensación.</p><div class="exercise-xp">🎁 +55 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="16">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="17">
+              <div class="exercise-icon">👑</div><div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Desafío</span></div><h3>Mate en uno</h3><p class="exercise-description">Entrená tu visión para encontrar una amenaza decisiva.</p><div class="exercise-xp">🎁 +60 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="17">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="18">
+              <div class="exercise-icon">🔍</div><div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Desafío</span></div><h3>Calculá dos jugadas</h3><p class="exercise-description">Mejorá tu cálculo de variantes cortas.</p><div class="exercise-xp">🎁 +65 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="18">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-exercise-id="19">
+              <div class="exercise-icon">🧠</div><div><div class="exercise-meta"><span class="badge">Estrategia</span><span class="badge">⭐⭐⭐⭐ Desafío</span></div><h3>Final de peones</h3><p class="exercise-description">Tomá decisiones básicas en finales de peones.</p><div class="exercise-xp">🎁 +70 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="19">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-exercise-id="20">
+              <div class="exercise-icon">🏆</div><div><div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐⭐ Maestro</span></div><h3>Desafío maestro</h3><p class="exercise-description">Combiná amenazas, cálculo y evaluación en un único desafío.</p><div class="exercise-xp">🎁 +100 XP</div></div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="20">Resolver</button>
+            </article>
+          </div>
+
+          <div id="exercise-modal" class="alert" style="display:none">
+            <div class="exercise-modal-content">
+              <div class="panel-title" id="exercise-modal-category">⚡ Ejercicio</div>
+              <h3 id="exercise-modal-title">Ejercicio</h3>
+              <div class="exercise-streak" id="exercise-modal-streak">🔥 Racha: 0</div>
+              <div class="exercise-question" id="exercise-question"></div>
+              <div class="exercise-options" id="exercise-options"></div>
+              <div class="exercise-feedback" id="exercise-feedback"></div>
+              <div id="exercise-result" class="exercise-result" style="display:none">
+                <div class="exercise-result-score" id="exercise-result-score">0/0</div>
+                <p id="exercise-result-text"></p>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:22px">
+                <button class="btn primary" id="exercise-next" style="display:none">Siguiente</button>
+                <button class="btn" id="exercise-close">Cerrar</button>
+              </div>
             </div>
           </div>
         </section>
 
-        <div id="puzzle-modal" class="alert" style="display: none">
-          <div style="background: var(--surface); padding: 25px; border-radius: 16px; max-width: 700px; max-height: 90vh; overflow: auto">
-            <h3 id="puzzle-title" style="margin-top: 0">Ejercicio táctico</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px">
-              <div>
-                <div class="board-frame" style="padding: 8px">
-                  <div class="board" id="puzzle-board"></div>
-                </div>
-                <p id="puzzle-status" style="text-align: center; color: var(--accent2); font-weight: bold; margin-top: 10px">Haz tu movimiento</p>
-              </div>
-              <div>
-                <p id="puzzle-info" style="color: var(--muted); line-height: 1.6; margin: 0 0 15px"></p>
-                <p id="puzzle-hint" style="background: rgba(92, 200, 255, 0.1); padding: 12px; border-left: 3px solid var(--accent2); border-radius: 4px; color: var(--muted); margin: 0"></p>
-              </div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 20px">
-              <button class="btn primary" id="puzzle-submit">✓ Completar ejercicio</button>
-              <button class="btn" id="puzzle-reset">🔄 Reintentar</button>
-              <button class="btn" onclick="document.getElementById('puzzle-modal').style.display = 'none'">Cerrar</button>
-            </div>
-          </div>
-        </div>
 
         <section class="page" id="page-estadisticas">
           <div class="grid dashboard-grid">
@@ -1331,27 +2316,129 @@
           <div class="card">
             <div class="panel-title">🎨 Personalización</div>
             <h2>Elegí tu estilo</h2>
+            <p style="color: var(--muted); margin-bottom: 0">
+              Personalizá la apariencia de la escuela y encontrá el ambiente que más te guste para aprender y jugar.
+            </p>
+
+            <div class="theme-toolbar">
+              <div class="theme-current">
+                Estilo actual: <strong id="current-theme-name">Azul moderno</strong>
+              </div>
+              <button class="btn" id="reset-theme">↺ Restaurar predeterminado</button>
+            </div>
           </div>
 
           <div class="grid theme-grid" style="margin-top: 20px">
-            <div class="card">
-              <h3>🌊 Azul moderno</h3>
-              <button class="btn theme-btn" data-theme="blue">Aplicar</button>
+            <div class="card theme-card" data-theme-card="blue">
+              <div class="theme-preview" style="--preview-bg: linear-gradient(135deg,#132943,#07111f); --preview-piece:#f2b84b">
+                <span class="theme-swatch" style="background:#f2b84b"></span>
+                <span class="theme-swatch" style="background:#5cc8ff"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🌊 Azul moderno</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn primary theme-btn" data-theme="blue">Aplicar</button>
+              </div>
             </div>
 
-            <div class="card">
-              <h3>🪵 Madera clásica</h3>
-              <button class="btn theme-btn" data-theme="wood">Aplicar</button>
+            <div class="card theme-card" data-theme-card="wood">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#4a2e1d,#160c08);--preview-piece:#d9a441">
+                <span class="theme-swatch" style="background:#d9a441"></span>
+                <span class="theme-swatch" style="background:#c98245"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🪵 Madera clásica</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="wood">Aplicar</button>
+              </div>
             </div>
 
-            <div class="card">
-              <h3>🟢 Verde torneo</h3>
-              <button class="btn theme-btn" data-theme="green">Aplicar</button>
+            <div class="card theme-card" data-theme-card="green">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#174c35,#06110c);--preview-piece:#72d572">
+                <span class="theme-swatch" style="background:#72d572"></span>
+                <span class="theme-swatch" style="background:#55c7a0"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🟢 Verde torneo</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="green">Aplicar</button>
+              </div>
             </div>
 
-            <div class="card">
-              <h3>🟣 Violeta</h3>
-              <button class="btn theme-btn" data-theme="purple">Aplicar</button>
+            <div class="card theme-card" data-theme-card="purple">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#38205d,#0d0717);--preview-piece:#d69cff">
+                <span class="theme-swatch" style="background:#d69cff"></span>
+                <span class="theme-swatch" style="background:#8db4ff"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🟣 Violeta</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="purple">Aplicar</button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-theme-card="red">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#5a1e25,#150606);--preview-piece:#ff9a76">
+                <span class="theme-swatch" style="background:#ff9a76"></span>
+                <span class="theme-swatch" style="background:#ff6b7a"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🔥 Rojo intenso</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="red">Aplicar</button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-theme-card="ocean">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#124b63,#041018);--preview-piece:#5ce1e6">
+                <span class="theme-swatch" style="background:#5ce1e6"></span>
+                <span class="theme-swatch" style="background:#65a9ff"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🌊 Océano</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="ocean">Aplicar</button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-theme-card="midnight">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#17223b,#010207);--preview-piece:#f5c451">
+                <span class="theme-swatch" style="background:#f5c451"></span>
+                <span class="theme-swatch" style="background:#7298ff"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">🌌 Medianoche</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="midnight">Aplicar</button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-theme-card="light">
+              <div class="theme-preview" style="--preview-bg:linear-gradient(135deg,#ffffff,#dce6f2);--preview-piece:#367ee8">
+                <span class="theme-swatch" style="background:#d88b16"></span>
+                <span class="theme-swatch" style="background:#367ee8"></span>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin:0">☀️ Claro elegante</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn theme-btn" data-theme="light">Aplicar</button>
+              </div>
             </div>
           </div>
         </section>
@@ -2232,14 +3319,539 @@
       setupFullscreenToggle("fullscreen-btn");
       setupFullscreenToggle("game-fullscreen");
 
-      document.getElementById("theme-toggle").onclick = () => {
-        document.body.classList.toggle("light-mode");
-        localStorage.setItem("chessLightMode", document.body.classList.contains("light-mode"));
+      /* =========================
+         PERSONALIZACIÓN DE TEMAS
+      ========================== */
+      const THEME_NAMES = {
+        blue: "Azul moderno",
+        wood: "Madera clásica",
+        green: "Verde torneo",
+        purple: "Violeta",
+        red: "Rojo intenso",
+        ocean: "Océano",
+        midnight: "Medianoche",
+        light: "Claro elegante"
       };
+
+      function applyTheme(theme, notify = true) {
+        const selectedTheme = THEME_NAMES[theme] ? theme : "blue";
+        document.body.dataset.theme = selectedTheme;
+        document.body.classList.remove("light-mode");
+        localStorage.setItem("chessTheme", selectedTheme);
+
+        const currentName = document.getElementById("current-theme-name");
+        if (currentName) currentName.textContent = THEME_NAMES[selectedTheme];
+
+        document.querySelectorAll("[data-theme-card]").forEach((card) => {
+          card.classList.toggle("active", card.dataset.themeCard === selectedTheme);
+        });
+
+        if (notify) toast(`🎨 Tema aplicado: ${THEME_NAMES[selectedTheme]}`);
+      }
+
+      document.querySelectorAll(".theme-btn").forEach((button) => {
+        button.addEventListener("click", () => applyTheme(button.dataset.theme));
+      });
+
+      document.getElementById("reset-theme").onclick = () => {
+        applyTheme("blue");
+        toast("↺ Tema predeterminado restaurado");
+      };
+
+      document.getElementById("theme-toggle").onclick = () => {
+        const current = document.body.dataset.theme || "blue";
+        applyTheme(current === "light" ? "blue" : "light");
+      };
+
+      applyTheme(localStorage.getItem("chessTheme") || "blue", false);
 
       updateProfile();
       initClock(false);
       render();
+
+      /* =========================
+         APRENDER · LÓGICA
+      ========================== */
+      const LESSONS = {
+        1: { title: "♟️ Conocé las piezas", category: "Fundamentos", xp: 25, content: "<h4>La base de todo</h4><p>Cada pieza se mueve de una manera diferente. El peón avanza hacia adelante, pero captura en diagonal. La torre se mueve en líneas rectas, el alfil en diagonales, la dama combina ambos movimientos, el caballo salta y el rey se mueve una casilla.</p><div class='lesson-tip'>💡 Consejo: antes de mover, preguntate siempre: <strong>¿qué piezas pueden atacar esta casilla?</strong></div>" },
+        2: { title: "🎯 Capturas y valor de las piezas", category: "Fundamentos", xp: 30, content: "<h4>No todas las piezas valen lo mismo</h4><p>Como referencia, un peón vale 1, un caballo 3, un alfil 3, una torre 5 y una dama 9. El rey es invaluable: perderlo significa perder la partida.</p><div class='lesson-tip'>💡 No captures automáticamente. Primero comprobá qué ocurre después de la captura.</div>" },
+        3: { title: "👑 Jaque, jaque mate y tablas", category: "Fundamentos", xp: 35, content: "<h4>El objetivo es el rey</h4><p>Hay jaque cuando el rey está amenazado. El jugador debe responder. Hay jaque mate cuando el rey está en jaque y no existe ninguna jugada legal para escapar. Las tablas ocurren cuando la partida termina sin ganador.</p><div class='lesson-tip'>💡 Ante un jaque, buscá tres respuestas: mover el rey, capturar al atacante o bloquear el ataque.</div>" },
+        4: { title: "🌟 El control del centro", category: "Estrategia", xp: 40, content: "<h4>El centro da movilidad</h4><p>Las casillas centrales permiten que tus piezas tengan más opciones. Controlarlas ayuda a desarrollar rápidamente y a ganar espacio.</p><div class='lesson-tip'>💡 Las casillas centrales más importantes son d4, e4, d5 y e5.</div>" },
+        5: { title: "🚀 Desarrollo y seguridad del rey", category: "Estrategia", xp: 45, content: "<h4>Desarrollá con propósito</h4><p>En la apertura, intentá sacar tus piezas menores, controlar el centro y poner a tu rey a salvo. Evitá mover muchas veces la misma pieza sin necesidad.</p><div class='lesson-tip'>💡 Una buena pregunta es: ¿qué pieza todavía no participa?</div>" },
+        6: { title: "🏰 El enroque", category: "Estrategia", xp: 45, content: "<h4>Una jugada, dos objetivos</h4><p>El enroque permite mover el rey dos casillas hacia una torre y colocar la torre junto al rey. Ayuda a proteger al rey y a conectar las torres.</p><div class='lesson-tip'>💡 No podés enrocar si el rey está en jaque, pasa por una casilla atacada o termina en una casilla atacada.</div>" },
+        7: { title: "⚡ El ataque doble", category: "Táctica", xp: 50, content: "<h4>Una jugada, dos amenazas</h4><p>Un ataque doble ocurre cuando una misma jugada crea dos amenazas al mismo tiempo. El caballo es especialmente bueno para crear ataques dobles.</p><div class='lesson-tip'>💡 Buscá jugadas que ataquen al rey y, simultáneamente, a otra pieza.</div>" },
+        8: { title: "📌 La clavada", category: "Táctica", xp: 50, content: "<h4>Una pieza no puede moverse</h4><p>Una pieza está clavada cuando no puede moverse sin exponer una pieza más importante detrás, normalmente el rey.</p><div class='lesson-tip'>💡 Mirá las líneas de torres, alfiles y damas: pueden revelar clavadas.</div>" },
+        9: { title: "💥 El ataque descubierto", category: "Táctica", xp: 55, content: "<h4>Una pieza se mueve y descubre otra</h4><p>En un ataque descubierto, una pieza se aparta y libera la línea de ataque de una torre, alfil o dama que estaba detrás.</p><div class='lesson-tip'>💡 El ataque descubierto puede ser especialmente fuerte cuando la pieza que se mueve también crea una amenaza.</div>" },
+        10: { title: "🧲 La desviación", category: "Táctica", xp: 60, content: "<h4>Alejando al defensor</h4><p>La desviación consiste en obligar a una pieza defensora a abandonar la casilla o función que protegía.</p><div class='lesson-tip'>💡 Preguntate: ¿qué pieza está defendiendo algo importante?</div>" },
+        11: { title: "🔗 La sobrecarga", category: "Táctica", xp: 60, content: "<h4>Demasiadas responsabilidades</h4><p>Una pieza está sobrecargada cuando debe defender varios objetivos importantes y no puede cumplir todas sus funciones al mismo tiempo.</p><div class='lesson-tip'>💡 Atacá una de las tareas de la pieza sobrecargada y buscá qué queda sin defensa.</div>" },
+        12: { title: "🏆 Pensamiento ajedrecístico", category: "Estrategia", xp: 100, content: "<h4>Tu método antes de mover</h4><p>Antes de jugar, seguí una rutina: 1) ¿Qué amenaza mi rival? 2) ¿Tengo jaques, capturas o amenazas? 3) ¿Qué jugadas candidatas existen? 4) ¿Qué responde mi rival?</p><div class='lesson-tip'>💡 La mejor jugada no siempre es la más espectacular: muchas veces es la que evita el peligro y mejora tu posición.</div>" }
+,
+        13: { title: "🧭 La notación algebraica", category: "Fundamentos", xp: 40, content: "<h4>El idioma del ajedrez</h4><p>La notación algebraica permite registrar las jugadas usando letras y números. Cada casilla tiene una coordenada, como e4 o c6.</p><div class='lesson-tip'>💡 Aprender notación te permite estudiar tus propias partidas y las de los grandes maestros.</div>" },
+        14: { title: "🔄 El cambio de piezas", category: "Fundamentos", xp: 45, content: "<h4>¿Cambiar o mantener?</h4><p>Los cambios pueden simplificar una posición, eliminar una pieza defensora o llevarte a un final favorable. No todos los cambios son automáticamente buenos.</p><div class='lesson-tip'>💡 Antes de cambiar, preguntate: ¿quién se beneficia después del cambio?</div>" },
+        15: { title: "🛣️ Columnas abiertas", category: "Estrategia", xp: 55, content: "<h4>Las torres necesitan caminos</h4><p>Una columna abierta no tiene peones y puede convertirse en una autopista para las torres. Ocuparla puede aumentar enormemente la actividad de tus piezas.</p><div class='lesson-tip'>💡 Las torres suelen mejorar cuando ocupan columnas abiertas o la séptima fila.</div>" },
+        16: { title: "🐴 Caballo bueno y caballo malo", category: "Estrategia", xp: 55, content: "<h4>La actividad importa</h4><p>Un caballo bueno tiene casillas fuertes y no puede ser expulsado fácilmente por peones. Un caballo malo queda limitado por la estructura de peones.</p><div class='lesson-tip'>💡 Buscá puestos avanzados para tus caballos y evitá casillas donde puedan ser atacados fácilmente.</div>" },
+        17: { title: "🎯 La doble amenaza", category: "Táctica", xp: 60, content: "<h4>Dos problemas al mismo tiempo</h4><p>Una doble amenaza crea dos objetivos diferentes. Puede ser un ataque a una pieza y una amenaza de mate, o dos piezas atacadas simultáneamente.</p><div class='lesson-tip'>💡 La fuerza de la táctica aparece cuando el rival no puede responder a todo.</div>" },
+        18: { title: "🪤 La intermedia", category: "Táctica", xp: 70, content: "<h4>Antes de recapturar, mirá otra vez</h4><p>Una jugada intermedia, o zwischenzug, aparece cuando en vez de recapturar inmediatamente encontrás una amenaza más fuerte, como un jaque.</p><div class='lesson-tip'>💡 Después de una captura, preguntate: ¿tengo un jaque o una amenaza más fuerte antes de recuperar?</div>" },
+        19: { title: "💣 El sacrificio", category: "Táctica", xp: 80, content: "<h4>Entregar material por algo concreto</h4><p>Un sacrificio puede entregar material a cambio de ataque, desarrollo, seguridad del rey, iniciativa o una ventaja decisiva.</p><div class='lesson-tip'>💡 Un sacrificio correcto siempre debe tener una compensación concreta. No sacrifiques solo porque parece espectacular.</div>" },
+        20: { title: "🧠 Planificar una partida", category: "Estrategia", xp: 120, content: "<h4>Unir todas las ideas</h4><p>Un buen plan nace de la posición: observá la estructura de peones, las piezas activas, las debilidades y las amenazas. Después elegí un objetivo y mejorá tus piezas para alcanzarlo.</p><div class='lesson-tip'>💡 Tu método: amenaza del rival → jaques, capturas y amenazas → peor pieza → plan → cálculo de la respuesta rival.</div>" }
+      };
+
+      let activeLessonId = null;
+
+      function getCompletedLessons() {
+        return Array.isArray(state.completedLessons) ? state.completedLessons : [];
+      }
+
+      function updateLearningProgress() {
+        const completed = getCompletedLessons();
+        const total = Object.keys(LESSONS).length;
+        const percent = Math.round((completed.length / total) * 100);
+        const bar = document.getElementById("learning-progress-bar");
+        const text = document.getElementById("learning-progress-text");
+        const detail = document.getElementById("learning-progress-detail");
+
+        if (bar) bar.style.width = percent + "%";
+        if (text) text.textContent = percent + "%";
+        if (detail) detail.textContent = `${completed.length} de ${total} lecciones completadas`;
+
+        document.querySelectorAll("[data-lesson-card]").forEach(card => {
+          const id = Number(card.dataset.lessonId);
+          const done = completed.includes(id);
+          card.classList.toggle("completed", done);
+          const button = card.querySelector(".lesson-btn");
+          if (button) button.textContent = done ? "✓ Repasar" : "Comenzar";
+          const number = card.querySelector(".lesson-number");
+          if (number) number.textContent = done ? "✓" : id;
+        });
+      }
+
+      function openLesson(id) {
+        const lesson = LESSONS[id];
+        if (!lesson) return;
+        activeLessonId = Number(id);
+        document.getElementById("lesson-modal-category").textContent = "📚 " + lesson.category;
+        document.getElementById("lesson-title").textContent = lesson.title;
+        document.getElementById("lesson-content").innerHTML = lesson.content;
+        document.querySelectorAll(".lesson-check").forEach(check => check.checked = false);
+        document.getElementById("lesson-modal").style.display = "flex";
+      }
+
+      function closeLesson() {
+        document.getElementById("lesson-modal").style.display = "none";
+        activeLessonId = null;
+      }
+
+      document.querySelectorAll(".lesson-btn").forEach(button => {
+        button.addEventListener("click", () => openLesson(button.dataset.lesson));
+      });
+
+      document.getElementById("lesson-close").addEventListener("click", closeLesson);
+
+      document.getElementById("lesson-modal").addEventListener("click", e => {
+        if (e.target.id === "lesson-modal") closeLesson();
+      });
+
+      document.getElementById("lesson-complete").addEventListener("click", () => {
+        if (!activeLessonId) return;
+        const lesson = LESSONS[activeLessonId];
+        const completed = getCompletedLessons();
+
+        if (!completed.includes(activeLessonId)) {
+          completed.push(activeLessonId);
+          state.completedLessons = completed;
+          addXP(lesson.xp, `Lección: ${lesson.title.replace(/^[^ ]+ /, "")}`, "Completada");
+          save();
+          updateLearningProgress();
+          toast(`🎓 Lección completada · +${lesson.xp} XP`);
+        } else {
+          toast("📖 Lección repasada");
+        }
+
+        closeLesson();
+      });
+
+      document.querySelectorAll(".learning-filter").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".learning-filter").forEach(b => b.classList.remove("active"));
+          button.classList.add("active");
+          const filter = button.dataset.learningFilter;
+          let visible = 0;
+
+          document.querySelectorAll("[data-lesson-card]").forEach(card => {
+            const show = filter === "all" || card.dataset.category === filter;
+            card.style.display = show ? "" : "none";
+            if (show) visible++;
+          });
+
+          document.getElementById("learning-empty").style.display = visible ? "none" : "block";
+        });
+      });
+
+      updateLearningProgress();
+
+
+      /* =========================
+         EJERCICIOS · LÓGICA
+      ========================== */
+      const EXERCISES = {
+        1: {
+          title: "El valor de las piezas",
+          category: "Principiante",
+          xp: 20,
+          questions: [
+            { q: "¿Qué pieza vale aproximadamente 5 puntos?", options: ["La torre", "El caballo", "El peón", "La dama"], answer: 0, explanation: "La torre suele valorarse en aproximadamente 5 puntos." },
+            { q: "¿Qué pieza suele valer aproximadamente 9 puntos?", options: ["El alfil", "La dama", "La torre", "El rey"], answer: 1, explanation: "La dama suele valorarse en aproximadamente 9 puntos." }
+          ]
+        },
+        2: {
+          title: "Seguridad del rey",
+          category: "Principiante",
+          xp: 20,
+          questions: [
+            { q: "¿Qué jugada suele ayudar a poner al rey a salvo?", options: ["Enrocar", "Mover la dama muchas veces", "Avanzar todos los peones", "No desarrollar piezas"], answer: 0, explanation: "El enroque suele mejorar la seguridad del rey y conecta las torres." },
+            { q: "¿Cuál es una mala idea en la apertura?", options: ["Desarrollar piezas", "Controlar el centro", "Mover muchas veces la misma pieza sin necesidad", "Enrocar cuando sea posible"], answer: 2, explanation: "Mover repetidamente una pieza sin necesidad puede hacerte perder tiempos." }
+          ]
+        },
+        3: {
+          title: "La apertura correcta",
+          category: "Estrategia",
+          xp: 30,
+          questions: [
+            { q: "¿Cuál es un objetivo típico de la apertura?", options: ["Desarrollar piezas y controlar el centro", "Sacar la dama y dejar el rey en el centro", "Mover solo peones", "Buscar capturas sin mirar"], answer: 0, explanation: "El desarrollo y el control del centro son objetivos fundamentales." },
+            { q: "¿Qué pieza suele ser conveniente desarrollar temprano?", options: ["Las piezas menores", "El rey varias veces", "La dama cinco veces", "Solo la torre"], answer: 0, explanation: "Caballos y alfiles suelen desarrollarse antes que las torres." }
+          ]
+        },
+        4: {
+          title: "Encontrá el ataque doble",
+          category: "Táctica",
+          xp: 35,
+          questions: [
+            { q: "¿Qué define mejor un ataque doble?", options: ["Una jugada que crea dos amenazas", "Mover dos piezas a la vez", "Cambiar damas", "Dar siempre jaque mate"], answer: 0, explanation: "El ataque doble crea dos amenazas que el rival difícilmente puede resolver al mismo tiempo." },
+            { q: "¿Qué pieza es famosa por crear ataques dobles con facilidad?", options: ["El caballo", "El rey", "El peón de torre", "La torre solamente"], answer: 0, explanation: "Los saltos del caballo permiten atacar objetivos que no están alineados." }
+          ]
+        },
+        5: {
+          title: "Reconocé la clavada",
+          category: "Táctica",
+          xp: 35,
+          questions: [
+            { q: "¿Qué ocurre en una clavada?", options: ["Una pieza no puede moverse sin exponer algo más importante", "Se pierde automáticamente la dama", "El rey siempre captura", "Se intercambian dos peones"], answer: 0, explanation: "La pieza está limitada porque detrás de ella hay un objetivo más importante." },
+            { q: "¿Qué piezas suelen crear clavadas a distancia?", options: ["Torres, alfiles y damas", "Solo el rey", "Solo los peones", "El caballo exclusivamente"], answer: 0, explanation: "Las piezas lineales pueden ejercer presión a través de una pieza interpuesta." }
+          ]
+        },
+        6: {
+          title: "Jaque, captura o amenaza",
+          category: "Táctica",
+          xp: 50,
+          questions: [
+            { q: "Al buscar una jugada fuerte, ¿qué grupo conviene revisar primero?", options: ["Jaque, capturas y amenazas", "Solo movimientos de peones", "Solo cambios de damas", "Movimientos al azar"], answer: 0, explanation: "Este método ayuda a encontrar jugadas tácticas y evita pasar por alto oportunidades." },
+            { q: "Después de encontrar una jugada candidata, ¿qué debes calcular?", options: ["La mejor respuesta del rival", "Solo tu siguiente jugada", "El resultado de otra partida", "Nada"], answer: 0, explanation: "Siempre hay que comprobar la respuesta más fuerte del rival." }
+          ]
+        },
+        7: {
+          title: "¿Qué pieza está peor?",
+          category: "Estrategia",
+          xp: 50,
+          questions: [
+            { q: "Si no hay táctica inmediata, ¿qué plan suele ser útil?", options: ["Mejorar la pieza menos activa", "Mover la dama sin objetivo", "Cambiar todas las piezas", "Pasar el turno"], answer: 0, explanation: "Mejorar la peor pieza es una regla estratégica muy útil." },
+            { q: "Una pieza bien colocada suele...", options: ["Controlar casillas importantes y tener actividad", "Quedarse sin movimientos", "Atacar siempre al rey", "Estar en su casilla inicial"], answer: 0, explanation: "La actividad y el control de casillas son señales de una buena colocación." }
+          ]
+        },
+        8: {
+          title: "Desafío final: calculá antes de mover",
+          category: "Táctica",
+          xp: 75,
+          questions: [
+            { q: "Tu rival amenaza una pieza. ¿Qué debes hacer primero?", options: ["Identificar exactamente la amenaza", "Mover la dama automáticamente", "Atacar cualquier peón", "Enrocar sin mirar"], answer: 0, explanation: "Antes de buscar tu plan, debes entender qué está amenazando el rival." },
+            { q: "¿Cuál es el mejor hábito antes de confirmar una jugada?", options: ["Preguntar qué puede responder el rival", "Mover rápidamente", "Mirar solo tu ataque", "Ignorar las capturas"], answer: 0, explanation: "La comprobación final evita muchos errores tácticos." }
+          ]
+        }
+,
+        9: {
+          title: "Leé la posición",
+          category: "Principiante",
+          xp: 25,
+          questions: [
+            { q: "Antes de pensar en tu ataque, ¿qué conviene observar?", options: ["Las amenazas del rival", "Solo tu dama", "El reloj únicamente", "Los peones del borde"], answer: 0, explanation: "La seguridad comienza por identificar qué está amenazando el rival." },
+            { q: "¿Qué información ayuda a evaluar una posición?", options: ["Material, seguridad del rey y actividad", "Solo quién tiene más peones", "Solo la dama", "Nada"], answer: 0, explanation: "La evaluación debe considerar varios elementos, no solo el material." }
+          ]
+        },
+        10: {
+          title: "Notación algebraica",
+          category: "Principiante",
+          xp: 25,
+          questions: [
+            { q: "¿Cómo se identifica una casilla de ajedrez?", options: ["Con una letra y un número", "Con dos letras", "Con dos colores", "Solo con un número"], answer: 0, explanation: "Cada casilla se identifica con una letra de la columna y un número de la fila." },
+            { q: "¿Qué representa la letra N en la notación inglesa?", options: ["El caballo", "La torre", "El rey", "El peón"], answer: 0, explanation: "N representa al caballo porque K ya se utiliza para el rey." }
+          ]
+        },
+        11: {
+          title: "Encontrá la columna abierta",
+          category: "Estrategia",
+          xp: 35,
+          questions: [
+            { q: "¿Qué es una columna abierta?", options: ["Una columna sin peones", "Una diagonal sin piezas", "Una fila sin reyes", "Una columna con dos damas"], answer: 0, explanation: "Una columna abierta no contiene peones y puede ser muy útil para las torres." },
+            { q: "¿Qué pieza suele aprovechar especialmente una columna abierta?", options: ["La torre", "El caballo", "El rey", "El peón"], answer: 0, explanation: "Las torres se benefician de las líneas abiertas para aumentar su actividad." }
+          ]
+        },
+        12: {
+          title: "Mejorá tu peor pieza",
+          category: "Estrategia",
+          xp: 40,
+          questions: [
+            { q: "Si no existe una táctica inmediata, ¿qué plan es razonable?", options: ["Mejorar la pieza menos activa", "Mover una pieza al azar", "Cambiar siempre damas", "Avanzar cualquier peón"], answer: 0, explanation: "Mejorar la peor pieza es un principio estratégico muy útil." },
+            { q: "Una pieza activa normalmente...", options: ["Controla casillas importantes", "No tiene movimientos", "Está siempre en la esquina", "Nunca puede ser atacada"], answer: 0, explanation: "La actividad se relaciona con la cantidad y calidad de casillas que controla." }
+          ]
+        },
+        13: {
+          title: "Elegí el plan",
+          category: "Estrategia",
+          xp: 50,
+          questions: [
+            { q: "¿De dónde debería surgir un plan?", options: ["De las características de la posición", "De mover rápido", "De copiar siempre al rival", "De atacar sin mirar"], answer: 0, explanation: "El plan debe responder a las necesidades concretas de la posición." },
+          { q: "¿Qué debilidad puede convertirse en un objetivo?", options: ["Un peón aislado o débil", "Una pieza bien defendida", "Una casilla controlada por todas tus piezas", "Tu propio rey seguro"], answer: 0, explanation: "Las debilidades permanentes pueden convertirse en objetivos estratégicos." }
+          ]
+        },
+        14: {
+          title: "La doble amenaza",
+          category: "Táctica",
+          xp: 40,
+          questions: [
+            { q: "¿Qué hace fuerte a una doble amenaza?", options: ["Crea dos problemas al mismo tiempo", "Mueve dos piezas en un turno", "Siempre gana la dama", "Solo funciona con peones"], answer: 0, explanation: "La fuerza está en obligar al rival a elegir qué amenaza atender." },
+            { q: "¿Cuál puede ser una doble amenaza?", options: ["Atacar una pieza y amenazar mate", "Mover el rey una casilla", "Cambiar un peón", "Esperar"], answer: 0, explanation: "Una amenaza material y otra contra el rey pueden ser muy difíciles de defender simultáneamente." }
+          ]
+        },
+        15: {
+          title: "La intermedia",
+          category: "Táctica",
+          xp: 50,
+          questions: [
+            { q: "¿Qué es una jugada intermedia?", options: ["Una jugada fuerte antes de realizar la recaptura esperada", "Una jugada al azar", "Un movimiento ilegal", "Un cambio de peones"], answer: 0, explanation: "La jugada intermedia altera el orden esperado y puede ganar material o iniciativa." },
+          { q: "¿Qué recurso se busca especialmente como jugada intermedia?", options: ["Un jaque", "Un movimiento sin amenaza", "Un retroceso cualquiera", "Un cambio de peones"], answer: 0, explanation: "Los jaques suelen obligar al rival a responder inmediatamente." }
+          ]
+        },
+        16: {
+          title: "¿Conviene sacrificar?",
+          category: "Táctica",
+          xp: 55,
+          questions: [
+            { q: "¿Qué debe existir normalmente detrás de un sacrificio correcto?", options: ["Compensación concreta", "Solo una sensación", "Ninguna idea", "La esperanza de que el rival se equivoque"], answer: 0, explanation: "El sacrificio debe buscar ataque, desarrollo, iniciativa o una ventaja concreta." },
+            { q: "¿Qué NO es suficiente para sacrificar material?", options: ["Que la jugada se vea espectacular", "Obtener un ataque fuerte", "Ganar material después", "Conseguir una ventaja decisiva"], answer: 0, explanation: "La estética de una jugada no justifica por sí sola entregar material." }
+          ]
+        },
+        17: {
+          title: "Mate en uno",
+          category: "Táctica",
+          xp: 60,
+          questions: [
+            { q: "¿Qué debes buscar primero en un ejercicio de mate en uno?", options: ["Todos los jaques legales", "Mover un peón al azar", "Cambiar damas", "Una jugada tranquila"], answer: 0, explanation: "En un mate en uno, la búsqueda comienza por los jaques." },
+            { q: "Después de encontrar un jaque, ¿qué debes comprobar?", options: ["Si el rey tiene alguna respuesta legal", "Solo si se ve bonito", "Si puedes mover otra pieza", "Nada"], answer: 0, explanation: "El jaque mate requiere que no exista ninguna defensa legal." }
+          ]
+        },
+        18: {
+          title: "Calculá dos jugadas",
+          category: "Táctica",
+          xp: 65,
+          questions: [
+            { q: "¿Qué significa calcular una variante?", options: ["Imaginar las jugadas y respuestas antes de mover", "Mover rápidamente", "Mirar solo tu primera jugada", "Memorizar nombres"], answer: 0, explanation: "Calcular significa visualizar una secuencia de jugadas y respuestas." },
+            { q: "¿Qué respuesta rival conviene analizar?", options: ["La más fuerte", "La más débil", "Una respuesta al azar", "Ninguna"], answer: 0, explanation: "Si tu jugada funciona contra la mejor defensa, aumenta su solidez." }
+          ]
+        },
+        19: {
+          title: "Final de peones",
+          category: "Estrategia",
+          xp: 70,
+          questions: [
+            { q: "En muchos finales de peones, ¿qué recurso es fundamental?", options: ["La oposición", "Mover la dama", "Enrocar", "Atacar con un caballo"], answer: 0, explanation: "La oposición es un concepto fundamental en muchos finales de rey y peones." },
+            { q: "¿Qué pieza es especialmente importante en un final de peones?", options: ["El rey", "La dama", "La torre", "El caballo"], answer: 0, explanation: "En estos finales, el rey debe participar activamente." }
+          ]
+        },
+        20: {
+          title: "Desafío maestro",
+          category: "Táctica",
+          xp: 100,
+          questions: [
+            { q: "¿Cuál es el orden de pensamiento más útil?", options: ["Amenaza rival → jaques, capturas y amenazas → calcular", "Mover rápido → mirar después", "Atacar siempre → ignorar al rival", "Cambiar todo → pensar al final"], answer: 0, explanation: "Este método combina prevención, búsqueda de oportunidades y cálculo." },
+            { q: "¿Cuál es la comprobación final antes de mover?", options: ["¿Qué puede responder mi rival?", "¿Puedo mover otra pieza?", "¿Me gusta la jugada?", "¿El tablero es bonito?"], answer: 0, explanation: "La última pregunta evita muchos errores tácticos." }
+          ]
+        }
+      };
+
+      let activeExerciseId = null;
+      let activeExerciseQuestion = 0;
+      let exerciseScore = 0;
+      let exerciseAnswered = false;
+
+      function getExerciseStats() {
+        return state.exerciseStats || { total: 0, correct: 0, streak: 0, best: 0, completed: [] };
+      }
+
+      function updateExerciseStats() {
+        const stats = getExerciseStats();
+        const accuracy = stats.total ? Math.round((stats.correct / stats.total) * 100) : 0;
+
+        const total = document.getElementById("exercise-total-stat");
+        const correct = document.getElementById("exercise-correct-stat");
+        const streak = document.getElementById("exercise-streak-stat");
+        const best = document.getElementById("exercise-best-stat");
+
+        if (total) total.textContent = stats.total;
+        if (correct) correct.textContent = accuracy + "%";
+        if (streak) streak.textContent = stats.streak + " 🔥";
+        if (best) best.textContent = stats.best;
+        const modalStreak = document.getElementById("exercise-modal-streak");
+        if (modalStreak) modalStreak.textContent = "🔥 Racha: " + stats.streak;
+
+        document.querySelectorAll("[data-exercise-card]").forEach(card => {
+          const id = Number(card.dataset.exerciseId);
+          const done = stats.completed.includes(id);
+          card.classList.toggle("completed", done);
+          const btn = card.querySelector(".exercise-start");
+          if (btn) btn.textContent = done ? "↻ Repetir" : "Resolver";
+        });
+      }
+
+      function closeExercise() {
+        document.getElementById("exercise-modal").style.display = "none";
+        activeExerciseId = null;
+      }
+
+      function renderExerciseQuestion() {
+        const exercise = EXERCISES[activeExerciseId];
+        const question = exercise.questions[activeExerciseQuestion];
+        exerciseAnswered = false;
+
+        document.getElementById("exercise-modal-category").textContent = "⚡ " + exercise.category;
+        document.getElementById("exercise-modal-title").textContent = exercise.title;
+        document.getElementById("exercise-question").textContent =
+          `${activeExerciseQuestion + 1}/${exercise.questions.length} · ${question.q}`;
+
+        const options = document.getElementById("exercise-options");
+        options.innerHTML = "";
+
+        question.options.forEach((option, index) => {
+          const button = document.createElement("button");
+          button.className = "exercise-option";
+          button.textContent = String.fromCharCode(65 + index) + ". " + option;
+          button.addEventListener("click", () => answerExercise(index));
+          options.appendChild(button);
+        });
+
+        document.getElementById("exercise-feedback").classList.remove("show");
+        document.getElementById("exercise-feedback").innerHTML = "";
+        document.getElementById("exercise-next").style.display = "none";
+        document.getElementById("exercise-result").style.display = "none";
+      }
+
+      function startExercise(id) {
+        activeExerciseId = Number(id);
+        activeExerciseQuestion = 0;
+        exerciseScore = 0;
+        document.getElementById("exercise-modal").style.display = "flex";
+        renderExerciseQuestion();
+        updateExerciseStats();
+      }
+
+      function answerExercise(index) {
+        if (exerciseAnswered) return;
+        exerciseAnswered = true;
+
+        const exercise = EXERCISES[activeExerciseId];
+        const question = exercise.questions[activeExerciseQuestion];
+        const buttons = [...document.querySelectorAll(".exercise-option")];
+        const stats = getExerciseStats();
+
+        buttons[question.answer].classList.add("correct");
+
+        stats.total++;
+        if (index === question.answer) {
+          exerciseScore++;
+          stats.correct++;
+          stats.streak++;
+          stats.best = Math.max(stats.best, stats.streak);
+          document.getElementById("exercise-feedback").innerHTML = "✅ <strong>¡Correcto!</strong> " + question.explanation;
+        } else {
+          stats.streak = 0;
+          buttons[index].classList.add("wrong");
+          document.getElementById("exercise-feedback").innerHTML = "❌ <strong>No es correcto.</strong> " + question.explanation;
+        }
+
+        state.exerciseStats = stats;
+        save();
+        updateExerciseStats();
+
+        const feedback = document.getElementById("exercise-feedback");
+        feedback.classList.add("show");
+
+        const next = document.getElementById("exercise-next");
+        next.style.display = "inline-flex";
+        next.textContent = activeExerciseQuestion === exercise.questions.length - 1 ? "Ver resultado" : "Siguiente";
+      }
+
+      function finishExercise() {
+        const exercise = EXERCISES[activeExerciseId];
+        const stats = getExerciseStats();
+
+        if (!stats.completed.includes(activeExerciseId)) {
+          stats.completed.push(activeExerciseId);
+          state.exerciseStats = stats;
+          addXP(exercise.xp, "Ejercicio: " + exercise.title, "Completado");
+          save();
+        }
+
+        document.getElementById("exercise-question").style.display = "none";
+        document.getElementById("exercise-options").style.display = "none";
+        document.getElementById("exercise-feedback").style.display = "none";
+        document.getElementById("exercise-next").style.display = "none";
+        document.getElementById("exercise-result").style.display = "block";
+
+        const total = exercise.questions.length;
+        const percent = Math.round((exerciseScore / total) * 100);
+        document.getElementById("exercise-result-score").textContent = `${exerciseScore}/${total}`;
+        document.getElementById("exercise-result-text").textContent =
+          percent === 100
+            ? "🏆 ¡Excelente! Resolviste todo correctamente."
+            : percent >= 50
+              ? "👍 Buen trabajo. Revisá los errores y volvé a intentarlo."
+              : "📚 Seguí practicando. Cada intento te ayuda a reconocer patrones.";
+
+        updateExerciseStats();
+      }
+
+      document.querySelectorAll(".exercise-start").forEach(button => {
+        button.addEventListener("click", () => startExercise(button.dataset.exercise));
+      });
+
+      document.getElementById("exercise-next").addEventListener("click", () => {
+        const exercise = EXERCISES[activeExerciseId];
+        if (activeExerciseQuestion >= exercise.questions.length - 1) {
+          finishExercise();
+        } else {
+          activeExerciseQuestion++;
+          renderExerciseQuestion();
+        }
+      });
+
+      document.getElementById("exercise-close").addEventListener("click", closeExercise);
+
+      document.getElementById("exercise-modal").addEventListener("click", e => {
+        if (e.target.id === "exercise-modal") closeExercise();
+      });
+
+      document.querySelectorAll(".exercise-filter").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".exercise-filter").forEach(b => b.classList.remove("active"));
+          button.classList.add("active");
+
+          const filter = button.dataset.exerciseFilter;
+          document.querySelectorAll("[data-exercise-card]").forEach(card => {
+            card.style.display = filter === "all" || card.dataset.category === filter ? "" : "none";
+          });
+        });
+      });
+
+      updateExerciseStats();
+
     </script>
   </body>
 </html>
