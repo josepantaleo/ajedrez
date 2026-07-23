@@ -1639,277 +1639,6 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
-
-      /* =========================
-         ANÁLISIS COMPLETO DE PARTIDAS
-      ========================== */
-      .saved-games-empty {
-        color: var(--muted);
-        font-size: 0.85rem;
-      }
-
-      .saved-game-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        background: rgba(128, 150, 180, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        margin-bottom: 8px;
-      }
-
-      .saved-game-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .saved-game-info b {
-        font-size: 0.88rem;
-      }
-
-      .saved-game-info small {
-        color: var(--muted);
-        font-size: 0.75rem;
-      }
-
-      .saved-game-actions {
-        display: flex;
-        gap: 6px;
-      }
-
-      .saved-game-actions .btn {
-        padding: var(--btn-padding);
-        font-size: var(--btn-font-size);
-      }
-
-      .analysis-modal-content {
-        width: min(100%, 1080px);
-        max-height: 94vh;
-        overflow: auto;
-        background: var(--surface);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 22px;
-        padding: 22px;
-        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-        text-align: left;
-      }
-
-      .analysis-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .analysis-progress {
-        margin-top: 18px;
-      }
-
-      .analysis-progress-bar {
-        height: 10px;
-        background: rgba(128, 150, 180, 0.18);
-        border-radius: 20px;
-        overflow: hidden;
-        margin-top: 8px;
-      }
-
-      .analysis-progress-bar i {
-        display: block;
-        height: 100%;
-        width: 0%;
-        background: var(--accent2);
-        transition: 0.2s;
-      }
-
-      .analysis-summary {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        margin: 18px 0;
-      }
-
-      .analysis-side-card {
-        background: rgba(128, 150, 180, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        padding: 14px;
-      }
-
-      .analysis-side-card h4 {
-        margin: 0 0 8px;
-      }
-
-      .analysis-accuracy {
-        font-size: 1.8rem;
-        font-weight: 900;
-        color: var(--accent);
-      }
-
-      .analysis-tag-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 10px;
-      }
-
-      .analysis-tag {
-        font-size: 0.72rem;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-      }
-
-      .analysis-layout {
-        display: grid;
-        grid-template-columns: 340px 1fr;
-        gap: 18px;
-      }
-
-      .analysis-board-col {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .analysis-board {
-        width: 100%;
-        max-width: 340px;
-        aspect-ratio: 1;
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        grid-template-rows: repeat(8, 1fr);
-        border-radius: 10px;
-        overflow: hidden;
-        border: 3px solid var(--board-frame);
-      }
-
-      .analysis-nav {
-        display: flex;
-        gap: 6px;
-        margin-top: 12px;
-      }
-
-      .analysis-eval-current {
-        margin-top: 10px;
-        font-weight: 800;
-        text-align: center;
-      }
-
-      .analysis-move-list {
-        max-height: 460px;
-        overflow: auto;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 6px;
-      }
-
-      .analysis-move-row {
-        display: grid;
-        grid-template-columns: 32px 1fr 1fr;
-        gap: 6px;
-        align-items: center;
-        margin-bottom: 3px;
-      }
-
-      .analysis-move-num {
-        color: var(--muted);
-        font-size: 0.8rem;
-        text-align: right;
-        padding-right: 4px;
-      }
-
-      .analysis-move-btn {
-        border: 0;
-        border-radius: 8px;
-        padding: 6px 8px;
-        background: transparent;
-        color: var(--text);
-        cursor: pointer;
-        text-align: left;
-        font-size: 0.85rem;
-        display: flex;
-        justify-content: space-between;
-        gap: 6px;
-      }
-
-      .analysis-move-btn:hover {
-        background: rgba(255, 255, 255, 0.06);
-      }
-
-      .analysis-move-btn.active {
-        background: rgba(92, 200, 255, 0.18);
-        outline: 1px solid var(--accent2);
-      }
-
-      .analysis-move-btn .mv-icon {
-        font-size: 0.8rem;
-      }
-
-      .analysis-move-btn.tag-best .mv-icon,
-      .analysis-move-btn.tag-good .mv-icon {
-        color: var(--success);
-      }
-
-      .analysis-move-btn.tag-inaccuracy .mv-icon {
-        color: var(--accent);
-      }
-
-      .analysis-move-btn.tag-mistake .mv-icon,
-      .analysis-move-btn.tag-blunder .mv-icon {
-        color: var(--danger);
-      }
-
-      .analysis-comment {
-        margin-top: 14px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: rgba(128, 150, 180, 0.08);
-        min-height: 44px;
-        font-size: 0.88rem;
-        line-height: 1.5;
-      }
-
-      .analysis-eval-graph {
-        display: flex;
-        align-items: center;
-        height: 46px;
-        gap: 1px;
-        margin-top: 14px;
-        border-radius: 8px;
-        overflow: hidden;
-        background: rgba(0, 0, 0, 0.25);
-        cursor: pointer;
-      }
-
-      .analysis-eval-graph .bar {
-        flex: 1;
-        min-width: 2px;
-        align-self: flex-end;
-        background: var(--text);
-        opacity: 0.85;
-      }
-
-      .analysis-eval-graph .bar.black-adv {
-        align-self: flex-start;
-        background: #1a1a1a;
-      }
-
-      .analysis-eval-graph .bar.current {
-        background: var(--accent2) !important;
-      }
-
-      @media (max-width: 850px) {
-        .analysis-layout {
-          grid-template-columns: 1fr;
-        }
-        .analysis-summary {
-          grid-template-columns: 1fr;
-        }
-      }
     </style>
   </head>
 
@@ -2157,19 +1886,6 @@
                   </button>
                 </div>
                 <div class="moves" id="moves"></div>
-              </div>
-
-              <div class="card" style="margin-top: 18px">
-                <div class="panel-title">🔎 Análisis de partidas</div>
-                <p style="color: var(--muted); font-size: 0.85rem; margin: 0 0 12px">
-                  Revisá tus últimas partidas jugada por jugada con el motor,
-                  con precisión y errores marcados.
-                </p>
-                <div id="saved-games-list" class="saved-games-list">
-                  <p class="saved-games-empty" id="saved-games-empty">
-                    Todavía no jugaste ninguna partida completa.
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -3753,61 +3469,11 @@
     <div class="toast" id="toast"></div>
 
     <div class="alert" id="alert">
-      <div class="alert-box" id="alert-box">
-        <div id="alert-box-text"></div>
-        <button
-          class="btn primary"
-          id="alert-analyze-btn"
-          style="display: none; margin-top: 16px"
-        >
-          🔎 Analizar esta partida
-        </button>
-      </div>
+      <div class="alert-box" id="alert-box"></div>
     </div>
 
     <div class="promo" id="promo">
       <div class="promo-box" id="promo-box"></div>
-    </div>
-
-    <div id="analysis-modal" class="alert" style="display: none">
-      <div class="analysis-modal-content">
-        <div class="analysis-header">
-          <h3 id="analysis-title" style="margin: 0">🔎 Análisis de la partida</h3>
-          <button class="btn secondary" id="analysis-close">✖ Cerrar</button>
-        </div>
-        <div style="color: var(--muted); font-size: 0.85rem; margin-top: 4px">
-          <span id="analysis-meta"></span>
-        </div>
-
-        <div class="analysis-progress" id="analysis-progress">
-          <span id="analysis-progress-text">Analizando jugada 0/0…</span>
-          <div class="analysis-progress-bar">
-            <i id="analysis-progress-fill"></i>
-          </div>
-        </div>
-
-        <div id="analysis-body" style="display: none">
-          <div class="analysis-summary" id="analysis-summary"></div>
-
-          <div class="analysis-eval-graph" id="analysis-eval-graph"></div>
-
-          <div class="analysis-layout" style="margin-top: 16px">
-            <div class="analysis-board-col">
-              <div class="analysis-board" id="analysis-board"></div>
-              <div class="analysis-eval-current" id="analysis-eval-current"></div>
-              <div class="analysis-nav">
-                <button class="btn secondary" id="analysis-first">⏮</button>
-                <button class="btn secondary" id="analysis-prev">◀</button>
-                <button class="btn secondary" id="analysis-next">▶</button>
-                <button class="btn secondary" id="analysis-last">⏭</button>
-              </div>
-              <div class="analysis-comment" id="analysis-comment"></div>
-            </div>
-
-            <div class="analysis-move-list" id="analysis-move-list"></div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <script>
@@ -3841,7 +3507,6 @@
         games: 0,
         puzzles: 0,
         history: [],
-        savedGames: [],
       };
 
       let state = loadState();
@@ -3885,18 +3550,8 @@
       }
 
       function showAlert(text) {
-        document.getElementById("alert-box-text").textContent = text;
-        document.getElementById("alert-analyze-btn").style.display = "none";
+        document.getElementById("alert-box").textContent = text;
         document.getElementById("alert").classList.add("show");
-      }
-
-      function offerAnalysis(gameId) {
-        const btn = document.getElementById("alert-analyze-btn");
-        btn.style.display = "inline-flex";
-        btn.onclick = () => {
-          document.getElementById("alert").classList.remove("show");
-          openAnalysisModal(gameId);
-        };
       }
 
       document.getElementById("alert").onclick = (e) => {
@@ -4409,108 +4064,6 @@
       let selected = null;
       let valid = [];
 
-      // =========================
-      // ANÁLISIS COMPLETO DE PARTIDAS
-      // =========================
-
-      function clonePosition(pos) {
-        return {
-          board: pos.board.map((row) => row.slice()),
-          turn: pos.turn,
-          castling: JSON.parse(JSON.stringify(pos.castling)),
-          enPassant: pos.enPassant ? [...pos.enPassant] : null,
-          halfmove: pos.halfmove || 0,
-        };
-      }
-
-      function getPositionAt(g, i) {
-        if (i < g.history.length) return g.history[i].snapshot;
-        return {
-          board: g.board,
-          turn: g.turn,
-          castling: g.castling,
-          enPassant: g.enPassant,
-          halfmove: g.halfmove,
-        };
-      }
-
-      function capturePositions(g) {
-        const list = [];
-        for (let i = 0; i <= g.moves.length; i++) {
-          list.push(clonePosition(getPositionAt(g, i)));
-        }
-        return list;
-      }
-
-      function positionToFEN(pos, fullmove) {
-        const rows = [];
-        for (let r = 0; r < 8; r++) {
-          let row = "";
-          let empty = 0;
-          for (let c = 0; c < 8; c++) {
-            const p = pos.board[r][c];
-            if (!p) {
-              empty++;
-              continue;
-            }
-            if (empty) {
-              row += empty;
-              empty = 0;
-            }
-            const letter = p[1].toLowerCase();
-            row += p[0] === "w" ? letter.toUpperCase() : letter;
-          }
-          if (empty) row += empty;
-          rows.push(row);
-        }
-        const boardPart = rows.join("/");
-        let castling = "";
-        if (pos.castling.w.K) castling += "K";
-        if (pos.castling.w.Q) castling += "Q";
-        if (pos.castling.b.K) castling += "k";
-        if (pos.castling.b.Q) castling += "q";
-        if (!castling) castling = "-";
-        const ep = pos.enPassant
-          ? squareName(pos.enPassant[0], pos.enPassant[1])
-          : "-";
-        const halfmove = pos.halfmove || 0;
-        return `${boardPart} ${pos.turn} ${castling} ${ep} ${halfmove} ${fullmove}`;
-      }
-
-      function fullmoveForPly(i) {
-        return Math.floor(i / 2) + 1;
-      }
-
-      function uciToNotation(board, uci) {
-        if (!uci || uci.length < 4) return uci || "";
-        const fromC = FILES.indexOf(uci[0]);
-        const fromR = 8 - Number(uci[1]);
-        const toC = FILES.indexOf(uci[2]);
-        const toR = 8 - Number(uci[3]);
-        const promo = uci.length > 4 ? uci[4].toUpperCase() : null;
-        const p = board[fromR] && board[fromR][fromC];
-        if (!p) return uci;
-        const col = p[0];
-        const type = p[1];
-        const target = board[toR][toC];
-
-        if (type === "K" && Math.abs(toC - fromC) === 2) {
-          return toC > fromC ? "O-O" : "O-O-O";
-        }
-
-        const capture = !!target || (type === "P" && fromC !== toC && !target);
-        let notation;
-        if (type === "P") {
-          notation = capture
-            ? FILES[fromC] + "x" + squareName(toR, toC)
-            : squareName(toR, toC);
-          if (promo) notation += "=" + promo;
-        } else {
-          notation = type + (capture ? "x" : "") + squareName(toR, toC);
-        }
-        return notation;
-      }
-
       /* =========================
          IA · MOTOR DEL BOT
       ========================== */
@@ -4738,8 +4291,16 @@
         board.innerHTML = "";
         const check = gameStarted ? game.inCheck(game.turn) : false;
 
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
+        // Detección de perspectiva: si elegimos jugar con negras, damos vuelta el tablero
+        const humanColorSelect = document.getElementById("bot-color");
+        const humanColor = humanColorSelect ? humanColorSelect.value : "w";
+        const flipped = (botEnabled && humanColor === "b");
+
+        const rows = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+        const cols = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+
+        for (let r of rows) {
+          for (let c of cols) {
             const square = document.createElement("div");
             square.className = "square " + ((r + c) % 2 ? "dark" : "light");
 
@@ -4775,13 +4336,13 @@
               square.appendChild(piece);
             }
 
-            if (c === 0) {
+            if (c === (flipped ? 7 : 0)) {
               const rank = document.createElement("span");
               rank.className = "coord rank";
               rank.textContent = 8 - r;
               square.appendChild(rank);
             }
-            if (r === 7) {
+            if (r === (flipped ? 0 : 7)) {
               const file = document.createElement("span");
               file.className = "coord file";
               file.textContent = FILES[c];
@@ -4907,80 +4468,6 @@
         document.getElementById("promo").classList.add("show");
       }
 
-      function renderSavedGamesList() {
-        const container = document.getElementById("saved-games-list");
-        const emptyMsg = document.getElementById("saved-games-empty");
-        if (!container || !emptyMsg) return;
-        container
-          .querySelectorAll(".saved-game-item")
-          .forEach((el) => el.remove());
-
-        const games = state.savedGames || [];
-        if (!games.length) {
-          emptyMsg.style.display = "block";
-          return;
-        }
-        emptyMsg.style.display = "none";
-
-        games.forEach((g) => {
-          const item = document.createElement("div");
-          item.className = "saved-game-item";
-          const modeLabel =
-            g.mode === "bot"
-              ? `IA (${BOT_LEVELS[g.difficulty]?.label || g.difficulty})`
-              : "Dos jugadores";
-          item.innerHTML = `
-            <div class="saved-game-info">
-              <b>${g.result}</b>
-              <small>${g.date} · ${g.time} · ${modeLabel} · ${g.moves.length} jugadas</small>
-            </div>
-            <div class="saved-game-actions">
-              <button class="btn secondary" data-analyze="${g.id}">🔎 Analizar</button>
-              <button class="btn danger" data-delete="${g.id}">🗑</button>
-            </div>
-          `;
-          container.appendChild(item);
-        });
-
-        container.querySelectorAll("[data-analyze]").forEach((btn) => {
-          btn.onclick = () => openAnalysisModal(btn.dataset.analyze);
-        });
-        container.querySelectorAll("[data-delete]").forEach((btn) => {
-          btn.onclick = () => {
-            state.savedGames = (state.savedGames || []).filter(
-              (g) => g.id !== btn.dataset.delete,
-            );
-            save();
-            renderSavedGamesList();
-          };
-        });
-      }
-
-      function saveFinishedGame(resultText) {
-        if (!game.moves.length) return null;
-        const record = {
-          id:
-            "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-          date: new Date().toLocaleDateString("es-AR"),
-          time: new Date().toLocaleTimeString("es-AR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          result: resultText,
-          mode: botEnabled ? "bot" : "pvp",
-          difficulty: botEnabled ? botDifficulty : null,
-          moves: game.moves.slice(),
-          positions: capturePositions(game),
-          analysis: null,
-        };
-        state.savedGames = state.savedGames || [];
-        state.savedGames.unshift(record);
-        state.savedGames = state.savedGames.slice(0, 30);
-        save();
-        renderSavedGamesList();
-        return record;
-      }
-
       function finishResult(result) {
         if (
           [
@@ -4991,22 +4478,17 @@
             "DRAW_MATERIAL",
           ].includes(result)
         ) {
-          let resultText = "";
           if (result === "CHECKMATE") {
             const winner = game.turn === "w" ? "Negras" : "Blancas";
             state.games++;
-            resultText = `Jaque mate · Ganaron las ${winner}`;
             showAlert(`♚ ¡JAQUE MATE! Ganaron las ${winner}.`);
           } else {
             state.games++;
             state.draws++;
-            resultText = "Tablas";
             showAlert("🤝 Partida tablas");
           }
-          const record = saveFinishedGame(resultText);
           save();
           updateProfile();
-          if (record) offerAnalysis(record.id);
         }
       }
 
@@ -5061,13 +4543,7 @@
               game.over = true;
               clearInterval(clockTimer);
               const winner = game.turn === "w" ? "Negras" : "Blancas";
-              state.games++;
-              const record = saveFinishedGame(
-                `Tiempo agotado · Ganaron las ${winner}`,
-              );
-              save();
               showAlert(`⏱️ Tiempo agotado. Ganaron las ${winner}.`);
-              if (record) offerAnalysis(record.id);
             }
             updateClockDisplay();
           }, 1000);
@@ -5184,10 +4660,8 @@
         clearInterval(clockTimer);
         state.games++;
         state.losses++;
-        const record = saveFinishedGame("Rendición");
         showAlert("🏳️ Te rendiste.");
         save();
-        if (record) offerAnalysis(record.id);
       };
 
       document.getElementById("copy-game").onclick = () => {
@@ -5290,7 +4764,6 @@
       updateProfile();
       initClock(false);
       render();
-      renderSavedGamesList();
 
       /* =========================
          APRENDER · LÓGICA
@@ -6354,436 +5827,6 @@
       });
 
       updateExerciseStats();
-
-      /* =========================
-         MOTOR DE ANÁLISIS (tipo Stockfish)
-      ========================== */
-
-      const CLASSIFICATIONS = {
-        best: { label: "Mejor jugada", icon: "🌟" },
-        good: { label: "Buena jugada", icon: "✔️" },
-        inaccuracy: { label: "Imprecisión", icon: "⚠️" },
-        mistake: { label: "Error", icon: "❌" },
-        blunder: { label: "Error grave", icon: "🔴" },
-      };
-
-      let sfWorker = null;
-      let sfWorkerPromise = null;
-      let analysisCurrentRecord = null;
-      let analysisPly = 0;
-      let analysisRunId = 0;
-
-      function getStockfish() {
-        if (sfWorkerPromise) return sfWorkerPromise;
-        sfWorkerPromise = (async () => {
-          const resp = await fetch(
-            "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js",
-          );
-          if (!resp.ok) throw new Error("No se pudo descargar el motor");
-          const code = await resp.text();
-          const blob = new Blob([code], { type: "application/javascript" });
-          const worker = new Worker(URL.createObjectURL(blob));
-          await new Promise((resolve) => {
-            const onMsg = (e) => {
-              const line = typeof e.data === "string" ? e.data : "";
-              if (line.includes("uciok")) {
-                worker.removeEventListener("message", onMsg);
-                resolve();
-              }
-            };
-            worker.addEventListener("message", onMsg);
-            worker.postMessage("uci");
-          });
-          worker.postMessage("setoption name Skill Level value 20");
-          sfWorker = worker;
-          return worker;
-        })();
-        return sfWorkerPromise;
-      }
-
-      function analyzeFEN(worker, fen, depth) {
-        return new Promise((resolve) => {
-          let cp = 0;
-          let mate = null;
-          let bestMove = null;
-          const onMsg = (e) => {
-            const line = typeof e.data === "string" ? e.data : "";
-            if (line.startsWith("info") && line.indexOf("score") !== -1) {
-              const cpMatch = line.match(/score cp (-?\d+)/);
-              const mateMatch = line.match(/score mate (-?\d+)/);
-              const pvMatch = line.match(/ pv (\S+)/);
-              if (mateMatch) {
-                mate = parseInt(mateMatch[1], 10);
-              } else if (cpMatch) {
-                cp = parseInt(cpMatch[1], 10);
-                mate = null;
-              }
-              if (pvMatch) bestMove = pvMatch[1];
-            } else if (line.startsWith("bestmove")) {
-              worker.removeEventListener("message", onMsg);
-              const parts = line.split(" ");
-              resolve({ cp, mate, bestMove: parts[1] || bestMove });
-            }
-          };
-          worker.addEventListener("message", onMsg);
-          worker.postMessage("position fen " + fen);
-          worker.postMessage("go depth " + depth);
-        });
-      }
-
-      function toCp(info) {
-        if (info.mate !== null && info.mate !== undefined) {
-          return info.mate > 0 ? 100000 - info.mate : -100000 - info.mate;
-        }
-        return info.cp;
-      }
-
-      function winPercent(cpMoverPerspective) {
-        const cp = Math.max(-1000, Math.min(1000, cpMoverPerspective));
-        return (
-          50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1)
-        );
-      }
-
-      function accuracyFromWinDiff(diff) {
-        const acc = 103.1668 * Math.exp(-0.04354 * diff) - 3.1669;
-        return Math.max(0, Math.min(100, acc));
-      }
-
-      function classifyMove(loss, isTopEngineMove) {
-        if (isTopEngineMove || loss <= 5) return "best";
-        if (loss < 25) return "good";
-        if (loss < 60) return "inaccuracy";
-        if (loss < 150) return "mistake";
-        return "blunder";
-      }
-
-      function formatEval(cpWhite) {
-        if (Math.abs(cpWhite) >= 90000) {
-          const mateIn = Math.round(100000 - Math.abs(cpWhite));
-          return cpWhite > 0
-            ? `Mate en ${mateIn} (blancas)`
-            : `Mate en ${mateIn} (negras)`;
-        }
-        const pawns = cpWhite / 100;
-        return (pawns > 0 ? "+" : "") + pawns.toFixed(2);
-      }
-
-      async function runAnalysis(record) {
-        const myRunId = ++analysisRunId;
-        const progressWrap = document.getElementById("analysis-progress");
-        const progressText = document.getElementById("analysis-progress-text");
-        const progressFill = document.getElementById("analysis-progress-fill");
-        const body = document.getElementById("analysis-body");
-        progressWrap.style.display = "block";
-        body.style.display = "none";
-
-        const total = record.positions.length;
-        const depth = total > 60 ? 10 : 12;
-        let worker;
-        try {
-          worker = await getStockfish();
-        } catch (err) {
-          progressText.textContent =
-            "No se pudo cargar el motor de análisis. Verificá tu conexión a internet.";
-          return;
-        }
-
-        const evals = [];
-        const bestMoves = [];
-        for (let i = 0; i < total; i++) {
-          if (myRunId !== analysisRunId) return;
-          const fen = positionToFEN(record.positions[i], fullmoveForPly(i));
-          const info = await analyzeFEN(worker, fen, depth);
-          const cpSideToMove = toCp(info);
-          const sideToMove = record.positions[i].turn;
-          evals.push(sideToMove === "w" ? cpSideToMove : -cpSideToMove);
-          bestMoves.push(info.bestMove);
-          progressText.textContent = `Analizando jugada ${i + 1}/${total}…`;
-          progressFill.style.width = Math.round(((i + 1) / total) * 100) + "%";
-        }
-
-        const perMove = [];
-        const counts = {
-          w: { best: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
-          b: { best: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
-        };
-        const accSum = { w: 0, b: 0 };
-        const accCount = { w: 0, b: 0 };
-
-        for (let k = 0; k < record.moves.length; k++) {
-          const mover = k % 2 === 0 ? "w" : "b";
-          const sign = mover === "w" ? 1 : -1;
-          const before = evals[k] * sign;
-          const after = evals[k + 1] * sign;
-          const loss = Math.max(0, before - after);
-          const bestNotation = uciToNotation(
-            record.positions[k].board,
-            bestMoves[k],
-          );
-          const playedNotation = record.moves[k];
-          const isTop =
-            !!bestMoves[k] &&
-            bestNotation.replace("+", "") === playedNotation.replace("+", "");
-          const tag = classifyMove(loss, isTop);
-          counts[mover][tag]++;
-
-          const winBefore = winPercent(before);
-          const winAfter = winPercent(after);
-          const acc = accuracyFromWinDiff(Math.max(0, winBefore - winAfter));
-          accSum[mover] += acc;
-          accCount[mover]++;
-
-          perMove.push({
-            ply: k,
-            mover,
-            loss,
-            tag,
-            bestNotation,
-            playedNotation,
-            accuracy: acc,
-          });
-        }
-
-        record.analysis = {
-          evals,
-          perMove,
-          counts,
-          accuracy: {
-            w: accCount.w ? accSum.w / accCount.w : 100,
-            b: accCount.b ? accSum.b / accCount.b : 100,
-          },
-        };
-
-        const idx = state.savedGames.findIndex((g) => g.id === record.id);
-        if (idx !== -1) {
-          state.savedGames[idx].analysis = record.analysis;
-          save();
-        }
-
-        if (myRunId !== analysisRunId) return;
-        progressWrap.style.display = "none";
-        body.style.display = "block";
-        analysisPly = 0;
-        renderAnalysisResults(record);
-      }
-
-      function openAnalysisModal(gameId) {
-        const record = (state.savedGames || []).find((g) => g.id === gameId);
-        if (!record) return;
-        analysisCurrentRecord = record;
-        const modeLabel =
-          record.mode === "bot"
-            ? `IA (${BOT_LEVELS[record.difficulty]?.label || record.difficulty})`
-            : "Dos jugadores";
-        document.getElementById("analysis-meta").textContent =
-          `${record.result} · ${record.date} ${record.time} · ${modeLabel} · ${record.moves.length} jugadas`;
-        document.getElementById("analysis-modal").style.display = "flex";
-
-        if (record.analysis) {
-          document.getElementById("analysis-progress").style.display = "none";
-          document.getElementById("analysis-body").style.display = "block";
-          analysisPly = 0;
-          renderAnalysisResults(record);
-        } else {
-          runAnalysis(record);
-        }
-      }
-
-      function closeAnalysisModal() {
-        analysisRunId++;
-        document.getElementById("analysis-modal").style.display = "none";
-      }
-
-      function boardDiffSquares(before, after) {
-        const changed = [];
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            if (before[r][c] !== after[r][c]) changed.push([r, c]);
-          }
-        }
-        return changed;
-      }
-
-      function renderAnalysisBoard() {
-        const record = analysisCurrentRecord;
-        const board = document.getElementById("analysis-board");
-        board.innerHTML = "";
-        const pos = record.positions[analysisPly];
-        const prevPos = analysisPly > 0 ? record.positions[analysisPly - 1] : null;
-        const changed = prevPos
-          ? boardDiffSquares(prevPos.board, pos.board)
-          : [];
-
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            const square = document.createElement("div");
-            square.className = "square " + ((r + c) % 2 ? "dark" : "light");
-            if (changed.some(([rr, cc]) => rr === r && cc === c)) {
-              square.classList.add("last");
-            }
-            const p = pos.board[r][c];
-            if (p) {
-              const piece = document.createElement("div");
-              piece.className =
-                "piece " + (p[0] === "w" ? "white-piece" : "black-piece");
-              piece.textContent = PIECES[p];
-              square.appendChild(piece);
-            }
-            if (c === 0) {
-              const rank = document.createElement("span");
-              rank.className = "coord rank";
-              rank.textContent = 8 - r;
-              square.appendChild(rank);
-            }
-            if (r === 7) {
-              const file = document.createElement("span");
-              file.className = "coord file";
-              file.textContent = FILES[c];
-              square.appendChild(file);
-            }
-            board.appendChild(square);
-          }
-        }
-      }
-
-      function renderAnalysisEvalGraph() {
-        const record = analysisCurrentRecord;
-        const graph = document.getElementById("analysis-eval-graph");
-        graph.innerHTML = "";
-        const evals = record.analysis.evals;
-        evals.forEach((cp, i) => {
-          const bar = document.createElement("div");
-          const clamped = Math.max(-600, Math.min(600, cp));
-          const pct = Math.abs(clamped) / 600;
-          bar.className =
-            "bar " + (cp < 0 ? "black-adv" : "") + (i === analysisPly ? " current" : "");
-          bar.style.height = Math.max(6, Math.round(pct * 100)) + "%";
-          bar.title = formatEval(cp);
-          bar.dataset.ply = i;
-          bar.onclick = () => jumpToPly(i);
-          graph.appendChild(bar);
-        });
-      }
-
-      function renderAnalysisEvalCurrent() {
-        const record = analysisCurrentRecord;
-        const cp = record.analysis.evals[analysisPly];
-        document.getElementById("analysis-eval-current").textContent =
-          `Evaluación: ${formatEval(cp)}`;
-      }
-
-      function renderAnalysisComment() {
-        const record = analysisCurrentRecord;
-        const el = document.getElementById("analysis-comment");
-        if (analysisPly === 0) {
-          el.textContent = "Posición inicial de la partida.";
-          return;
-        }
-        const move = record.analysis.perMove[analysisPly - 1];
-        const moverLabel = move.mover === "w" ? "Blancas" : "Negras";
-        const info = CLASSIFICATIONS[move.tag];
-        let text = `${moverLabel} jugaron ${move.playedNotation} — ${info.icon} ${info.label}.`;
-        if (move.tag !== "best" && move.bestNotation) {
-          text += ` La mejor jugada era ${move.bestNotation} (pérdida ≈ ${(move.loss / 100).toFixed(2)} peones).`;
-        }
-        el.textContent = text;
-      }
-
-      function renderAnalysisMoveList() {
-        const record = analysisCurrentRecord;
-        const container = document.getElementById("analysis-move-list");
-        container.innerHTML = "";
-        for (let i = 0; i < record.moves.length; i += 2) {
-          const row = document.createElement("div");
-          row.className = "analysis-move-row";
-
-          const num = document.createElement("span");
-          num.className = "analysis-move-num";
-          num.textContent = i / 2 + 1 + ".";
-          row.appendChild(num);
-
-          [i, i + 1].forEach((idx) => {
-            const cell = document.createElement("button");
-            if (idx >= record.moves.length) {
-              cell.className = "analysis-move-btn";
-              cell.disabled = true;
-              cell.textContent = "";
-              row.appendChild(cell);
-              return;
-            }
-            const move = record.analysis.perMove[idx];
-            const info = CLASSIFICATIONS[move.tag];
-            cell.className = `analysis-move-btn tag-${move.tag}`;
-            if (idx + 1 === analysisPly) cell.classList.add("active");
-            cell.innerHTML = `<span>${record.moves[idx]}</span><span class="mv-icon">${info.icon}</span>`;
-            cell.onclick = () => jumpToPly(idx + 1);
-            row.appendChild(cell);
-          });
-
-          container.appendChild(row);
-        }
-      }
-
-      function renderAnalysisSummary() {
-        const record = analysisCurrentRecord;
-        const container = document.getElementById("analysis-summary");
-        container.innerHTML = "";
-        ["w", "b"].forEach((side) => {
-          const card = document.createElement("div");
-          card.className = "analysis-side-card";
-          const label = side === "w" ? "⚪ Blancas" : "⚫ Negras";
-          const acc = record.analysis.accuracy[side];
-          const counts = record.analysis.counts[side];
-          const tags = Object.keys(CLASSIFICATIONS)
-            .map((key) => {
-              const info = CLASSIFICATIONS[key];
-              return `<span class="analysis-tag">${info.icon} ${info.label}: ${counts[key]}</span>`;
-            })
-            .join("");
-          card.innerHTML = `
-            <h4>${label}</h4>
-            <div class="analysis-accuracy">${acc.toFixed(1)}%</div>
-            <div style="color: var(--muted); font-size: 0.8rem">Precisión estimada</div>
-            <div class="analysis-tag-row">${tags}</div>
-          `;
-          container.appendChild(card);
-        });
-      }
-
-      function renderAnalysisResults(record) {
-        renderAnalysisSummary();
-        renderAnalysisEvalGraph();
-        renderAnalysisBoard();
-        renderAnalysisEvalCurrent();
-        renderAnalysisComment();
-        renderAnalysisMoveList();
-      }
-
-      function jumpToPly(ply) {
-        const record = analysisCurrentRecord;
-        if (!record || !record.analysis) return;
-        analysisPly = Math.max(0, Math.min(record.positions.length - 1, ply));
-        renderAnalysisEvalGraph();
-        renderAnalysisBoard();
-        renderAnalysisEvalCurrent();
-        renderAnalysisComment();
-        renderAnalysisMoveList();
-      }
-
-      document.getElementById("analysis-close").onclick = closeAnalysisModal;
-      document.getElementById("analysis-modal").addEventListener("click", (e) => {
-        if (e.target.id === "analysis-modal") closeAnalysisModal();
-      });
-      document.getElementById("analysis-first").onclick = () => jumpToPly(0);
-      document.getElementById("analysis-prev").onclick = () =>
-        jumpToPly(analysisPly - 1);
-      document.getElementById("analysis-next").onclick = () =>
-        jumpToPly(analysisPly + 1);
-      document.getElementById("analysis-last").onclick = () =>
-        jumpToPly(
-          analysisCurrentRecord ? analysisCurrentRecord.positions.length - 1 : 0,
-        );
     </script>
   </body>
 </html>
