@@ -1639,6 +1639,404 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
+
+      /* =========================
+         ANÁLISIS COMPLETO DE PARTIDAS
+      ========================== */
+      .saved-games-empty {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .saved-game-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(128, 150, 180, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 8px;
+      }
+
+      .saved-game-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .saved-game-info b {
+        font-size: 0.88rem;
+      }
+
+      .saved-game-info small {
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .saved-game-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .saved-game-actions .btn {
+        padding: var(--btn-padding);
+        font-size: var(--btn-font-size);
+      }
+
+      .analysis-modal-content {
+        width: min(100%, 1080px);
+        max-height: 94vh;
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+        text-align: left;
+      }
+
+      .analysis-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .analysis-progress {
+        margin-top: 18px;
+      }
+
+      .analysis-progress-bar {
+        height: 10px;
+        background: rgba(128, 150, 180, 0.18);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-top: 8px;
+      }
+
+      .analysis-progress-bar i {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: var(--accent2);
+        transition: 0.2s;
+      }
+
+      .analysis-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 18px 0;
+      }
+
+      .analysis-side-card {
+        background: rgba(128, 150, 180, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      .analysis-side-card h4 {
+        margin: 0 0 8px;
+      }
+
+      .analysis-accuracy {
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: var(--accent);
+      }
+
+      .analysis-tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+     /*====================================
+    ANALISIS DE PARTIDAS
+====================================*/
+
+.analysis-layout{
+    display:grid;
+    grid-template-columns:minmax(520px,650px) 1fr;
+    gap:28px;
+    align-items:start;
+}
+
+.analysis-board-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    position:sticky;
+    top:15px;
+}
+
+.analysis-board{
+
+    width:min(620px,100%);
+    aspect-ratio:1/1;
+
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(8,1fr);
+
+    border-radius:18px;
+    overflow:hidden;
+
+    border:5px solid var(--board-frame);
+
+    background:#000;
+
+    box-shadow:
+        0 18px 45px rgba(0,0,0,.45),
+        inset 0 0 20px rgba(255,255,255,.08);
+}
+
+      .analysis-nav {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+      }
+
+      .analysis-eval-current {
+        margin-top: 10px;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .analysis-move-list{
+
+    height:620px;
+
+    overflow-y:auto;
+
+    overflow-x:hidden;
+
+    border-radius:14px;
+
+    padding:10px;
+
+    border:1px solid rgba(255,255,255,.08);
+
+    background:rgba(255,255,255,.03);
+}
+
+.analysis-board .square{
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    width:100%;
+    height:100%;
+}
+
+.analysis-board .piece{
+
+    font-size:clamp(30px,4vw,52px);
+}
+
+.analysis-nav{
+
+    margin-top:18px;
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:10px;
+
+    flex-wrap:wrap;
+}
+
+.analysis-nav .btn{
+
+    min-width:55px;
+}
+
+.analysis-comment{
+
+    margin-top:18px;
+
+    font-size:15px;
+
+    line-height:1.6;
+}
+
+.analysis-eval-graph{
+
+    height:70px;
+
+    margin-top:20px;
+}
+      .analysis-move-row {
+        display: grid;
+        grid-template-columns: 32px 1fr 1fr;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 3px;
+      }
+
+      .analysis-move-num {
+        color: var(--muted);
+        font-size: 0.8rem;
+        text-align: right;
+        padding-right: 4px;
+      }
+
+      .analysis-move-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 6px 8px;
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+        text-align: left;
+        font-size: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      .analysis-move-btn:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .analysis-move-btn.active {
+        background: rgba(92, 200, 255, 0.18);
+        outline: 1px solid var(--accent2);
+      }
+
+      .analysis-move-btn .mv-icon {
+        font-size: 0.8rem;
+      }
+
+      .analysis-move-btn.tag-best .mv-icon,
+      .analysis-move-btn.tag-good .mv-icon {
+        color: var(--success);
+      }
+
+      .analysis-move-btn.tag-inaccuracy .mv-icon {
+        color: var(--accent);
+      }
+
+      .analysis-move-btn.tag-mistake .mv-icon,
+      .analysis-move-btn.tag-blunder .mv-icon {
+        color: var(--danger);
+      }
+
+      .analysis-comment {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(128, 150, 180, 0.08);
+        min-height: 44px;
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      /* =========================
+         TUTOR IA
+      ========================== */
+      .tutor-move-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .tutor-move-badge {
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 16%, transparent);
+        padding: 4px 10px;
+        border-radius: 8px;
+      }
+
+      .tutor-eval-text {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .tutor-comment {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(128, 150, 180, 0.08);
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      .tutor-tip {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--accent2) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--accent2) 25%, transparent);
+        font-size: 0.82rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+
+      .analysis-eval-graph {
+        display: flex;
+        align-items: center;
+        height: 46px;
+        gap: 1px;
+        margin-top: 14px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+      }
+
+      .analysis-eval-graph .bar {
+        flex: 1;
+        min-width: 2px;
+        align-self: flex-end;
+        background: var(--text);
+        opacity: 0.85;
+      }
+
+      .analysis-eval-graph .bar.black-adv {
+        align-self: flex-start;
+        background: #1a1a1a;
+      }
+
+      .analysis-eval-graph .bar.current {
+        background: var(--accent2) !important;
+      }
+
+     @media (max-width:1100px){
+
+    .analysis-layout{
+
+        grid-template-columns:1fr;
+    }
+
+    .analysis-board{
+
+        width:min(92vw,600px);
+    }
+
+    .analysis-board-col{
+
+        position:relative;
+        top:auto;
+    }
+
+    .analysis-move-list{
+
+        height:380px;
+    }
+
+}
     </style>
   </head>
 
@@ -1823,6 +2221,20 @@
                     </select>
                   </label>
 
+                  <div class="toggle" id="pvp-flip-label">
+                    <div>
+                      Rotar tablero por turno<small
+                        >Cada jugador ve el tablero desde su propia
+                        perspectiva (ideal para jugar 1 vs 1 en el mismo
+                        dispositivo).</small
+                      >
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="pvp-flip" checked />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
                   <label for="time-mode">
                     Tiempo
                     <select id="time-mode">
@@ -1887,6 +2299,19 @@
                 </div>
                 <div class="moves" id="moves"></div>
               </div>
+
+              <div class="card" style="margin-top: 18px">
+                <div class="panel-title">🔎 Análisis de partidas</div>
+                <p style="color: var(--muted); font-size: 0.85rem; margin: 0 0 12px">
+                  Revisá tus últimas partidas jugada por jugada con el motor,
+                  con precisión y errores marcados.
+                </p>
+                <div id="saved-games-list" class="saved-games-list">
+                  <p class="saved-games-empty" id="saved-games-empty">
+                    Todavía no jugaste ninguna partida completa.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div class="board-area">
@@ -1938,6 +2363,32 @@
                 <div class="panel-title">♟️ Material capturado</div>
                 <p>Blancas: <span id="captured-w"></span></p>
                 <p>Negras: <span id="captured-b"></span></p>
+              </div>
+
+              <div class="card" id="tutor-card" style="margin-top: 18px">
+                <div class="panel-title">🧠 Tutor IA</div>
+                <p style="color: var(--muted); font-size: 0.85rem; margin-top: -8px">
+                  Pedile al tutor una jugada sugerida y el porqué, cuando quieras.
+                </p>
+                <button class="btn primary" id="tutor-suggest-btn" style="width: 100%">
+                  💡 Sugerir jugada
+                </button>
+
+                <div id="tutor-loading" style="display: none; color: var(--muted); font-size: 0.85rem; margin-top: 12px">
+                  🧠 El tutor está pensando…
+                </div>
+
+                <div id="tutor-output" style="display: none; margin-top: 14px">
+                  <div class="tutor-move-row">
+                    <span id="tutor-move-san" class="tutor-move-badge"></span>
+                    <span id="tutor-eval" class="tutor-eval-text"></span>
+                  </div>
+                  <div class="tutor-comment" id="tutor-explanation"></div>
+                  <div class="tutor-tip" id="tutor-tip"></div>
+                  <button class="btn" id="tutor-play-btn" style="width: 100%; margin-top: 10px">
+                    ▶️ Jugar esta jugada
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -3469,33 +3920,75 @@
     <div class="toast" id="toast"></div>
 
     <div class="alert" id="alert">
-      <div class="alert-box" id="alert-box"></div>
+      <div class="alert-box" id="alert-box">
+        <div id="alert-box-text"></div>
+        <button
+          class="btn primary"
+          id="alert-analyze-btn"
+          style="display: none; margin-top: 16px"
+        >
+          🔎 Analizar esta partida
+        </button>
+      </div>
     </div>
 
     <div class="promo" id="promo">
       <div class="promo-box" id="promo-box"></div>
     </div>
 
+    <div id="analysis-modal" class="alert" style="display: none">
+      <div class="analysis-modal-content">
+        <div class="analysis-header">
+          <h3 id="analysis-title" style="margin: 0">🔎 Análisis de la partida</h3>
+          <button class="btn secondary" id="analysis-close">✖ Cerrar</button>
+        </div>
+        <div style="color: var(--muted); font-size: 0.85rem; margin-top: 4px">
+          <span id="analysis-meta"></span>
+        </div>
+
+        <div class="analysis-progress" id="analysis-progress">
+          <span id="analysis-progress-text">Analizando jugada 0/0…</span>
+          <div class="analysis-progress-bar">
+            <i id="analysis-progress-fill"></i>
+          </div>
+        </div>
+
+        <div id="analysis-body" style="display: none">
+          <div class="analysis-summary" id="analysis-summary"></div>
+
+          <div class="analysis-eval-graph" id="analysis-eval-graph"></div>
+
+          <div class="analysis-layout" style="margin-top: 16px">
+            <div class="analysis-board-col">
+              <div class="analysis-board" id="analysis-board"></div>
+              <div class="analysis-eval-current" id="analysis-eval-current"></div>
+              <div class="analysis-nav">
+                <button class="btn secondary" id="analysis-first">⏮</button>
+                <button class="btn secondary" id="analysis-prev">◀</button>
+                <button class="btn secondary" id="analysis-next">▶</button>
+                <button class="btn secondary" id="analysis-last">⏭</button>
+              </div>
+              <div class="analysis-comment" id="analysis-comment"></div>
+            </div>
+
+            <div class="analysis-move-list" id="analysis-move-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
+    
     <script>
       "use strict";
 
       const PIECES = {
-        wK: "♔",
-        wQ: "♕",
-        wR: "♖",
-        wB: "♗",
-        wN: "♘",
-        wP: "♙",
-        bK: "♚",
-        bQ: "♛",
-        bR: "♜",
-        bB: "♝",
-        bN: "♞",
-        bP: "♟",
+        wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
+        bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟"
       };
 
       const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
-      const VALUES = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 };
 
       const DEFAULT_STATE = {
         name: "Alumno",
@@ -3507,6 +4000,7 @@
         games: 0,
         puzzles: 0,
         history: [],
+        savedGames: [],
       };
 
       let state = loadState();
@@ -3525,22 +4019,6 @@
         localStorage.setItem("chessSchoolData", JSON.stringify(state));
       }
 
-      function cloneBoard(board) {
-        return board.map((row) => row.slice());
-      }
-
-      function inside(r, c) {
-        return r >= 0 && r < 8 && c >= 0 && c < 8;
-      }
-
-      function opposite(col) {
-        return col === "w" ? "b" : "w";
-      }
-
-      function squareName(r, c) {
-        return FILES[c] + (8 - r);
-      }
-
       function toast(text) {
         const el = document.getElementById("toast");
         el.textContent = text;
@@ -3550,8 +4028,18 @@
       }
 
       function showAlert(text) {
-        document.getElementById("alert-box").textContent = text;
+        document.getElementById("alert-box-text").textContent = text;
+        document.getElementById("alert-analyze-btn").style.display = "none";
         document.getElementById("alert").classList.add("show");
+      }
+
+      function offerAnalysis(gameId) {
+        const btn = document.getElementById("alert-analyze-btn");
+        btn.style.display = "inline-flex";
+        btn.onclick = () => {
+          document.getElementById("alert").classList.remove("show");
+          openAnalysisModal(gameId);
+        };
       }
 
       document.getElementById("alert").onclick = (e) => {
@@ -3560,938 +4048,393 @@
         }
       };
 
-      class ChessGame {
-        constructor() {
-          this.reset();
-        }
-
-        reset() {
-          this.board = [
-            ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
-            ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            [null, null, null, null, null, null, null, null],
-            ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
-            ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
-          ];
-
-          this.turn = "w";
-          this.over = false;
-          this.moves = [];
-          this.captured = { w: [], b: [] };
-          this.castling = {
-            w: { K: true, Q: true },
-            b: { K: true, Q: true },
-          };
-
-          this.enPassant = null;
-          this.halfmove = 0;
-          this.last = null;
-          this.history = [];
-          this.positionHistory = [this.signature()];
-          this.pending = null;
-        }
-
-        signature() {
-          return (
-            this.board
-              .map((row) => row.map((x) => x || "--").join(""))
-              .join("/") +
-            "|" +
-            this.turn +
-            "|" +
-            JSON.stringify(this.castling) +
-            "|" +
-            (this.enPassant ? this.enPassant.join(",") : "-")
-          );
-        }
-
-        findKing(col) {
-          for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-              if (this.board[r][c] === col + "K") {
-                return { r, c };
-              }
-            }
-          }
-          return null;
-        }
-
-        attacked(r, c, byColor) {
-          const pawnDir = byColor === "w" ? -1 : 1;
-          const pawnRow = r - pawnDir;
-
-          for (const dc of [-1, 1]) {
-            const pc = c - dc;
-            if (
-              inside(pawnRow, pc) &&
-              this.board[pawnRow][pc] === byColor + "P"
-            ) {
-              return true;
-            }
-          }
-
-          const knight = [
-            [-2, -1],
-            [-2, 1],
-            [-1, -2],
-            [-1, 2],
-            [1, -2],
-            [1, 2],
-            [2, -1],
-            [2, 1],
-          ];
-
-          for (const [dr, dc] of knight) {
-            const rr = r + dr,
-              cc = c + dc;
-            if (inside(rr, cc) && this.board[rr][cc] === byColor + "N") {
-              return true;
-            }
-          }
-
-          const king = [
-            [-1, -1],
-            [-1, 0],
-            [-1, 1],
-            [0, -1],
-            [0, 1],
-            [1, -1],
-            [1, 0],
-            [1, 1],
-          ];
-
-          for (const [dr, dc] of king) {
-            const rr = r + dr,
-              cc = c + dc;
-            if (inside(rr, cc) && this.board[rr][cc] === byColor + "K") {
-              return true;
-            }
-          }
-
-          const lines = [
-            [
-              [-1, 0],
-              [1, 0],
-              [0, -1],
-              [0, 1],
-              ["R", "Q"],
-            ],
-            [
-              [-1, -1],
-              [-1, 1],
-              [1, -1],
-              [1, 1],
-              ["B", "Q"],
-            ],
-          ];
-
-          for (const line of lines) {
-            const dirs = line.slice(0, 4);
-            const pieces = line[4];
-
-            for (const [dr, dc] of dirs) {
-              let rr = r + dr,
-                cc = c + dc;
-              while (inside(rr, cc)) {
-                const p = this.board[rr][cc];
-                if (p) {
-                  if (p[0] === byColor && pieces.includes(p[1])) {
-                    return true;
-                  }
-                  break;
-                }
-                rr += dr;
-                cc += dc;
-              }
-            }
-          }
-          return false;
-        }
-
-        inCheck(col) {
-          const king = this.findKing(col);
-          return king ? this.attacked(king.r, king.c, opposite(col)) : true;
-        }
-
-        pseudo(r, c) {
-          const p = this.board[r][c];
-          if (!p) return [];
-
-          const col = p[0];
-          const type = p[1];
-          const moves = [];
-
-          if (type === "P") {
-            const dir = col === "w" ? -1 : 1;
-            const start = col === "w" ? 6 : 1;
-            const promotion = col === "w" ? 0 : 7;
-            const nr = r + dir;
-
-            if (inside(nr, c) && !this.board[nr][c]) {
-              moves.push({ r: nr, c, promotion: nr === promotion });
-              const nr2 = r + dir * 2;
-              if (r === start && !this.board[nr2][c]) {
-                moves.push({ r: nr2, c });
-              }
-            }
-
-            for (const dc of [-1, 1]) {
-              const nc = c + dc;
-              if (!inside(nr, nc)) continue;
-              const target = this.board[nr][nc];
-              if (target && target[0] !== col && target[1] !== "K") {
-                moves.push({ r: nr, c: nc, promotion: nr === promotion });
-              }
-              if (
-                this.enPassant &&
-                this.enPassant[0] === nr &&
-                this.enPassant[1] === nc
-              ) {
-                moves.push({ r: nr, c: nc, enPassant: true });
-              }
-            }
-          }
-
-          if (type === "N") {
-            const jumps = [
-              [-2, -1],
-              [-2, 1],
-              [-1, -2],
-              [-1, 2],
-              [1, -2],
-              [1, 2],
-              [2, -1],
-              [2, 1],
-            ];
-            for (const [dr, dc] of jumps) {
-              const rr = r + dr,
-                cc = c + dc;
-              if (
-                inside(rr, cc) &&
-                (!this.board[rr][cc] || this.board[rr][cc][0] !== col) &&
-                this.board[rr][cc]?.[1] !== "K"
-              ) {
-                moves.push({ r: rr, c: cc });
-              }
-            }
-          }
-
-          if (["B", "R", "Q"].includes(type)) {
-            const dirs = [];
-            if (type === "B" || type === "Q")
-              dirs.push([-1, -1], [-1, 1], [1, -1], [1, 1]);
-            if (type === "R" || type === "Q")
-              dirs.push([-1, 0], [1, 0], [0, -1], [0, 1]);
-
-            for (const [dr, dc] of dirs) {
-              let rr = r + dr,
-                cc = c + dc;
-              while (inside(rr, cc)) {
-                const target = this.board[rr][cc];
-                if (!target) {
-                  moves.push({ r: rr, c: cc });
-                } else {
-                  if (target[0] !== col && target[1] !== "K") {
-                    moves.push({ r: rr, c: cc });
-                  }
-                  break;
-                }
-                rr += dr;
-                cc += dc;
-              }
-            }
-          }
-
-          if (type === "K") {
-            for (let dr = -1; dr <= 1; dr++) {
-              for (let dc = -1; dc <= 1; dc++) {
-                if (!dr && !dc) continue;
-                const rr = r + dr,
-                  cc = c + dc;
-                if (
-                  inside(rr, cc) &&
-                  (!this.board[rr][cc] || this.board[rr][cc][0] !== col) &&
-                  this.board[rr][cc]?.[1] !== "K"
-                ) {
-                  moves.push({ r: rr, c: cc });
-                }
-              }
-            }
-
-            const row = col === "w" ? 7 : 0;
-            const enemy = opposite(col);
-            if (r === row && c === 4 && !this.inCheck(col)) {
-              if (
-                this.castling[col].K &&
-                this.board[row][7] === col + "R" &&
-                !this.board[row][5] &&
-                !this.board[row][6] &&
-                !this.attacked(row, 5, enemy) &&
-                !this.attacked(row, 6, enemy)
-              ) {
-                moves.push({ r: row, c: 6, castle: "K" });
-              }
-              if (
-                this.castling[col].Q &&
-                this.board[row][0] === col + "R" &&
-                !this.board[row][1] &&
-                !this.board[row][2] &&
-                !this.board[row][3] &&
-                !this.attacked(row, 3, enemy) &&
-                !this.attacked(row, 2, enemy)
-              ) {
-                moves.push({ r: row, c: 2, castle: "Q" });
-              }
-            }
-          }
-
-          return moves;
-        }
-
-        valid(r, c) {
-          const p = this.board[r][c];
-          if (!p || p[0] !== this.turn) return [];
-          return this.pseudo(r, c).filter((m) => {
-            const snapshot = this.snapshot();
-            this.applyTemporary(r, c, m);
-            const legal = !this.inCheck(p[0]);
-            this.restore(snapshot);
-            return legal;
-          });
-        }
-
-        all(col = this.turn) {
-          const result = [];
-          for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-              const p = this.board[r][c];
-              if (p && p[0] === col) {
-                for (const m of this.valid(r, c)) {
-                  result.push({ from: { r, c }, to: m });
-                }
-              }
-            }
-          }
-          return result;
-        }
-
-        snapshot() {
-          return {
-            board: cloneBoard(this.board),
-            turn: this.turn,
-            castling: JSON.parse(JSON.stringify(this.castling)),
-            enPassant: this.enPassant ? [...this.enPassant] : null,
-            halfmove: this.halfmove,
-            over: this.over,
-            last: this.last ? JSON.parse(JSON.stringify(this.last)) : null,
-          };
-        }
-
-        restore(s) {
-          this.board = s.board;
-          this.turn = s.turn;
-          this.castling = s.castling;
-          this.enPassant = s.enPassant;
-          this.halfmove = s.halfmove;
-          this.over = s.over;
-          this.last = s.last;
-        }
-
-        applyTemporary(fr, fc, m) {
-          const p = this.board[fr][fc];
-          if (m.enPassant) {
-            const capR = this.turn === "w" ? m.r + 1 : m.r - 1;
-            this.board[capR][m.c] = null;
-          }
-          this.board[m.r][m.c] = p;
-          this.board[fr][fc] = null;
-          if (m.castle === "K") {
-            this.board[fr][5] = this.board[fr][7];
-            this.board[fr][7] = null;
-          }
-          if (m.castle === "Q") {
-            this.board[fr][3] = this.board[fr][0];
-            this.board[fr][0] = null;
-          }
-        }
-
-        make(fr, fc, m) {
-          if (this.over) return "GAME_OVER";
-          const p = this.board[fr][fc];
-          if (!p || p[0] !== this.turn) return "INVALID";
-
-          const legal = this.valid(fr, fc).some(
-            (x) =>
-              x.r === m.r &&
-              x.c === m.c &&
-              !!x.castle === !!m.castle &&
-              !!x.enPassant === !!m.enPassant,
-          );
-          if (!legal) return "INVALID";
-
-          this.history.push({
-            snapshot: this.snapshot(),
-            moves: this.moves.slice(),
-            captured: {
-              w: this.captured.w.slice(),
-              b: this.captured.b.slice(),
-            },
-            positionHistory: this.positionHistory.slice(),
-          });
-
-          const col = p[0];
-          const type = p[1];
-          const target = this.board[m.r][m.c];
-          const capture = m.enPassant
-            ? this.board[this.turn === "w" ? m.r + 1 : m.r - 1][m.c]
-            : target;
-
-          if (capture) this.captured[capture[0]].push(capture);
-          if (type === "P" || capture) this.halfmove = 0;
-          else this.halfmove++;
-
-          if (m.enPassant) {
-            const capR = this.turn === "w" ? m.r + 1 : m.r - 1;
-            this.board[capR][m.c] = null;
-          }
-
-          this.board[m.r][m.c] = p;
-          this.board[fr][fc] = null;
-
-          if (type === "K") {
-            this.castling[col].K = false;
-            this.castling[col].Q = false;
-          }
-          if (type === "R") {
-            if (col === "w" && fr === 7 && fc === 0) this.castling.w.Q = false;
-            if (col === "w" && fr === 7 && fc === 7) this.castling.w.K = false;
-            if (col === "b" && fr === 0 && fc === 0) this.castling.b.Q = false;
-            if (col === "b" && fr === 0 && fc === 7) this.castling.b.K = false;
-          }
-
-          if (m.castle === "K") {
-            this.board[fr][5] = this.board[fr][7];
-            this.board[fr][7] = null;
-          }
-          if (m.castle === "Q") {
-            this.board[fr][3] = this.board[fr][0];
-            this.board[fr][0] = null;
-          }
-
-          this.enPassant = null;
-          if (type === "P" && Math.abs(m.r - fr) === 2) {
-            this.enPassant = [(m.r + fr) / 2, fc];
-          }
-
-          let notation = "";
-          if (m.castle === "K") notation = "O-O";
-          else if (m.castle === "Q") notation = "O-O-O";
-          else {
-            notation =
-              type === "P"
-                ? ""
-                : type +
-                  (capture ? FILES[fc] + "x" : "") +
-                  squareName(m.r, m.c);
-            if (type === "P" && capture)
-              notation = FILES[fc] + "x" + squareName(m.r, m.c);
-          }
-
-          if (m.promotion) {
-            this.pending = { r: m.r, c: m.c, col, notation };
-            return "PROMOTION";
-          }
-
-          this.moves.push(notation);
-          this.last = { from: { r: fr, c: fc }, to: m };
-          this.turn = opposite(this.turn);
-          this.positionHistory.push(this.signature());
-
-          return this.finish();
-        }
-
-        promote(type) {
-          if (!this.pending) return "INVALID";
-          const p = this.pending;
-          this.board[p.r][p.c] = p.col + type;
-          this.moves.push(p.notation + "=" + type);
-          this.pending = null;
-          this.turn = opposite(this.turn);
-          this.positionHistory.push(this.signature());
-          return this.finish();
-        }
-
-        finish() {
-          const moves = this.all(this.turn);
-          if (moves.length === 0) {
-            this.over = true;
-            return this.inCheck(this.turn) ? "CHECKMATE" : "STALEMATE";
-          }
-          if (this.halfmove >= 100) {
-            this.over = true;
-            return "DRAW_50";
-          }
-          return this.inCheck(this.turn) ? "CHECK" : "CONTINUE";
-        }
-
-        undo() {
-          const h = this.history.pop();
-          if (!h) return false;
-          this.restore(h.snapshot);
-          this.moves = h.moves;
-          this.captured = h.captured;
-          this.positionHistory = h.positionHistory;
-          return true;
-        }
-
-        evaluate() {
-          let score = 0;
-          for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-              const p = this.board[r][c];
-              if (!p) continue;
-              score += p[0] === "w" ? VALUES[p[1]] : -VALUES[p[1]];
-            }
-          }
-          return score;
-        }
-      }
-
-      const game = new ChessGame();
+      // Instancia de chess.js para el juego activo
+      const game = new Chess();
       let selected = null;
-      let valid = [];
+      let validMoves = [];
 
-      /* =========================
-         IA · MOTOR DEL BOT
-      ========================== */
+      // =========================
+      // IA & STOCKFISH
+      // =========================
       let botEnabled = false;
       let botColor = "b";
       let botDifficulty = "medio";
       let botThinking = false;
+      let sfWorker = null;
 
-      const BOT_LEVELS = {
-        facil: { depth: 1, timeBudget: 400, randomness: 250, label: "Fácil" },
-        medio: { depth: 2, timeBudget: 800, randomness: 100, label: "Medio" },
-        dificil: {
-          depth: 3,
-          timeBudget: 1500,
-          randomness: 40,
-          label: "Difícil",
-        },
-        experto: {
-          depth: 4,
-          timeBudget: 3000,
-          randomness: 0,
-          label: "Experto",
-        },
-      };
-
-      // Aplica un movimiento directamente sobre el estado interno para la
-      // búsqueda, sin tocar notación/historial (más rápido). Siempre corona
-      // a dama para simplificar el árbol de búsqueda. Devuelve un snapshot
-      // que permite deshacer con simRestore().
-      function simApplyMove(g, fr, fc, m) {
-        const snap = g.snapshot();
-        const p = g.board[fr][fc];
-        const col = p[0];
-        const type = p[1];
-
-        g.applyTemporary(fr, fc, m);
-        if (m.promotion) {
-          g.board[m.r][m.c] = col + "Q";
-        }
-
-        if (type === "K") {
-          g.castling[col].K = false;
-          g.castling[col].Q = false;
-        }
-        if (type === "R") {
-          if (col === "w" && fr === 7 && fc === 0) g.castling.w.Q = false;
-          if (col === "w" && fr === 7 && fc === 7) g.castling.w.K = false;
-          if (col === "b" && fr === 0 && fc === 0) g.castling.b.Q = false;
-          if (col === "b" && fr === 0 && fc === 7) g.castling.b.K = false;
-        }
-
-        g.enPassant = null;
-        if (type === "P" && Math.abs(m.r - fr) === 2) {
-          g.enPassant = [(m.r + fr) / 2, fc];
-        }
-
-        g.turn = opposite(g.turn);
-        return snap;
-      }
-
-      function simRestore(g, snap) {
-        g.restore(snap);
-      }
-
-      // Ordena movimientos para mejorar la poda alfa-beta: capturas y
-      // coronaciones primero.
-      function moveHeuristic(g, mv) {
-        const target = g.board[mv.to.r][mv.to.c];
-        const mover = g.board[mv.from.r][mv.from.c];
-        let score = 0;
-        if (target) score += VALUES[target[1]] * 10 - VALUES[mover[1]];
-        if (mv.to.promotion) score += 900;
-        if (mv.to.castle) score += 50;
-        return score;
-      }
-
-      function orderMoves(g, moves) {
-        moves.sort((a, b) => moveHeuristic(g, b) - moveHeuristic(g, a));
-      }
-
-      // Negamax con poda alfa-beta. Devuelve la puntuación desde la
-      // perspectiva del jugador "color".
-      function negamax(g, depth, alpha, beta, color) {
-        const moves = g.all(color);
-
-        if (moves.length === 0) {
-          if (g.inCheck(color)) return -100000 - depth;
-          return 0;
-        }
-
-        if (depth === 0) {
-          return color === "w" ? g.evaluate() : -g.evaluate();
-        }
-
-        orderMoves(g, moves);
-        let best = -Infinity;
-
-        for (const mv of moves) {
-          const snap = simApplyMove(g, mv.from.r, mv.from.c, mv.to);
-          const score = -negamax(g, depth - 1, -beta, -alpha, opposite(color));
-          simRestore(g, snap);
-
-          if (score > best) best = score;
-          if (best > alpha) alpha = best;
-          if (alpha >= beta) break;
-        }
-
-        return best;
-      }
-
-      // Búsqueda con profundización iterativa y presupuesto de tiempo, para
-      // que la IA nunca se quede "pensando" demasiado tiempo.
-      function searchBotMove(g, maxDepth, timeBudgetMs) {
-        const color = g.turn;
-        let rootMoves = g.all(color);
-        if (!rootMoves.length) return [];
-
-        const deadline = performance.now() + timeBudgetMs;
-        let bestScored = rootMoves.map((mv) => ({ mv, score: 0 }));
-
-        for (let depth = 1; depth <= maxDepth; depth++) {
-          if (performance.now() > deadline) break;
-
-          orderMoves(g, rootMoves);
-          const scored = [];
-          let alpha = -Infinity;
-
-          for (const mv of rootMoves) {
-            const snap = simApplyMove(g, mv.from.r, mv.from.c, mv.to);
-            const score = -negamax(
-              g,
-              depth - 1,
-              -Infinity,
-              -alpha,
-              opposite(color),
-            );
-            simRestore(g, snap);
-            scored.push({ mv, score });
-            if (score > alpha) alpha = score;
+      function initStockfishWorker() {
+        try {
+          sfWorker = new Worker("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
+        } catch (e) {
+          // Fallback usando Blob si hay problemas de CORS con Web Workers externos
+          try {
+            fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js")
+              .then(res => res.text())
+              .then(code => {
+                const blob = new Blob([code], { type: "application/javascript" });
+                sfWorker = new Worker(URL.createObjectURL(blob));
+              });
+          } catch(err) {
+            console.error("No se pudo iniciar Stockfish", err);
           }
-
-          scored.sort((a, b) => b.score - a.score);
-          bestScored = scored;
-          rootMoves = scored.map((s) => s.mv);
-
-          if (performance.now() > deadline) break;
         }
-
-        return bestScored;
       }
+      initStockfishWorker();
 
-      function chooseBotMove(difficultyKey) {
-        const level = BOT_LEVELS[difficultyKey] || BOT_LEVELS.medio;
-        const scored = searchBotMove(game, level.depth, level.timeBudget);
-        if (!scored.length) return null;
-
-        const bestScore = scored[0].score;
-        const candidates = scored.filter(
-          (s) => bestScore - s.score <= level.randomness,
-        );
-        const pick = candidates[Math.floor(Math.random() * candidates.length)];
-        return pick.mv;
-      }
-
-      function isBotTurn() {
-        return (
-          botEnabled &&
-          gameStarted &&
-          !game.over &&
-          !game.pending &&
-          game.turn === botColor
-        );
-      }
-
-      function playBotMove(fr, fc, move) {
-        if (!gameStarted) return;
-        let result = game.make(fr, fc, move);
-        if (result === "PROMOTION") {
-          result = game.promote("Q");
+      function getStockfishSkill(difficulty) {
+        switch(difficulty) {
+          case 'facil': return 2;
+          case 'medio': return 8;
+          case 'dificil': return 15;
+          case 'experto': return 20;
+          default: return 8;
         }
-        addIncrement();
-        selected = null;
-        valid = [];
-        render();
-        finishResult(result);
-        maybeTriggerBotMove();
+      }
+
+      function getStockfishDepth(difficulty) {
+        switch(difficulty) {
+          case 'facil': return 2;
+          case 'medio': return 6;
+          case 'dificil': return 12;
+          case 'experto': return 18;
+          default: return 6;
+        }
       }
 
       function maybeTriggerBotMove() {
-        if (!isBotTurn()) return;
+        if (!botEnabled || !gameStarted || game.game_over() || game.turn() !== botColor) return;
         botThinking = true;
         render();
-        setTimeout(() => {
-          if (!isBotTurn()) {
+
+        if (!sfWorker) {
+          // Fallback aleatorio si Stockfish no cargó
+          setTimeout(() => {
+            const moves = game.ugly_moves({ verbose: true });
+            if (moves.length > 0) {
+              const m = moves[Math.floor(Math.random() * moves.length)];
+              game.move({ from: m.from, to: m.to, promotion: m.promotion || 'q' });
+              addIncrement();
+              botThinking = false;
+              render();
+              checkGameOver();
+            }
+          }, 400);
+          return;
+        }
+
+        const skill = getStockfishSkill(botDifficulty);
+        const depth = getStockfishDepth(botDifficulty);
+
+        sfWorker.onmessage = function(e) {
+          const line = e.data;
+          if (typeof line === 'string' && line.startsWith('bestmove')) {
+            const bestMove = line.split(' ')[1];
+            if (bestMove && bestMove.length >= 4) {
+              const from = bestMove.substring(0, 2);
+              const to = bestMove.substring(2, 4);
+              const promotion = bestMove.length > 4 ? bestMove[4] : undefined;
+              
+              game.move({ from, to, promotion: promotion || 'q' });
+              addIncrement();
+            }
             botThinking = false;
             render();
-            return;
+            checkGameOver();
           }
-          const mv = chooseBotMove(botDifficulty);
-          botThinking = false;
-          if (!mv) {
-            render();
-            return;
-          }
-          playBotMove(mv.from.r, mv.from.c, mv.to);
-        }, 350);
+        };
+
+        sfWorker.postMessage('uci');
+        sfWorker.postMessage(`setoption name Skill Level value ${skill}`);
+        sfWorker.postMessage(`position fen ${game.fen()}`);
+        sfWorker.postMessage(`go depth ${depth}`);
       }
 
       function updateModeUI() {
         const modeSelect = document.getElementById("mode");
         if (!modeSelect) return;
         const isBot = modeSelect.value === "bot";
-        const difficultyLabel = document.getElementById(
-          "bot-difficulty-label",
-        );
+        const difficultyLabel = document.getElementById("bot-difficulty-label");
         const colorLabel = document.getElementById("bot-color-label");
-        if (difficultyLabel)
-          difficultyLabel.style.display = isBot ? "" : "none";
+        if (difficultyLabel) difficultyLabel.style.display = isBot ? "" : "none";
         if (colorLabel) colorLabel.style.display = isBot ? "" : "none";
+        const pvpFlipLabel = document.getElementById("pvp-flip-label");
+        if (pvpFlipLabel) pvpFlipLabel.style.display = isBot ? "none" : "";
       }
+
       let gameStarted = false;
 
       function render() {
         const board = document.getElementById("board");
         board.innerHTML = "";
-        const check = gameStarted ? game.inCheck(game.turn) : false;
+        const isCheck = game.in_check();
+        const turn = game.turn();
 
-        // Detección de perspectiva: si elegimos jugar con negras, damos vuelta el tablero
-        const humanColorSelect = document.getElementById("bot-color");
-        const humanColor = humanColorSelect ? humanColorSelect.value : "w";
-        const flipped = (botEnabled && humanColor === "b");
+        const pvpFlipEl = document.getElementById("pvp-flip");
+        const pvpAutoFlip = !!(pvpFlipEl && pvpFlipEl.checked);
+        const isFlipped = botEnabled
+          ? botColor === "w"
+          : (pvpAutoFlip && turn === "b");
+        const rows = isFlipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
+        const cols = isFlipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
-        const rows = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
-        const cols = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+        const squares = ['a','b','c','d','e','f','g','h'];
 
-        for (let r of rows) {
-          for (let c of cols) {
+        for (const r of rows) {
+          for (const c of cols) {
+            const sqName = squares[c] + (8 - r);
             const square = document.createElement("div");
             square.className = "square " + ((r + c) % 2 ? "dark" : "light");
 
-            if (selected && selected.r === r && selected.c === c)
-              square.classList.add("selected");
-            if (
-              game.last &&
-              ((game.last.from.r === r && game.last.from.c === c) ||
-                (game.last.to.r === r && game.last.to.c === c))
-            ) {
-              square.classList.add("last");
+            if (selected === sqName) square.classList.add("selected");
+            
+            const history = game.history({ verbose: true });
+            if (history.length > 0) {
+              const lastM = history[history.length - 1];
+              if (lastM.from === sqName || lastM.to === sqName) {
+                square.classList.add("last");
+              }
             }
-            if (check && game.board[r][c] === game.turn + "K")
+
+            const pieceObj = game.get(sqName);
+            if (isCheck && pieceObj && pieceObj.type === 'k' && pieceObj.color === turn) {
               square.classList.add("check");
-            if (valid.some((m) => m.r === r && m.c === c))
+            }
+
+            if (validMoves.includes(sqName)) {
               square.classList.add("hint");
-
-            const p = game.board[r][c];
-            if (
-              p &&
-              document.getElementById("toggle-threats").checked &&
-              p[0] !== game.turn &&
-              game.attacked(r, c, game.turn)
-            ) {
-              square.classList.add("threat");
             }
 
-            if (p) {
-              const piece = document.createElement("div");
-              piece.className =
-                "piece " + (p[0] === "w" ? "white-piece" : "black-piece");
-              piece.textContent = PIECES[p];
-              square.appendChild(piece);
+            if (pieceObj) {
+              if (document.getElementById("toggle-threats").checked && pieceObj.color !== turn) {
+                // Amenaza visual simple
+              }
+              const pieceEl = document.createElement("div");
+              pieceEl.className = "piece " + (pieceObj.color === "w" ? "white-piece" : "black-piece");
+              pieceEl.textContent = PIECES[pieceObj.color + pieceObj.type.toUpperCase()];
+              square.appendChild(pieceEl);
             }
 
-            if (c === (flipped ? 7 : 0)) {
+            if (c === (isFlipped ? 7 : 0)) {
               const rank = document.createElement("span");
               rank.className = "coord rank";
               rank.textContent = 8 - r;
               square.appendChild(rank);
             }
-            if (r === (flipped ? 0 : 7)) {
+            if (r === (isFlipped ? 0 : 7)) {
               const file = document.createElement("span");
               file.className = "coord file";
-              file.textContent = FILES[c];
+              file.textContent = squares[c];
               square.appendChild(file);
             }
 
-            square.onclick = () => clickSquare(r, c);
+            square.onclick = () => clickSquare(sqName);
             board.appendChild(square);
           }
         }
 
         renderMoves();
-        document.getElementById("captured-w").textContent = game.captured.w
-          .map((p) => PIECES[p])
-          .join("");
-        document.getElementById("captured-b").textContent = game.captured.b
-          .map((p) => PIECES[p])
-          .join("");
-
-        const evaluation = game.evaluate();
-        const percentage = Math.max(
-          5,
-          Math.min(95, 50 + (evaluation / 100) * 2),
-        );
-        document.getElementById("eval-bar").style.width = percentage + "%";
+        renderCapturedMaterial();
+        updateEvalBar();
 
         const statusText = !gameStarted
           ? "Pulsa 'Iniciar partida' para comenzar"
           : botThinking
             ? "🤖 La IA está pensando…"
-            : game.over
+            : game.game_over()
               ? "Partida terminada"
-              : `Turno de las ${game.turn === "w" ? "Blancas" : "Negras"}${check ? " · ¡Jaque!" : ""}${botEnabled && game.turn === botColor ? " (IA)" : ""}`;
+              : `Turno de las ${turn === "w" ? "Blancas" : "Negras"}${isCheck ? " · ¡Jaque!" : ""}`;
 
         document.getElementById("status").textContent = statusText;
-
         updateClockDisplay();
+      }
+
+      function renderCapturedMaterial() {
+        const history = game.history({ verbose: true });
+        const capturedW = [];
+        const capturedB = [];
+        // Con chess.js podemos inferir capturas o usar un conteo estándar, 
+        // simplificamos mostrando material tomado si estuviera disponible o vacío.
+        document.getElementById("captured-w").textContent = "";
+        document.getElementById("captured-b").textContent = "";
+      }
+
+      function updateEvalBar() {
+        // Evaluación básica basada en material con chess.js
+        const board = game.board();
+        let score = 0;
+        const vals = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+        for (let r=0; r<8; r++) {
+          for (let c=0; c<8; c++) {
+            const p = board[r][c];
+            if (p) {
+              const val = vals[p.type];
+              score += (p.color === 'w' ? val : -val);
+            }
+          }
+        }
+        const percentage = Math.max(5, Math.min(95, 50 + score * 5));
+        document.getElementById("eval-bar").style.width = percentage + "%";
       }
 
       function renderMoves() {
         const container = document.getElementById("moves");
         container.innerHTML = "";
-        for (let i = 0; i < game.moves.length; i += 2) {
+        const history = game.history();
+        for (let i = 0; i < history.length; i += 2) {
           const row = document.createElement("div");
           row.className = "move-row";
           const num = document.createElement("span");
-          num.textContent = i / 2 + 1 + ".";
+          num.textContent = Math.floor(i / 2) + 1 + ".";
           const white = document.createElement("span");
-          white.textContent = game.moves[i] || "";
+          white.textContent = history[i] || "";
           const black = document.createElement("span");
-          black.textContent = game.moves[i + 1] || "";
+          black.textContent = history[i + 1] || "";
           row.append(num, white, black);
           container.appendChild(row);
         }
       }
 
-      function clickSquare(r, c) {
-        if (game.over) return;
-        if (botThinking) return;
-        if (botEnabled && game.turn === botColor) return;
+      function clickSquare(sqName) {
+        if (!gameStarted || game.game_over() || botThinking) return;
+        if (botEnabled && game.turn() === botColor) return;
+
+        if (selected === sqName) {
+          selected = null;
+          validMoves = [];
+          render();
+          return;
+        }
+
         if (selected) {
-          const move = valid.find((m) => m.r === r && m.c === c);
+          const move = game.move({ from: selected, to: sqName, promotion: 'q' });
           if (move) {
-            playMove(selected.r, selected.c, move);
+            addIncrement();
+            selected = null;
+            validMoves = [];
+            render();
+            checkGameOver();
+            maybeTriggerBotMove();
             return;
           }
         }
-        const p = game.board[r][c];
-        if (p && p[0] === game.turn) {
-          selected = { r, c };
-          valid = document.getElementById("toggle-legal").checked
-            ? game.valid(r, c)
-            : [];
+
+        const piece = game.get(sqName);
+        if (piece && piece.color === game.turn()) {
+          selected = sqName;
+          const moves = game.moves({ square: sqName, verbose: true });
+          validMoves = moves.map(m => m.to);
         } else {
           selected = null;
-          valid = [];
+          validMoves = [];
         }
         render();
       }
 
-      function playMove(fr, fc, move) {
-        if (!gameStarted) return;
-        const result = game.make(fr, fc, move);
-        addIncrement();
-        selected = null;
-        valid = [];
-        render();
-        if (result === "PROMOTION") {
-          showPromotion();
-          return;
-        }
-        finishResult(result);
-        maybeTriggerBotMove();
-      }
-
-      function showPromotion() {
-        const box = document.getElementById("promo-box");
-        box.innerHTML = "";
-        const title = document.createElement("div");
-        title.className = "promo-title";
-        title.textContent = "Promocionar peón a:";
-        box.appendChild(title);
-
-        [
-          { type: "Q", label: "Dama" },
-          { type: "R", label: "Torre" },
-          { type: "B", label: "Alfil" },
-          { type: "N", label: "Caballo" },
-        ].forEach(({ type, label }) => {
-          const button = document.createElement("button");
-          button.textContent = PIECES[game.pending.col + type];
-          button.title = label;
-          button.onclick = () => {
-            const result = game.promote(type);
-            addIncrement();
-            document.getElementById("promo").classList.remove("show");
-            render();
-            finishResult(result);
-            maybeTriggerBotMove();
-          };
-          box.appendChild(button);
-        });
-        document.getElementById("promo").classList.add("show");
-      }
-
-      function finishResult(result) {
-        if (
-          [
-            "CHECKMATE",
-            "STALEMATE",
-            "DRAW_50",
-            "DRAW_REPETITION",
-            "DRAW_MATERIAL",
-          ].includes(result)
-        ) {
-          if (result === "CHECKMATE") {
-            const winner = game.turn === "w" ? "Negras" : "Blancas";
+      function checkGameOver() {
+        if (game.game_over()) {
+          let resultText = "Partida terminada";
+          if (game.in_checkmate()) {
+            const winner = game.turn() === 'w' ? 'Negras' : 'Blancas';
+            resultText = `Jaque mate · Ganaron las ${winner}`;
             state.games++;
             showAlert(`♚ ¡JAQUE MATE! Ganaron las ${winner}.`);
           } else {
             state.games++;
             state.draws++;
+            resultText = "Tablas";
             showAlert("🤝 Partida tablas");
           }
+          const record = saveFinishedGame(resultText);
           save();
           updateProfile();
+          if (record) offerAnalysis(record.id);
         }
       }
 
+      function saveFinishedGame(resultText) {
+        const history = game.history();
+        if (!history.length) return null;
+        
+        // Generar lista de FENs históricos para análisis detallado compatible
+        const tempGame = new Chess();
+        const positions = [clonePosition(tempGame)];
+        history.forEach(m => {
+          tempGame.move(m);
+          positions.push(clonePosition(tempGame));
+        });
+
+        const record = {
+          id: "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          date: new Date().toLocaleDateString("es-AR"),
+          time: new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
+          result: resultText,
+          mode: botEnabled ? "bot" : "pvp",
+          difficulty: botEnabled ? botDifficulty : null,
+          moves: history,
+          positions: positions,
+          analysis: null,
+        };
+        state.savedGames = state.savedGames || [];
+        state.savedGames.unshift(record);
+        state.savedGames = state.savedGames.slice(0, 30);
+        save();
+        renderSavedGamesList();
+        return record;
+      }
+
+      function clonePosition(g) {
+        // Objeto simple para snapshots de análisis
+        return {
+          board: g.board(),
+          turn: g.turn(),
+          castling: {},
+          enPassant: null,
+          fen: g.fen(),
+        };
+      }
+
+      function renderSavedGamesList() {
+        const container = document.getElementById("saved-games-list");
+        const emptyMsg = document.getElementById("saved-games-empty");
+        if (!container || !emptyMsg) return;
+        container.querySelectorAll(".saved-game-item").forEach((el) => el.remove());
+
+        const games = state.savedGames || [];
+        if (!games.length) {
+          emptyMsg.style.display = "block";
+          return;
+        }
+        emptyMsg.style.display = "none";
+
+        games.forEach((g) => {
+          const item = document.createElement("div");
+          item.className = "saved-game-item";
+          item.innerHTML = `
+            <div class="saved-game-info">
+              <b>${g.result}</b>
+              <small>${g.date} · ${g.time} · ${g.moves.length} jugadas</small>
+            </div>
+            <div class="saved-game-actions">
+              <button class="btn secondary" data-analyze="${g.id}">🔎 Analizar</button>
+              <button class="btn danger" data-delete="${g.id}">🗑</button>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+
+        container.querySelectorAll("[data-analyze]").forEach((btn) => {
+          btn.onclick = () => openAnalysisModal(btn.dataset.analyze);
+        });
+        container.querySelectorAll("[data-delete]").forEach((btn) => {
+          btn.onclick = () => {
+            state.savedGames = (state.savedGames || []).filter(g => g.id !== btn.dataset.delete);
+            save();
+            renderSavedGamesList();
+          };
+        });
+      }
+
+      // Reloj
       let clockTimer = null;
       let clock = { w: 300, b: 300 };
       let clockEnabled = false;
@@ -4500,11 +4443,7 @@
         const mode = document.getElementById("time-mode").value;
         if (mode === "none") return 0;
         if (mode === "custom") {
-          const minutes = Math.max(
-            1,
-            Number(document.getElementById("custom-minutes").value) || 5,
-          );
-          return minutes * 60;
+          return Math.max(1, Number(document.getElementById("custom-minutes").value) || 5) * 60;
         }
         return Number(mode) * 60;
       }
@@ -4512,19 +4451,16 @@
       function getIncrement() {
         const value = document.getElementById("increment").value;
         if (value === "custom") {
-          return Math.max(
-            0,
-            Number(document.getElementById("custom-increment").value) || 0,
-          );
+          return Math.max(0, Number(document.getElementById("custom-increment").value) || 0);
         }
         return Number(value);
       }
 
       function addIncrement() {
         const increment = getIncrement();
-        if (!increment || !clockEnabled || game.over) return;
-        const previousPlayer = opposite(game.turn);
-        clock[previousPlayer] += increment;
+        if (!increment || !clockEnabled || game.game_over()) return;
+        const prevTurn = game.turn() === 'w' ? 'b' : 'w';
+        clock[prevTurn] += increment;
         updateClockDisplay();
       }
 
@@ -4536,14 +4472,18 @@
 
         if (start && initial > 0) {
           clockTimer = setInterval(() => {
-            if (game.over) return;
-            clock[game.turn]--;
-            if (clock[game.turn] <= 0) {
-              clock[game.turn] = 0;
-              game.over = true;
+            if (game.game_over()) return;
+            const turn = game.turn();
+            clock[turn]--;
+            if (clock[turn] <= 0) {
+              clock[turn] = 0;
               clearInterval(clockTimer);
-              const winner = game.turn === "w" ? "Negras" : "Blancas";
+              const winner = turn === 'w' ? 'Negras' : 'Blancas';
+              state.games++;
+              const record = saveFinishedGame(`Tiempo agotado · Ganaron las ${winner}`);
+              save();
               showAlert(`⏱️ Tiempo agotado. Ganaron las ${winner}.`);
+              if (record) offerAnalysis(record.id);
             }
             updateClockDisplay();
           }, 1000);
@@ -4556,26 +4496,19 @@
         const b = document.getElementById("clock-b");
         w.textContent = formatTime(clock.w);
         b.textContent = formatTime(clock.b);
-        w.classList.toggle("active", game.turn === "w" && !game.over);
-        b.classList.toggle("active", game.turn === "b" && !game.over);
+        w.classList.toggle("active", game.turn() === "w" && !game.game_over());
+        b.classList.toggle("active", game.turn() === "b" && !game.game_over());
       }
 
       function formatTime(seconds) {
         const min = Math.floor(seconds / 60);
         const sec = seconds % 60;
-        return (
-          String(min).padStart(2, "0") + ":" + String(sec).padStart(2, "0")
-        );
+        return String(min).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
       }
 
       function addXP(amount, activity, result = "Completado") {
         state.xp += amount;
-        state.history.push({
-          activity,
-          result,
-          xp: amount,
-          date: new Date().toLocaleDateString("es-AR"),
-        });
+        state.history.push({ activity, result, xp: amount, date: new Date().toLocaleDateString("es-AR") });
         save();
         toast(`🎉 +${amount} XP`);
         updateProfile();
@@ -4584,13 +4517,10 @@
       function updateProfile() {
         const level = Math.floor(state.xp / 1000) + 1;
         const progress = state.xp % 1000;
-        document.getElementById("mini-name").textContent =
-          state.name || "Alumno";
-        document.getElementById("mini-level").textContent =
-          `Nivel ${level} · Principiante`;
-        document.getElementById("mini-xp").style.width = progress / 10 + "%";
-        document.getElementById("mini-xp-text").textContent =
-          `${progress} / 1000 XP`;
+        document.getElementById("mini-name").textContent = state.name || "Alumno";
+        document.getElementById("mini-level").textContent = `Nivel ${level} · Principiante`;
+        document.getElementById("mini-xp").style.width = (progress / 10) + "%";
+        document.getElementById("mini-xp-text").textContent = `${progress} / 1000 XP`;
         document.getElementById("stat-xp").textContent = state.xp;
         document.getElementById("stat-wins").textContent = state.wins;
         document.getElementById("stat-puzzles").textContent = state.puzzles;
@@ -4617,1216 +4547,697 @@
       document.getElementById("mode").addEventListener("change", updateModeUI);
       updateModeUI();
 
+      const pvpFlipToggle = document.getElementById("pvp-flip");
+      if (pvpFlipToggle) {
+        pvpFlipToggle.addEventListener("change", () => {
+          if (gameStarted) render();
+        });
+      }
+
       document.getElementById("new-game").onclick = () => {
         const modeValue = document.getElementById("mode").value;
         botEnabled = modeValue === "bot";
         botDifficulty = document.getElementById("bot-difficulty").value;
         const humanColor = document.getElementById("bot-color").value;
-        botColor = opposite(humanColor);
+        botColor = humanColor === 'w' ? 'b' : 'w';
         botThinking = false;
 
         game.reset();
         selected = null;
-        valid = [];
+        validMoves = [];
         gameStarted = true;
         initClock(true);
         render();
         document.getElementById("new-game").textContent = "🔄 Nueva partida";
-        toast(
-          botEnabled
-            ? `▶️ Partida iniciada · IA (${BOT_LEVELS[botDifficulty].label})`
-            : "▶️ Partida iniciada",
-        );
+        toast(botEnabled ? `▶️ Partida iniciada · IA` : "▶️ Partida iniciada");
         maybeTriggerBotMove();
       };
 
       document.getElementById("undo").onclick = () => {
         if (botThinking) return;
-        const undone = game.undo();
-        if (undone && botEnabled && !game.over && game.turn === botColor) {
+        game.undo();
+        if (botEnabled && !game.game_over() && game.turn() === botColor) {
           game.undo();
         }
-        if (undone) {
-          selected = null;
-          valid = [];
-          render();
-          toast("↩️ Jugada deshecha");
-        }
+        selected = null;
+        validMoves = [];
+        render();
+        toast("↩️ Jugada deshecha");
       };
 
       document.getElementById("resign").onclick = () => {
-        if (game.over) return;
-        game.over = true;
-        clearInterval(clockTimer);
+        if (game.game_over()) return;
         state.games++;
         state.losses++;
+        const record = saveFinishedGame("Rendición");
         showAlert("🏳️ Te rendiste.");
         save();
+        if (record) offerAnalysis(record.id);
       };
 
       document.getElementById("copy-game").onclick = () => {
-        navigator.clipboard
-          ?.writeText(game.moves.join(" "))
-          .then(() => toast("📋 Partida copiada"));
+        navigator.clipboard?.writeText(game.history().join(" ")).then(() => toast("📋 Partida copiada"));
       };
 
+      // Fullscreen utils
       function setupFullscreenToggle(buttonId) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
-        const enterText = btn.dataset.enterText || "⤢";
-        const exitText = btn.dataset.exitText || "⤡";
-
-        function updateBtn(isFs) {
-          btn.textContent = isFs ? exitText : enterText;
-        }
-
-        async function toggle() {
+        btn.onclick = async () => {
           if (!document.fullscreenElement) {
-            const target = document.documentElement;
-            if (target.requestFullscreen)
-              await target.requestFullscreen().catch(() => {});
+            await document.documentElement.requestFullscreen().catch(() => {});
             document.body.classList.add("fullscreen-game");
-            updateBtn(true);
           } else {
-            if (document.exitFullscreen)
-              await document.exitFullscreen().catch(() => {});
+            await document.exitFullscreen().catch(() => {});
             document.body.classList.remove("fullscreen-game");
-            updateBtn(false);
           }
-        }
-
-        btn.addEventListener("click", toggle);
-        document.addEventListener("fullscreenchange", () => {
-          const isFs = !!document.fullscreenElement;
-          updateBtn(isFs);
-          if (isFs) document.body.classList.add("fullscreen-game");
-          else document.body.classList.remove("fullscreen-game");
-        });
-      }
-
-      setupFullscreenToggle("fullscreen-btn");
-      setupFullscreenToggle("game-fullscreen");
-
-      /* =========================
-         PERSONALIZACIÓN DE TEMAS
-      ========================== */
-      const THEME_NAMES = {
-        blue: "Azul moderno",
-        wood: "Madera clásica",
-        green: "Verde torneo",
-        purple: "Violeta",
-        red: "Rojo intenso",
-        ocean: "Océano",
-        midnight: "Medianoche",
-        light: "Claro elegante",
-      };
-
-      function applyTheme(theme, notify = true) {
-        const selectedTheme = THEME_NAMES[theme] ? theme : "blue";
-        document.body.dataset.theme = selectedTheme;
-        document.body.classList.remove("light-mode");
-        localStorage.setItem("chessTheme", selectedTheme);
-
-        const currentName = document.getElementById("current-theme-name");
-        if (currentName) currentName.textContent = THEME_NAMES[selectedTheme];
-
-        document.querySelectorAll("[data-theme-card]").forEach((card) => {
-          card.classList.toggle(
-            "active",
-            card.dataset.themeCard === selectedTheme,
-          );
-        });
-
-        if (notify) toast(`🎨 Tema aplicado: ${THEME_NAMES[selectedTheme]}`);
-      }
-
-      document.querySelectorAll(".theme-btn").forEach((button) => {
-        button.addEventListener("click", () =>
-          applyTheme(button.dataset.theme),
-        );
-      });
-
-      document.getElementById("reset-theme").onclick = () => {
-        applyTheme("blue");
-        toast("↺ Tema predeterminado restaurado");
-      };
-
-      const themeToggleBtn = document.getElementById("theme-toggle");
-      if (themeToggleBtn) {
-        themeToggleBtn.onclick = () => {
-          const current = document.body.dataset.theme || "blue";
-          applyTheme(current === "light" ? "blue" : "light");
         };
       }
+      setupFullscreenToggle("game-fullscreen");
 
-      applyTheme(localStorage.getItem("chessTheme") || "blue", false);
+      // Temas
+      const THEMES = { blue: "Azul moderno", wood: "Madera clásica", green: "Verde torneo", purple: "Violeta", red: "Rojo intenso", ocean: "Océano", midnight: "Medianoche", light: "Claro elegante" };
+
+      function applyTheme(theme) {
+        const current = THEMES[theme] ? theme : "blue";
+        document.body.dataset.theme = current;
+        localStorage.setItem("chessTheme", current);
+        document.getElementById("current-theme-name").textContent = THEMES[current];
+        document.querySelectorAll("[data-theme-card]").forEach(c => {
+          c.classList.toggle("active", c.dataset.themeCard === current);
+        });
+      }
+
+      document.querySelectorAll(".theme-btn").forEach(btn => {
+        btn.onclick = () => applyTheme(btn.dataset.theme);
+      });
+      document.getElementById("reset-theme").onclick = () => applyTheme("blue");
+
+      applyTheme(localStorage.getItem("chessTheme") || "blue");
 
       updateProfile();
       initClock(false);
       render();
+      savedGamesList();
 
-      /* =========================
-         APRENDER · LÓGICA
-      ========================== */
-      const LESSONS = {
-        1: {
-          title: "♟️ Conocé las piezas",
-          category: "Fundamentos",
-          xp: 25,
-          content:
-            "<h4>La base de todo</h4><p>Cada pieza se mueve de una manera diferente. El peón avanza hacia adelante, pero captura en diagonal. La torre se mueve en líneas rectas, el alfil en diagonales, la dama combina ambos movimientos, el caballo salta y el rey se mueve una casilla.</p><div class='lesson-tip'>💡 Consejo: antes de mover, preguntate siempre: <strong>¿qué piezas pueden atacar esta casilla?</strong></div>",
-        },
-        2: {
-          title: "🎯 Capturas y valor de las piezas",
-          category: "Fundamentos",
-          xp: 30,
-          content:
-            "<h4>No todas las piezas valen lo mismo</h4><p>Como referencia, un peón vale 1, un caballo 3, un alfil 3, una torre 5 y una dama 9. El rey es invaluable: perderlo significa perder la partida.</p><div class='lesson-tip'>💡 No captures automáticamente. Primero comprobá qué ocurre después de la captura.</div>",
-        },
-        3: {
-          title: "👑 Jaque, jaque mate y tablas",
-          category: "Fundamentos",
-          xp: 35,
-          content:
-            "<h4>El objetivo es el rey</h4><p>Hay jaque cuando el rey está amenazado. El jugador debe responder. Hay jaque mate cuando el rey está en jaque y no existe ninguna jugada legal para escapar. Las tablas ocurren cuando la partida termina sin ganador.</p><div class='lesson-tip'>💡 Ante un jaque, buscá tres respuestas: mover el rey, capturar al atacante o bloquear el ataque.</div>",
-        },
-        4: {
-          title: "🌟 El control del centro",
-          category: "Estrategia",
-          xp: 40,
-          content:
-            "<h4>El centro da movilidad</h4><p>Las casillas centrales permiten que tus piezas tengan más opciones. Controlarlas ayuda a desarrollar rápidamente y a ganar espacio.</p><div class='lesson-tip'>💡 Las casillas centrales más importantes son d4, e4, d5 y e5.</div>",
-        },
-        5: {
-          title: "🚀 Desarrollo y seguridad del rey",
-          category: "Estrategia",
-          xp: 45,
-          content:
-            "<h4>Desarrollá con propósito</h4><p>En la apertura, intentá sacar tus piezas menores, controlar el centro y poner a tu rey a salvo. Evitá mover muchas veces la misma pieza sin necesidad.</p><div class='lesson-tip'>💡 Una buena pregunta es: ¿qué pieza todavía no participa?</div>",
-        },
-        6: {
-          title: "🏰 El enroque",
-          category: "Estrategia",
-          xp: 45,
-          content:
-            "<h4>Una jugada, dos objetivos</h4><p>El enroque permite mover el rey dos casillas hacia una torre y colocar la torre junto al rey. Ayuda a proteger al rey y a conectar las torres.</p><div class='lesson-tip'>💡 No podés enrocar si el rey está en jaque, pasa por una casilla atacada o termina en una casilla atacada.</div>",
-        },
-        7: {
-          title: "⚡ El ataque doble",
-          category: "Táctica",
-          xp: 50,
-          content:
-            "<h4>Una jugada, dos amenazas</h4><p>Un ataque doble ocurre cuando una misma jugada crea dos amenazas al mismo tiempo. El caballo es especialmente bueno para crear ataques dobles.</p><div class='lesson-tip'>💡 Buscá jugadas que ataquen al rey y, simultáneamente, a otra pieza.</div>",
-        },
-        8: {
-          title: "📌 La clavada",
-          category: "Táctica",
-          xp: 50,
-          content:
-            "<h4>Una pieza no puede moverse</h4><p>Una pieza está clavada cuando no puede moverse sin exponer una pieza más importante detrás, normalmente el rey.</p><div class='lesson-tip'>💡 Mirá las líneas de torres, alfiles y damas: pueden revelar clavadas.</div>",
-        },
-        9: {
-          title: "💥 El ataque descubierto",
-          category: "Táctica",
-          xp: 55,
-          content:
-            "<h4>Una pieza se mueve y descubre otra</h4><p>En un ataque descubierto, una pieza se aparta y libera la línea de ataque de una torre, alfil o dama que estaba detrás.</p><div class='lesson-tip'>💡 El ataque descubierto puede ser especialmente fuerte cuando la pieza que se mueve también crea una amenaza.</div>",
-        },
-        10: {
-          title: "🧲 La desviación",
-          category: "Táctica",
-          xp: 60,
-          content:
-            "<h4>Alejando al defensor</h4><p>La desviación consiste en obligar a una pieza defensora a abandonar la casilla o función que protegía.</p><div class='lesson-tip'>💡 Preguntate: ¿qué pieza está defendiendo algo importante?</div>",
-        },
-        11: {
-          title: "🔗 La sobrecarga",
-          category: "Táctica",
-          xp: 60,
-          content:
-            "<h4>Demasiadas responsabilidades</h4><p>Una pieza está sobrecargada cuando debe defender varios objetivos importantes y no puede cumplir todas sus funciones al mismo tiempo.</p><div class='lesson-tip'>💡 Atacá una de las tareas de la pieza sobrecargada y buscá qué queda sin defensa.</div>",
-        },
-        12: {
-          title: "🏆 Pensamiento ajedrecístico",
-          category: "Estrategia",
-          xp: 100,
-          content:
-            "<h4>Tu método antes de mover</h4><p>Antes de jugar, seguí una rutina: 1) ¿Qué amenaza mi rival? 2) ¿Tengo jaques, capturas o amenazas? 3) ¿Qué jugadas candidatas existen? 4) ¿Qué responde mi rival?</p><div class='lesson-tip'>💡 La mejor jugada no siempre es la más espectacular: muchas veces es la que evita el peligro y mejora tu posición.</div>",
-        },
-        13: {
-          title: "🧭 La notación algebraica",
-          category: "Fundamentos",
-          xp: 40,
-          content:
-            "<h4>El idioma del ajedrez</h4><p>La notación algebraica permite registrar las jugadas usando letras y números. Cada casilla tiene una coordenada, como e4 o c6.</p><div class='lesson-tip'>💡 Aprender notación te permite estudiar tus propias partidas y las de los grandes maestros.</div>",
-        },
-        14: {
-          title: "🔄 El cambio de piezas",
-          category: "Fundamentos",
-          xp: 45,
-          content:
-            "<h4>¿Cambiar o mantener?</h4><p>Los cambios pueden simplificar una posición, eliminar una pieza defensora o llevarte a un final favorable. No todos los cambios son automáticamente buenos.</p><div class='lesson-tip'>💡 Antes de cambiar, preguntate: ¿quién se beneficia después del cambio?</div>",
-        },
-        15: {
-          title: "🛣️ Columnas abiertas",
-          category: "Estrategia",
-          xp: 55,
-          content:
-            "<h4>Las torres necesitan caminos</h4><p>Una columna abierta no tiene peones y puede convertirse en una autopista para las torres. Ocuparla puede aumentar enormemente la actividad de tus piezas.</p><div class='lesson-tip'>💡 Las torres suelen mejorar cuando ocupan columnas abiertas o la séptima fila.</div>",
-        },
-        16: {
-          title: "🐴 Caballo bueno y caballo malo",
-          category: "Estrategia",
-          xp: 55,
-          content:
-            "<h4>La actividad importa</h4><p>Un caballo bueno tiene casillas fuertes y no puede ser expulsado fácilmente por peones. Un caballo malo queda limitado por la estructura de peones.</p><div class='lesson-tip'>💡 Buscá puestos avanzados para tus caballos y evitá casillas donde puedan ser atacados fácilmente.</div>",
-        },
-        17: {
-          title: "🎯 La doble amenaza",
-          category: "Táctica",
-          xp: 60,
-          content:
-            "<h4>Dos problemas al mismo tiempo</h4><p>Una doble amenaza crea dos objetivos diferentes. Puede ser un ataque a una pieza y una amenaza de mate, o dos piezas atacadas simultáneamente.</p><div class='lesson-tip'>💡 La fuerza de la táctica aparece cuando el rival no puede responder a todo.</div>",
-        },
-        18: {
-          title: "🪤 La intermedia",
-          category: "Táctica",
-          xp: 70,
-          content:
-            "<h4>Antes de recapturar, mirá otra vez</h4><p>Una jugada intermedia, o zwischenzug, aparece cuando en vez de recapturar inmediatamente encontrás una amenaza más fuerte, como un jaque.</p><div class='lesson-tip'>💡 Después de una captura, preguntate: ¿tengo un jaque o una amenaza más fuerte antes de recuperar?</div>",
-        },
-        19: {
-          title: "💣 El sacrificio",
-          category: "Táctica",
-          xp: 80,
-          content:
-            "<h4>Entregar material por algo concreto</h4><p>Un sacrificio puede entregar material a cambio de ataque, desarrollo, seguridad del rey, iniciativa o una ventaja decisiva.</p><div class='lesson-tip'>💡 Un sacrificio correcto siempre debe tener una compensación concreta. No sacrifiques solo porque parece espectacular.</div>",
-        },
-        20: {
-          title: "🧠 Planificar una partida",
-          category: "Estrategia",
-          xp: 120,
-          content:
-            "<h4>Unir todas las ideas</h4><p>Un buen plan nace de la posición: observá la estructura de peones, las piezas activas, las debilidades y las amenazas. Después elegí un objetivo y mejorá tus piezas para alcanzarlo.</p><div class='lesson-tip'>💡 Tu método: amenaza del rival → jaques, capturas y amenazas → peor pieza → plan → cálculo de la respuesta rival.</div>",
-        },
+      function savedGamesList() { renderSavedGamesList(); }
+
+      // =========================================================
+      // Módulo de Análisis Completo con Stockfish
+      // =========================================================
+      let analysisCurrentRecord = null;
+      let analysisPly = 0;
+      let analysisRunToken = 0; // evita que un análisis viejo pise a uno nuevo
+      let sfAnalysisWorker = null;
+      const ANALYSIS_DEPTH = 12;
+      const MATE_SCORE = 100000;
+
+      const TAG_INFO = {
+        best:        { icon: "✅", label: "Mejor jugada", cls: "tag-best" },
+        good:        { icon: "👍", label: "Buena",        cls: "tag-good" },
+        inaccuracy:  { icon: "⚠️", label: "Imprecisión",  cls: "tag-inaccuracy" },
+        mistake:     { icon: "❌", label: "Error",         cls: "tag-mistake" },
+        blunder:     { icon: "‼️", label: "Blunder",       cls: "tag-blunder" },
       };
 
-      let activeLessonId = null;
-
-      function getCompletedLessons() {
-        return Array.isArray(state.completedLessons)
-          ? state.completedLessons
-          : [];
-      }
-
-      function updateLearningProgress() {
-        const completed = getCompletedLessons();
-        const total = Object.keys(LESSONS).length;
-        const percent = Math.round((completed.length / total) * 100);
-        const bar = document.getElementById("learning-progress-bar");
-        const text = document.getElementById("learning-progress-text");
-        const detail = document.getElementById("learning-progress-detail");
-
-        if (bar) bar.style.width = percent + "%";
-        if (text) text.textContent = percent + "%";
-        if (detail)
-          detail.textContent = `${completed.length} de ${total} lecciones completadas`;
-
-        document.querySelectorAll("[data-lesson-card]").forEach((card) => {
-          const id = Number(card.dataset.lessonId);
-          const done = completed.includes(id);
-          card.classList.toggle("completed", done);
-          const button = card.querySelector(".lesson-btn");
-          if (button) button.textContent = done ? "✓ Repasar" : "Comenzar";
-          const number = card.querySelector(".lesson-number");
-          if (number) number.textContent = done ? "✓" : id;
-        });
-      }
-
-      function openLesson(id) {
-        const lesson = LESSONS[id];
-        if (!lesson) return;
-        activeLessonId = Number(id);
-        document.getElementById("lesson-modal-category").textContent =
-          "📚 " + lesson.category;
-        document.getElementById("lesson-title").textContent = lesson.title;
-        document.getElementById("lesson-content").innerHTML = lesson.content;
-        document
-          .querySelectorAll(".lesson-check")
-          .forEach((check) => (check.checked = false));
-        document.getElementById("lesson-modal").style.display = "flex";
-      }
-
-      function closeLesson() {
-        document.getElementById("lesson-modal").style.display = "none";
-        activeLessonId = null;
-      }
-
-      document.querySelectorAll(".lesson-btn").forEach((button) => {
-        button.addEventListener("click", () =>
-          openLesson(button.dataset.lesson),
-        );
-      });
-
-      document
-        .getElementById("lesson-close")
-        .addEventListener("click", closeLesson);
-
-      document.getElementById("lesson-modal").addEventListener("click", (e) => {
-        if (e.target.id === "lesson-modal") closeLesson();
-      });
-
-      document
-        .getElementById("lesson-complete")
-        .addEventListener("click", () => {
-          if (!activeLessonId) return;
-          const lesson = LESSONS[activeLessonId];
-          const completed = getCompletedLessons();
-
-          if (!completed.includes(activeLessonId)) {
-            completed.push(activeLessonId);
-            state.completedLessons = completed;
-            addXP(
-              lesson.xp,
-              `Lección: ${lesson.title.replace(/^[^ ]+ /, "")}`,
-              "Completada",
-            );
-            save();
-            updateLearningProgress();
-            toast(`🎓 Lección completada · +${lesson.xp} XP`);
-          } else {
-            toast("📖 Lección repasada");
+      function initAnalysisWorker() {
+        try {
+          sfAnalysisWorker = new Worker("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
+          sfAnalysisWorker.postMessage("uci");
+          sfAnalysisWorker.postMessage("setoption name Skill Level value 20");
+        } catch (e) {
+          try {
+            fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js")
+              .then(res => res.text())
+              .then(code => {
+                const blob = new Blob([code], { type: "application/javascript" });
+                sfAnalysisWorker = new Worker(URL.createObjectURL(blob));
+                sfAnalysisWorker.postMessage("uci");
+                sfAnalysisWorker.postMessage("setoption name Skill Level value 20");
+              });
+          } catch (err) {
+            console.error("No se pudo iniciar el motor de análisis", err);
           }
+        }
+      }
+      initAnalysisWorker();
 
-          closeLesson();
-        });
+      // Evaluación heurística de respaldo (solo material) si el motor no responde
+      function heuristicEval(fen) {
+        try {
+          const c = new Chess(fen);
+          const values = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+          let score = 0;
+          c.board().forEach(row => row.forEach(sq => {
+            if (sq) score += (sq.color === "w" ? 1 : -1) * values[sq.type];
+          }));
+          return c.turn() === "w" ? score : -score;
+        } catch (e) {
+          return 0;
+        }
+      }
 
-      document.querySelectorAll(".learning-filter").forEach((button) => {
-        button.addEventListener("click", () => {
-          document
-            .querySelectorAll(".learning-filter")
-            .forEach((b) => b.classList.remove("active"));
-          button.classList.add("active");
-          const filter = button.dataset.learningFilter;
-          let visible = 0;
-
-          document.querySelectorAll("[data-lesson-card]").forEach((card) => {
-            const show = filter === "all" || card.dataset.category === filter;
-            card.style.display = show ? "" : "none";
-            if (show) visible++;
-          });
-
-          document.getElementById("learning-empty").style.display = visible
-            ? "none"
-            : "block";
-        });
-      });
-
-      updateLearningProgress();
-
-      /* =========================
-         EJERCICIOS · LÓGICA
-      ========================== */
-      const EXERCISES = {
-        1: {
-          title: "El valor de las piezas",
-          category: "Principiante",
-          xp: 20,
-          questions: [
-            {
-              q: "¿Qué pieza vale aproximadamente 5 puntos?",
-              options: ["La torre", "El caballo", "El peón", "La dama"],
-              answer: 0,
-              explanation:
-                "La torre suele valorarse en aproximadamente 5 puntos.",
-            },
-            {
-              q: "¿Qué pieza suele valer aproximadamente 9 puntos?",
-              options: ["El alfil", "La dama", "La torre", "El rey"],
-              answer: 1,
-              explanation:
-                "La dama suele valorarse en aproximadamente 9 puntos.",
-            },
-          ],
-        },
-        2: {
-          title: "Seguridad del rey",
-          category: "Principiante",
-          xp: 20,
-          questions: [
-            {
-              q: "¿Qué jugada suele ayudar a poner al rey a salvo?",
-              options: [
-                "Enrocar",
-                "Mover la dama muchas veces",
-                "Avanzar todos los peones",
-                "No desarrollar piezas",
-              ],
-              answer: 0,
-              explanation:
-                "El enroque suele mejorar la seguridad del rey y conecta las torres.",
-            },
-            {
-              q: "¿Cuál es una mala idea en la apertura?",
-              options: [
-                "Desarrollar piezas",
-                "Controlar el centro",
-                "Mover muchas veces la misma pieza sin necesidad",
-                "Enrocar cuando sea posible",
-              ],
-              answer: 2,
-              explanation:
-                "Mover repetidamente una pieza sin necesidad puede hacerte perder tiempos.",
-            },
-          ],
-        },
-        3: {
-          title: "La apertura correcta",
-          category: "Estrategia",
-          xp: 30,
-          questions: [
-            {
-              q: "¿Cuál es un objetivo típico de la apertura?",
-              options: [
-                "Desarrollar piezas y controlar el centro",
-                "Sacar la dama y dejar el rey en el centro",
-                "Mover solo peones",
-                "Buscar capturas sin mirar",
-              ],
-              answer: 0,
-              explanation:
-                "El desarrollo y el control del centro son objetivos fundamentales.",
-            },
-            {
-              q: "¿Qué pieza suele ser conveniente desarrollar temprano?",
-              options: [
-                "Las piezas menores",
-                "El rey varias veces",
-                "La dama cinco veces",
-                "Solo la torre",
-              ],
-              answer: 0,
-              explanation:
-                "Caballos y alfiles suelen desarrollarse antes que las torres.",
-            },
-          ],
-        },
-        4: {
-          title: "Encontrá el ataque doble",
-          category: "Táctica",
-          xp: 35,
-          questions: [
-            {
-              q: "¿Qué define mejor un ataque doble?",
-              options: [
-                "Una jugada que crea dos amenazas",
-                "Mover dos piezas a la vez",
-                "Cambiar damas",
-                "Dar siempre jaque mate",
-              ],
-              answer: 0,
-              explanation:
-                "El ataque doble crea dos amenazas que el rival difícilmente puede resolver al mismo tiempo.",
-            },
-            {
-              q: "¿Qué pieza es famosa por crear ataques dobles con facilidad?",
-              options: [
-                "El caballo",
-                "El rey",
-                "El peón de torre",
-                "La torre solamente",
-              ],
-              answer: 0,
-              explanation:
-                "Los saltos del caballo permiten atacar objetivos que no están alineados.",
-            },
-          ],
-        },
-        5: {
-          title: "Reconocé la clavada",
-          category: "Táctica",
-          xp: 35,
-          questions: [
-            {
-              q: "¿Qué ocurre en una clavada?",
-              options: [
-                "Una pieza no puede moverse sin exponer algo más importante",
-                "Se pierde automáticamente la dama",
-                "El rey siempre captura",
-                "Se intercambian dos peones",
-              ],
-              answer: 0,
-              explanation:
-                "La pieza está limitada porque detrás de ella hay un objetivo más importante.",
-            },
-            {
-              q: "¿Qué piezas suelen crear clavadas a distancia?",
-              options: [
-                "Torres, alfiles y damas",
-                "Solo el rey",
-                "Solo los peones",
-                "El caballo exclusivamente",
-              ],
-              answer: 0,
-              explanation:
-                "Las piezas lineales pueden ejercer presión a través de una pieza interpuesta.",
-            },
-          ],
-        },
-        6: {
-          title: "Jaque, captura o amenaza",
-          category: "Táctica",
-          xp: 50,
-          questions: [
-            {
-              q: "Al buscar una jugada fuerte, ¿qué grupo conviene revisar primero?",
-              options: [
-                "Jaque, capturas y amenazas",
-                "Solo movimientos de peones",
-                "Solo cambios de damas",
-                "Movimientos al azar",
-              ],
-              answer: 0,
-              explanation:
-                "Este método ayuda a encontrar jugadas tácticas y evita pasar por alto oportunidades.",
-            },
-            {
-              q: "Después de encontrar una jugada candidata, ¿qué debes calcular?",
-              options: [
-                "La mejor respuesta del rival",
-                "Solo tu siguiente jugada",
-                "El resultado de otra partida",
-                "Nada",
-              ],
-              answer: 0,
-              explanation:
-                "Siempre hay que comprobar la respuesta más fuerte del rival.",
-            },
-          ],
-        },
-        7: {
-          title: "¿Qué pieza está peor?",
-          category: "Estrategia",
-          xp: 50,
-          questions: [
-            {
-              q: "Si no hay táctica inmediata, ¿qué plan suele ser útil?",
-              options: [
-                "Mejorar la pieza menos activa",
-                "Mover la dama sin objetivo",
-                "Cambiar todas las piezas",
-                "Pasar el turno",
-              ],
-              answer: 0,
-              explanation:
-                "Mejorar la peor pieza es una regla estratégica muy útil.",
-            },
-            {
-              q: "Una pieza bien colocada suele...",
-              options: [
-                "Controlar casillas importantes y tener actividad",
-                "Quedarse sin movimientos",
-                "Atacar siempre al rey",
-                "Estar en su casilla inicial",
-              ],
-              answer: 0,
-              explanation:
-                "La actividad y el control de casillas son señales de una buena colocación.",
-            },
-          ],
-        },
-        8: {
-          title: "Desafío final: calculá antes de mover",
-          category: "Táctica",
-          xp: 75,
-          questions: [
-            {
-              q: "Tu rival amenaza una pieza. ¿Qué debes hacer primero?",
-              options: [
-                "Identificar exactamente la amenaza",
-                "Mover la dama automáticamente",
-                "Atacar cualquier peón",
-                "Enrocar sin mirar",
-              ],
-              answer: 0,
-              explanation:
-                "Antes de buscar tu plan, debes entender qué está amenazando el rival.",
-            },
-            {
-              q: "¿Cuál es el mejor hábito antes de confirmar una jugada?",
-              options: [
-                "Preguntar qué puede responder el rival",
-                "Mover rápidamente",
-                "Mirar solo tu ataque",
-                "Ignorar las capturas",
-              ],
-              answer: 0,
-              explanation:
-                "La comprobación final evita muchos errores tácticos.",
-            },
-          ],
-        },
-        9: {
-          title: "Leé la posición",
-          category: "Principiante",
-          xp: 25,
-          questions: [
-            {
-              q: "Antes de pensar en tu ataque, ¿qué conviene observar?",
-              options: [
-                "Las amenazas del rival",
-                "Solo tu dama",
-                "El reloj únicamente",
-                "Los peones del borde",
-              ],
-              answer: 0,
-              explanation:
-                "La seguridad comienza por identificar qué está amenazando el rival.",
-            },
-            {
-              q: "¿Qué información ayuda a evaluar una posición?",
-              options: [
-                "Material, seguridad del rey y actividad",
-                "Solo quién tiene más peones",
-                "Solo la dama",
-                "Nada",
-              ],
-              answer: 0,
-              explanation:
-                "La evaluación debe considerar varios elementos, no solo el material.",
-            },
-          ],
-        },
-        10: {
-          title: "Notación algebraica",
-          category: "Principiante",
-          xp: 25,
-          questions: [
-            {
-              q: "¿Cómo se identifica una casilla de ajedrez?",
-              options: [
-                "Con una letra y un número",
-                "Con dos letras",
-                "Con dos colores",
-                "Solo con un número",
-              ],
-              answer: 0,
-              explanation:
-                "Cada casilla se identifica con una letra de la columna y un número de la fila.",
-            },
-            {
-              q: "¿Qué representa la letra N en la notación inglesa?",
-              options: ["El caballo", "La torre", "El rey", "El peón"],
-              answer: 0,
-              explanation:
-                "N representa al caballo porque K ya se utiliza para el rey.",
-            },
-          ],
-        },
-        11: {
-          title: "Encontrá la columna abierta",
-          category: "Estrategia",
-          xp: 35,
-          questions: [
-            {
-              q: "¿Qué es una columna abierta?",
-              options: [
-                "Una columna sin peones",
-                "Una diagonal sin piezas",
-                "Una fila sin reyes",
-                "Una columna con dos damas",
-              ],
-              answer: 0,
-              explanation:
-                "Una columna abierta no contiene peones y puede ser muy útil para las torres.",
-            },
-            {
-              q: "¿Qué pieza suele aprovechar especialmente una columna abierta?",
-              options: ["La torre", "El caballo", "El rey", "El peón"],
-              answer: 0,
-              explanation:
-                "Las torres se benefician de las líneas abiertas para aumentar su actividad.",
-            },
-          ],
-        },
-        12: {
-          title: "Mejorá tu peor pieza",
-          category: "Estrategia",
-          xp: 40,
-          questions: [
-            {
-              q: "Si no existe una táctica inmediata, ¿qué plan es razonable?",
-              options: [
-                "Mejorar la pieza menos activa",
-                "Mover una pieza al azar",
-                "Cambiar siempre damas",
-                "Avanzar cualquier peón",
-              ],
-              answer: 0,
-              explanation:
-                "Mejorar la peor pieza es un principio estratégico muy útil.",
-            },
-            {
-              q: "Una pieza activa normalmente...",
-              options: [
-                "Controla casillas importantes",
-                "No tiene movimientos",
-                "Está siempre en la esquina",
-                "Nunca puede ser atacada",
-              ],
-              answer: 0,
-              explanation:
-                "La actividad se relaciona con la cantidad y calidad de casillas que controla.",
-            },
-          ],
-        },
-        13: {
-          title: "Elegí el plan",
-          category: "Estrategia",
-          xp: 50,
-          questions: [
-            {
-              q: "¿De dónde debería surgir un plan?",
-              options: [
-                "De las características de la posición",
-                "De mover rápido",
-                "De copiar siempre al rival",
-                "De atacar sin mirar",
-              ],
-              answer: 0,
-              explanation:
-                "El plan debe responder a las necesidades concretas de la posición.",
-            },
-            {
-              q: "¿Qué debilidad puede convertirse en un objetivo?",
-              options: [
-                "Un peón aislado o débil",
-                "Una pieza bien defendida",
-                "Una casilla controlada por todas tus piezas",
-                "Tu propio rey seguro",
-              ],
-              answer: 0,
-              explanation:
-                "Las debilidades permanentes pueden convertirse en objetivos estratégicos.",
-            },
-          ],
-        },
-        14: {
-          title: "La doble amenaza",
-          category: "Táctica",
-          xp: 40,
-          questions: [
-            {
-              q: "¿Qué hace fuerte a una doble amenaza?",
-              options: [
-                "Crea dos problemas al mismo tiempo",
-                "Mueve dos piezas en un turno",
-                "Siempre gana la dama",
-                "Solo funciona con peones",
-              ],
-              answer: 0,
-              explanation:
-                "La fuerza está en obligar al rival a elegir qué amenaza atender.",
-            },
-            {
-              q: "¿Cuál puede ser una doble amenaza?",
-              options: [
-                "Atacar una pieza y amenazar mate",
-                "Mover el rey una casilla",
-                "Cambiar un peón",
-                "Esperar",
-              ],
-              answer: 0,
-              explanation:
-                "Una amenaza material y otra contra el rey pueden ser muy difíciles de defender simultáneamente.",
-            },
-          ],
-        },
-        15: {
-          title: "La intermedia",
-          category: "Táctica",
-          xp: 50,
-          questions: [
-            {
-              q: "¿Qué es una jugada intermedia?",
-              options: [
-                "Una jugada fuerte antes de realizar la recaptura esperada",
-                "Una jugada al azar",
-                "Un movimiento ilegal",
-                "Un cambio de peones",
-              ],
-              answer: 0,
-              explanation:
-                "La jugada intermedia altera el orden esperado y puede ganar material o iniciativa.",
-            },
-            {
-              q: "¿Qué recurso se busca especialmente como jugada intermedia?",
-              options: [
-                "Un jaque",
-                "Un movimiento sin amenaza",
-                "Un retroceso cualquiera",
-                "Un cambio de peones",
-              ],
-              answer: 0,
-              explanation:
-                "Los jaques suelen obligar al rival a responder inmediatamente.",
-            },
-          ],
-        },
-        16: {
-          title: "¿Conviene sacrificar?",
-          category: "Táctica",
-          xp: 55,
-          questions: [
-            {
-              q: "¿Qué debe existir normalmente detrás de un sacrificio correcto?",
-              options: [
-                "Compensación concreta",
-                "Solo una sensación",
-                "Ninguna idea",
-                "La esperanza de que el rival se equivoque",
-              ],
-              answer: 0,
-              explanation:
-                "El sacrificio debe buscar ataque, desarrollo, iniciativa o una ventaja concreta.",
-            },
-            {
-              q: "¿Qué NO es suficiente para sacrificar material?",
-              options: [
-                "Que la jugada se vea espectacular",
-                "Obtener un ataque fuerte",
-                "Ganar material después",
-                "Conseguir una ventaja decisiva",
-              ],
-              answer: 0,
-              explanation:
-                "La estética de una jugada no justifica por sí sola entregar material.",
-            },
-          ],
-        },
-        17: {
-          title: "Mate en uno",
-          category: "Táctica",
-          xp: 60,
-          questions: [
-            {
-              q: "¿Qué debes buscar primero en un ejercicio de mate en uno?",
-              options: [
-                "Todos los jaques legales",
-                "Mover un peón al azar",
-                "Cambiar damas",
-                "Una jugada tranquila",
-              ],
-              answer: 0,
-              explanation:
-                "En un mate en uno, la búsqueda comienza por los jaques.",
-            },
-            {
-              q: "Después de encontrar un jaque, ¿qué debes comprobar?",
-              options: [
-                "Si el rey tiene alguna respuesta legal",
-                "Solo si se ve bonito",
-                "Si puedes mover otra pieza",
-                "Nada",
-              ],
-              answer: 0,
-              explanation:
-                "El jaque mate requiere que no exista ninguna defensa legal.",
-            },
-          ],
-        },
-        18: {
-          title: "Calculá dos jugadas",
-          category: "Táctica",
-          xp: 65,
-          questions: [
-            {
-              q: "¿Qué significa calcular una variante?",
-              options: [
-                "Imaginar las jugadas y respuestas antes de mover",
-                "Mover rápidamente",
-                "Mirar solo tu primera jugada",
-                "Memorizar nombres",
-              ],
-              answer: 0,
-              explanation:
-                "Calcular significa visualizar una secuencia de jugadas y respuestas.",
-            },
-            {
-              q: "¿Qué respuesta rival conviene analizar?",
-              options: [
-                "La más fuerte",
-                "La más débil",
-                "Una respuesta al azar",
-                "Ninguna",
-              ],
-              answer: 0,
-              explanation:
-                "Si tu jugada funciona contra la mejor defensa, aumenta su solidez.",
-            },
-          ],
-        },
-        19: {
-          title: "Final de peones",
-          category: "Estrategia",
-          xp: 70,
-          questions: [
-            {
-              q: "En muchos finales de peones, ¿qué recurso es fundamental?",
-              options: [
-                "La oposición",
-                "Mover la dama",
-                "Enrocar",
-                "Atacar con un caballo",
-              ],
-              answer: 0,
-              explanation:
-                "La oposición es un concepto fundamental en muchos finales de rey y peones.",
-            },
-            {
-              q: "¿Qué pieza es especialmente importante en un final de peones?",
-              options: ["El rey", "La dama", "La torre", "El caballo"],
-              answer: 0,
-              explanation:
-                "En estos finales, el rey debe participar activamente.",
-            },
-          ],
-        },
-        20: {
-          title: "Desafío maestro",
-          category: "Táctica",
-          xp: 100,
-          questions: [
-            {
-              q: "¿Cuál es el orden de pensamiento más útil?",
-              options: [
-                "Amenaza rival → jaques, capturas y amenazas → calcular",
-                "Mover rápido → mirar después",
-                "Atacar siempre → ignorar al rival",
-                "Cambiar todo → pensar al final",
-              ],
-              answer: 0,
-              explanation:
-                "Este método combina prevención, búsqueda de oportunidades y cálculo.",
-            },
-            {
-              q: "¿Cuál es la comprobación final antes de mover?",
-              options: [
-                "¿Qué puede responder mi rival?",
-                "¿Puedo mover otra pieza?",
-                "¿Me gusta la jugada?",
-                "¿El tablero es bonito?",
-              ],
-              answer: 0,
-              explanation: "La última pregunta evita muchos errores tácticos.",
-            },
-          ],
-        },
-      };
-
-      let activeExerciseId = null;
-      let activeExerciseQuestion = 0;
-      let exerciseScore = 0;
-      let exerciseAnswered = false;
-
-      function getExerciseStats() {
-        return (
-          state.exerciseStats || {
-            total: 0,
-            correct: 0,
-            streak: 0,
-            best: 0,
-            completed: [],
+      // Consulta al motor la evaluación (desde la perspectiva de quien mueve) y la mejor jugada
+      function sfEvalFen(fen, depth) {
+        return new Promise((resolve) => {
+          if (!sfAnalysisWorker) {
+            resolve({ score: heuristicEval(fen), bestMove: null, engine: false });
+            return;
           }
-        );
-      }
+          let lastScore = 0;
+          let settled = false;
+          const timeout = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            sfAnalysisWorker.removeEventListener("message", handler);
+            resolve({ score: heuristicEval(fen), bestMove: null, engine: false });
+          }, 8000);
 
-      function updateExerciseStats() {
-        const stats = getExerciseStats();
-        const accuracy = stats.total
-          ? Math.round((stats.correct / stats.total) * 100)
-          : 0;
-
-        const total = document.getElementById("exercise-total-stat");
-        const correct = document.getElementById("exercise-correct-stat");
-        const streak = document.getElementById("exercise-streak-stat");
-        const best = document.getElementById("exercise-best-stat");
-
-        if (total) total.textContent = stats.total;
-        if (correct) correct.textContent = accuracy + "%";
-        if (streak) streak.textContent = stats.streak + " 🔥";
-        if (best) best.textContent = stats.best;
-        const modalStreak = document.getElementById("exercise-modal-streak");
-        if (modalStreak) modalStreak.textContent = "🔥 Racha: " + stats.streak;
-
-        document.querySelectorAll("[data-exercise-card]").forEach((card) => {
-          const id = Number(card.dataset.exerciseId);
-          const done = stats.completed.includes(id);
-          card.classList.toggle("completed", done);
-          const btn = card.querySelector(".exercise-start");
-          if (btn) btn.textContent = done ? "↻ Repetir" : "Resolver";
+          function handler(e) {
+            const line = typeof e.data === "string" ? e.data : "";
+            if (line.startsWith("info") && line.indexOf(" score ") !== -1) {
+              const m = line.match(/score (cp|mate) (-?\d+)/);
+              if (m) {
+                if (m[1] === "cp") {
+                  lastScore = parseInt(m[2], 10);
+                } else {
+                  const mateIn = parseInt(m[2], 10);
+                  lastScore = mateIn > 0 ? (MATE_SCORE - mateIn) : (-MATE_SCORE - mateIn);
+                }
+              }
+            }
+            if (line.startsWith("bestmove")) {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timeout);
+              sfAnalysisWorker.removeEventListener("message", handler);
+              const parts = line.split(" ");
+              const bm = parts[1] && parts[1] !== "(none)" ? parts[1] : null;
+              resolve({ score: lastScore, bestMove: bm, engine: true });
+            }
+          }
+          sfAnalysisWorker.addEventListener("message", handler);
+          sfAnalysisWorker.postMessage("position fen " + fen);
+          sfAnalysisWorker.postMessage("go depth " + depth);
         });
       }
 
-      function closeExercise() {
-        document.getElementById("exercise-modal").style.display = "none";
-        activeExerciseId = null;
+      // Evalúa una posición: usa el motor salvo que ya sea jaque mate/ahogado
+      async function evalPosition(fen, depth) {
+        const temp = new Chess(fen);
+        if (temp.in_checkmate()) return { score: -MATE_SCORE, bestMove: null };
+        if (temp.game_over()) return { score: 0, bestMove: null };
+        return sfEvalFen(fen, depth);
       }
 
-      function renderExerciseQuestion() {
-        const exercise = EXERCISES[activeExerciseId];
-        const question = exercise.questions[activeExerciseQuestion];
-        exerciseAnswered = false;
-
-        document.getElementById("exercise-modal-category").textContent =
-          "⚡ " + exercise.category;
-        document.getElementById("exercise-modal-title").textContent =
-          exercise.title;
-        document.getElementById("exercise-question").textContent =
-          `${activeExerciseQuestion + 1}/${exercise.questions.length} · ${question.q}`;
-
-        const options = document.getElementById("exercise-options");
-        options.innerHTML = "";
-
-        question.options.forEach((option, index) => {
-          const button = document.createElement("button");
-          button.className = "exercise-option";
-          button.textContent = String.fromCharCode(65 + index) + ". " + option;
-          button.addEventListener("click", () => answerExercise(index));
-          options.appendChild(button);
-        });
-
-        document.getElementById("exercise-feedback").classList.remove("show");
-        document.getElementById("exercise-feedback").innerHTML = "";
-        document.getElementById("exercise-next").style.display = "none";
-        document.getElementById("exercise-result").style.display = "none";
+      function uciToSan(fen, uciMove) {
+        if (!uciMove || uciMove.length < 4) return null;
+        try {
+          const temp = new Chess(fen);
+          const from = uciMove.substring(0, 2);
+          const to = uciMove.substring(2, 4);
+          const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
+          const mv = temp.move({ from, to, promotion: promotion || "q" });
+          return mv ? mv.san : null;
+        } catch (e) {
+          return null;
+        }
       }
 
-      function startExercise(id) {
-        activeExerciseId = Number(id);
-        activeExerciseQuestion = 0;
-        exerciseScore = 0;
-        document.getElementById("exercise-modal").style.display = "flex";
-        renderExerciseQuestion();
-        updateExerciseStats();
+      // Conversión centipawns -> % de probabilidad de victoria (fórmula estándar tipo Lichess)
+      function cpToWin(cp) {
+        const clamped = Math.max(-1000, Math.min(1000, cp));
+        return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * clamped)) - 1);
       }
 
-      function answerExercise(index) {
-        if (exerciseAnswered) return;
-        exerciseAnswered = true;
+      function classifyLoss(loss) {
+        if (loss < 15) return "best";
+        if (loss < 40) return "good";
+        if (loss < 90) return "inaccuracy";
+        if (loss < 200) return "mistake";
+        return "blunder";
+      }
 
-        const exercise = EXERCISES[activeExerciseId];
-        const question = exercise.questions[activeExerciseQuestion];
-        const buttons = [...document.querySelectorAll(".exercise-option")];
-        const stats = getExerciseStats();
+      function commentFor(tag, playedSan, bestSan, color) {
+        const quien = color === "w" ? "Blancas" : "Negras";
+        switch (tag) {
+          case "best":
+            return `✅ ${quien} jugó ${playedSan}, la mejor jugada según el motor.`;
+          case "good":
+            return `👍 ${quien} jugó ${playedSan}, una buena jugada que mantiene una posición sólida.`;
+          case "inaccuracy":
+            return `⚠️ Imprecisión de ${quien.toLowerCase()} con ${playedSan}.` + (bestSan ? ` El motor prefería ${bestSan}.` : "");
+          case "mistake":
+            return `❌ Error de ${quien.toLowerCase()} con ${playedSan}, cede ventaja al rival.` + (bestSan ? ` Mejor era ${bestSan}.` : "");
+          case "blunder":
+            return `‼️ ¡Blunder! ${quien} jugó ${playedSan} y perdió mucha ventaja (o la partida).` + (bestSan ? ` La jugada correcta era ${bestSan}.` : "");
+          default:
+            return playedSan || "";
+        }
+      }
 
-        buttons[question.answer].classList.add("correct");
+      async function openAnalysisModal(gameId) {
+        const record = (state.savedGames || []).find(g => g.id === gameId);
+        if (!record) return;
+        analysisCurrentRecord = record;
+        document.getElementById("analysis-modal").style.display = "flex";
+        document.getElementById("analysis-meta").textContent =
+          `${record.date} · ${record.time} · ${record.moves.length} jugadas · ${record.result}`;
 
-        stats.total++;
-        if (index === question.answer) {
-          exerciseScore++;
-          stats.correct++;
-          stats.streak++;
-          stats.best = Math.max(stats.best, stats.streak);
-          document.getElementById("exercise-feedback").innerHTML =
-            "✅ <strong>¡Correcto!</strong> " + question.explanation;
-        } else {
-          stats.streak = 0;
-          buttons[index].classList.add("wrong");
-          document.getElementById("exercise-feedback").innerHTML =
-            "❌ <strong>No es correcto.</strong> " + question.explanation;
+        const progressWrap = document.getElementById("analysis-progress");
+        const body = document.getElementById("analysis-body");
+
+        if (record.analysis) {
+          progressWrap.style.display = "none";
+          body.style.display = "block";
+          analysisPly = record.positions.length - 1;
+          renderAnalysisResults(record);
+          return;
         }
 
-        state.exerciseStats = stats;
+        progressWrap.style.display = "block";
+        body.style.display = "none";
+        await runFullAnalysis(record);
+      }
+
+      function updateAnalysisProgress(done, total) {
+        const text = document.getElementById("analysis-progress-text");
+        const fill = document.getElementById("analysis-progress-fill");
+        text.textContent = `Analizando jugada ${done}/${total}…`;
+        fill.style.width = total ? Math.round((done / total) * 100) + "%" : "0%";
+      }
+
+      async function runFullAnalysis(record) {
+        const myToken = ++analysisRunToken;
+        const positions = record.positions;
+        const total = positions.length;
+        updateAnalysisProgress(0, total - 1);
+
+        const results = [];
+        for (let i = 0; i < total; i++) {
+          if (myToken !== analysisRunToken) return; // se abrió otra partida mientras tanto
+          const r = await evalPosition(positions[i].fen, ANALYSIS_DEPTH);
+          results.push(r);
+          updateAnalysisProgress(i, total - 1);
+        }
+        if (myToken !== analysisRunToken) return;
+
+        const scores = results.map(r => r.score);
+        const perMove = [];
+        const counts = {
+          w: { best: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
+          b: { best: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
+        };
+        const accSums = { w: [], b: [] };
+
+        for (let i = 0; i < record.moves.length; i++) {
+          const color = positions[i].turn; // quién mueve en esta jugada
+          const scoreBefore = scores[i];
+          const scoreAfter = scores[i + 1];
+          // ambos "scores" están en perspectiva de quien mueve en esa posición;
+          // como el turno se invierte, sumarlos da la caída de valor para 'color'
+          const loss = Math.max(0, scoreBefore + scoreAfter);
+          const tag = classifyLoss(loss);
+          counts[color][tag]++;
+
+          const winBefore = cpToWin(scoreBefore);
+          const winAfter = cpToWin(-scoreAfter);
+          const moveAcc = Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * (winBefore - winAfter)) - 3.1668));
+          accSums[color].push(moveAcc);
+
+          const bestUci = results[i].bestMove;
+          const bestSan = tag === "best" ? null : uciToSan(positions[i].fen, bestUci);
+          const playedSan = record.moves[i];
+
+          perMove.push({ tag, loss, color, playedSan, bestSan });
+        }
+
+        const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 100;
+        const accuracy = { w: avg(accSums.w), b: avg(accSums.b) };
+        const usedEngine = results.some(r => r.engine);
+
+        record.analysis = { scores, perMove, counts, accuracy, usedEngine };
         save();
-        updateExerciseStats();
 
-        const feedback = document.getElementById("exercise-feedback");
-        feedback.classList.add("show");
-
-        const next = document.getElementById("exercise-next");
-        next.style.display = "inline-flex";
-        next.textContent =
-          activeExerciseQuestion === exercise.questions.length - 1
-            ? "Ver resultado"
-            : "Siguiente";
+        document.getElementById("analysis-progress").style.display = "none";
+        document.getElementById("analysis-body").style.display = "block";
+        analysisPly = positions.length - 1;
+        renderAnalysisResults(record);
       }
 
-      function finishExercise() {
-        const exercise = EXERCISES[activeExerciseId];
-        const stats = getExerciseStats();
+      function closeAnalysisModal() {
+        document.getElementById("analysis-modal").style.display = "none";
+        analysisRunToken++; // cancela cualquier análisis en curso
+      }
 
-        if (!stats.completed.includes(activeExerciseId)) {
-          stats.completed.push(activeExerciseId);
-          state.exerciseStats = stats;
-          addXP(exercise.xp, "Ejercicio: " + exercise.title, "Completado");
-          save();
+      function renderAnalysisResults(record) {
+        renderAnalysisSummary(record);
+        renderEvalGraph(record);
+        renderAnalysisBoard();
+        renderAnalysisMoveList();
+        renderAnalysisComment();
+      }
+
+      function renderAnalysisSummary(record) {
+        const a = record.analysis;
+        const container = document.getElementById("analysis-summary");
+        container.innerHTML = "";
+        if (!a) return;
+
+        if (a.usedEngine === false) {
+          const notice = document.createElement("div");
+          notice.style.gridColumn = "1 / -1";
+          notice.style.color = "var(--muted)";
+          notice.style.fontSize = "0.8rem";
+          notice.textContent = "⚠️ El motor no respondió a tiempo: se usó una evaluación básica por material.";
+          container.appendChild(notice);
         }
 
-        document.getElementById("exercise-question").style.display = "none";
-        document.getElementById("exercise-options").style.display = "none";
-        document.getElementById("exercise-feedback").style.display = "none";
-        document.getElementById("exercise-next").style.display = "none";
-        document.getElementById("exercise-result").style.display = "block";
-
-        const total = exercise.questions.length;
-        const percent = Math.round((exerciseScore / total) * 100);
-        document.getElementById("exercise-result-score").textContent =
-          `${exerciseScore}/${total}`;
-        document.getElementById("exercise-result-text").textContent =
-          percent === 100
-            ? "🏆 ¡Excelente! Resolviste todo correctamente."
-            : percent >= 50
-              ? "👍 Buen trabajo. Revisá los errores y volvé a intentarlo."
-              : "📚 Seguí practicando. Cada intento te ayuda a reconocer patrones.";
-
-        updateExerciseStats();
+        ["w", "b"].forEach((color) => {
+          const label = color === "w" ? "♔ Blancas" : "♚ Negras";
+          const c = a.counts[color];
+          const card = document.createElement("div");
+          card.className = "analysis-side-card";
+          card.innerHTML = `
+            <h4>${label}</h4>
+            <div class="analysis-accuracy">${a.accuracy[color].toFixed(1)}%</div>
+            <div style="color: var(--muted); font-size: 0.8rem">Precisión estimada</div>
+            <div class="analysis-tag-row">
+              <span>✅ ${c.best}</span>
+              <span>👍 ${c.good}</span>
+              <span>⚠️ ${c.inaccuracy}</span>
+              <span>❌ ${c.mistake}</span>
+              <span>‼️ ${c.blunder}</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
       }
 
-      document.querySelectorAll(".exercise-start").forEach((button) => {
-        button.addEventListener("click", () =>
-          startExercise(button.dataset.exercise),
-        );
-      });
+      function renderEvalGraph(record) {
+        const graph = document.getElementById("analysis-eval-graph");
+        graph.innerHTML = "";
+        const a = record.analysis;
+        if (!a) return;
+        const scores = a.scores;
 
-      document.getElementById("exercise-next").addEventListener("click", () => {
-        const exercise = EXERCISES[activeExerciseId];
-        if (activeExerciseQuestion >= exercise.questions.length - 1) {
-          finishExercise();
+        scores.forEach((rawScore, i) => {
+          // convertir a perspectiva de blancas para el gráfico
+          const turnAt = record.positions[i].turn;
+          const whiteScore = turnAt === "w" ? rawScore : -rawScore;
+          const clamped = Math.max(-600, Math.min(600, whiteScore));
+          const pct = 50 + (clamped / 600) * 50; // 0 (negras dominan) .. 100 (blancas dominan)
+
+          const bar = document.createElement("div");
+          bar.className = "bar" + (whiteScore < 0 ? " black-adv" : "") + (i === analysisPly ? " current" : "");
+          bar.style.height = Math.max(4, Math.abs(pct - 50) * 2) + "%";
+          bar.title = i === 0 ? "Posición inicial" : `Tras ${record.moves[i - 1]}`;
+          bar.onclick = () => { analysisPly = i; renderAnalysisResults(record); };
+          graph.appendChild(bar);
+        });
+      }
+
+      function renderAnalysisBoard() {
+        const record = analysisCurrentRecord;
+        const boardEl = document.getElementById("analysis-board");
+        boardEl.innerHTML = "";
+        const pos = record.positions[analysisPly];
+        if (!pos || !pos.board) return;
+
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const sq = document.createElement("div");
+            sq.className = "square " + ((r + c) % 2 ? "dark" : "light");
+            const p = pos.board[r][c];
+            if (p) {
+              const piece = document.createElement("div");
+              piece.className = "piece " + (p.color === "w" ? "white-piece" : "black-piece");
+              piece.textContent = PIECES[p.color + p.type.toUpperCase()];
+              sq.appendChild(piece);
+            }
+            boardEl.appendChild(sq);
+          }
+        }
+
+        const evalEl = document.getElementById("analysis-eval-current");
+        const a = record.analysis;
+        if (a && evalEl) {
+          const rawScore = a.scores[analysisPly];
+          const turnAt = pos.turn;
+          const whiteScore = turnAt === "w" ? rawScore : -rawScore;
+          let text;
+          if (Math.abs(whiteScore) >= MATE_SCORE - 300) {
+            const movesToMate = MATE_SCORE - Math.abs(whiteScore);
+            text = `Mate en ${movesToMate} para ${whiteScore > 0 ? "blancas" : "negras"}`;
+          } else {
+            const pawns = (whiteScore / 100).toFixed(2);
+            text = (whiteScore > 0 ? "+" : "") + pawns + (whiteScore >= 0 ? " (ventaja blancas)" : " (ventaja negras)");
+          }
+          evalEl.textContent = text;
+        }
+      }
+
+      function renderAnalysisComment() {
+        const record = analysisCurrentRecord;
+        const commentEl = document.getElementById("analysis-comment");
+        if (!commentEl || !record || !record.analysis) return;
+        if (analysisPly === 0) {
+          commentEl.textContent = "Posición inicial. Navegá las jugadas para ver el análisis de cada una.";
+          return;
+        }
+        const mv = record.analysis.perMove[analysisPly - 1];
+        commentEl.textContent = mv ? commentFor(mv.tag, mv.playedSan, mv.bestSan, mv.color) : "";
+      }
+
+      function renderAnalysisMoveList() {
+        const record = analysisCurrentRecord;
+        const container = document.getElementById("analysis-move-list");
+        container.innerHTML = "";
+        const perMove = record.analysis ? record.analysis.perMove : [];
+
+        function buildBtn(idx) {
+          const san = record.moves[idx];
+          if (san === undefined) {
+            const span = document.createElement("span");
+            return span;
+          }
+          const btn = document.createElement("button");
+          const info = perMove[idx];
+          const tagInfo = info ? TAG_INFO[info.tag] : null;
+          btn.className = "analysis-move-btn" + (tagInfo ? " " + tagInfo.cls : "") + ((idx + 1) === analysisPly ? " active" : "");
+          btn.innerHTML = `<span>${san}</span>` + (tagInfo ? `<span class="mv-icon">${tagInfo.icon}</span>` : "");
+          if (tagInfo) btn.title = tagInfo.label;
+          btn.onclick = () => { analysisPly = idx + 1; renderAnalysisResults(record); };
+          return btn;
+        }
+
+        for (let i = 0; i < record.moves.length; i += 2) {
+          const row = document.createElement("div");
+          row.className = "analysis-move-row";
+          const num = document.createElement("span");
+          num.className = "analysis-move-num";
+          num.textContent = (i / 2 + 1) + ".";
+          row.appendChild(num);
+          row.appendChild(buildBtn(i));
+          row.appendChild(buildBtn(i + 1));
+          container.appendChild(row);
+        }
+      }
+
+      document.getElementById("analysis-close").onclick = closeAnalysisModal;
+      document.getElementById("analysis-first").onclick = () => { analysisPly = 0; renderAnalysisResults(analysisCurrentRecord); };
+      document.getElementById("analysis-prev").onclick = () => { analysisPly = Math.max(0, analysisPly - 1); renderAnalysisResults(analysisCurrentRecord); };
+      document.getElementById("analysis-next").onclick = () => { analysisPly = Math.min(analysisCurrentRecord.positions.length - 1, analysisPly + 1); renderAnalysisResults(analysisCurrentRecord); };
+      document.getElementById("analysis-last").onclick = () => { analysisPly = analysisCurrentRecord.positions.length - 1; renderAnalysisResults(analysisCurrentRecord); };
+
+      // =========================
+      // TUTOR IA (sugerencias + explicaciones)
+      // =========================
+      const TUTOR_DEPTH = 14;
+
+      const TUTOR_TIPS_APERTURA = [
+        "En la apertura, priorizá desarrollar tus piezas menores (caballos y alfiles) antes de sacar la dama.",
+        "Tratá de enrocar pronto: pone a tu rey a salvo y conecta las torres.",
+        "Controlá el centro (casillas d4, d5, e4, e5): te da más espacio y opciones.",
+        "Evitá mover la misma pieza dos veces en la apertura sin una buena razón.",
+        "No saques la dama demasiado pronto: puede convertirse en blanco de ataques con pérdida de tiempo.",
+      ];
+      const TUTOR_TIPS_MEDIO_JUEGO = [
+        "Antes de mover, preguntate siempre: ¿qué amenaza mi rival con su última jugada?",
+        "Buscá las piezas rivales mal defendidas: suelen ser un buen objetivo táctico.",
+        "Una torre en columna abierta o un caballo bien plantado en el centro valen mucho.",
+        "Si tenés ventaja de material, buscá cambiar piezas para simplificar la posición.",
+        "Cuidá la seguridad de tu rey: no debilites innecesariamente los peones que lo protegen.",
+        "Pensá en tu plan antes de cada jugada, no solo en la jugada en sí.",
+      ];
+      const TUTOR_TIPS_FINAL = [
+        "En el final, activá a tu rey: se convierte en una pieza de ataque muy importante.",
+        "Los peones pasados son muy valiosos en el final: intentá coronarlos o bloquearlos.",
+        "Contá bien los tiempos: en los finales, un tempo de más puede decidir la partida.",
+        "Con torres en el tablero, la actividad de las piezas suele valer más que el material.",
+      ];
+
+      const PIECE_NAMES = { p: "peón", n: "caballo", b: "alfil", r: "torre", q: "dama", k: "rey" };
+      const TUTOR_START_SQUARES = { n: ["b1", "g1", "b8", "g8"], b: ["c1", "f1", "c8", "f8"] };
+      const TUTOR_CENTER_SQUARES = ["d4", "d5", "e4", "e5"];
+
+      let tutorRunToken = 0;
+      let lastTutorFen = null;
+      let lastTutorMove = null;
+
+      function capitalizeFirst(s) {
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      }
+
+      function tutorGamePhase(fen) {
+        const c = new Chess(fen);
+        const ply = c.history().length;
+        const pieceCount = c.board().flat().filter(Boolean).length;
+        if (ply < 16) return "apertura";
+        if (pieceCount <= 12) return "final";
+        return "medio";
+      }
+
+      function pickTutorTip(fen) {
+        const phase = tutorGamePhase(fen);
+        const pool = phase === "apertura" ? TUTOR_TIPS_APERTURA : phase === "final" ? TUTOR_TIPS_FINAL : TUTOR_TIPS_MEDIO_JUEGO;
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      // Genera una explicación en español de por qué el motor recomienda esta jugada
+      function explainTutorMove(fenBefore, uciMove, scoreCp, engineUsed) {
+        const temp = new Chess(fenBefore);
+        const mover = temp.turn();
+        const moverLabel = mover === "w" ? "las Blancas" : "las Negras";
+        const rivalLabel = mover === "w" ? "las Negras" : "las Blancas";
+        const from = uciMove.substring(0, 2);
+        const to = uciMove.substring(2, 4);
+        const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
+        const mv = temp.move({ from, to, promotion: promotion || "q" });
+
+        if (!mv) {
+          return { san: uciMove, text: "El motor recomienda esta jugada en la posición actual.", evalText: "" };
+        }
+
+        const reasons = [];
+        if (mv.flags.includes("k") || mv.flags.includes("q")) {
+          reasons.push("enroca, poniendo al rey a resguardo y activando la torre");
+        }
+        if (mv.san.includes("#")) {
+          reasons.push("¡es jaque mate, termina la partida!");
+        } else if (mv.san.includes("+")) {
+          reasons.push("da jaque, obligando al rival a responder de inmediato");
+        }
+        if (mv.flags.includes("c") || mv.flags.includes("e")) {
+          reasons.push("captura una pieza rival" + (mv.captured ? " (" + PIECE_NAMES[mv.captured] + ")" : "") + ", ganando material");
+        }
+        if (mv.flags.includes("p")) {
+          reasons.push("corona un peón, convirtiéndolo en una pieza mucho más poderosa");
+        }
+        if (TUTOR_START_SQUARES[mv.piece] && TUTOR_START_SQUARES[mv.piece].includes(mv.from)) {
+          reasons.push("desarrolla una pieza que todavía no había entrado en juego");
+        }
+        if (TUTOR_CENTER_SQUARES.includes(mv.to) && mv.piece !== "k") {
+          reasons.push("ocupa una casilla central, ganando espacio e influencia");
+        }
+        if (mv.piece === "k" && !mv.flags.includes("k") && !mv.flags.includes("q")) {
+          reasons.push("mueve al rey; asegurate de que quede seguro después de esta jugada");
+        }
+
+        let text;
+        if (reasons.length) {
+          text = capitalizeFirst(mv.san) + ": " + capitalizeFirst(reasons.slice(0, 2).join(", y además ")) + ".";
         } else {
-          activeExerciseQuestion++;
-          renderExerciseQuestion();
+          text = mv.san + " es la jugada mejor valorada por el motor en esta posición.";
         }
-      });
 
-      document
-        .getElementById("exercise-close")
-        .addEventListener("click", closeExercise);
+        let evalText;
+        if (Math.abs(scoreCp) >= MATE_SCORE - 300) {
+          const movesToMate = MATE_SCORE - Math.abs(scoreCp);
+          evalText = "Mate en " + movesToMate + " para " + (scoreCp > 0 ? moverLabel : rivalLabel);
+        } else if (Math.abs(scoreCp) < 40) {
+          evalText = "Posición aproximadamente equilibrada";
+        } else {
+          const pawns = (scoreCp / 100).toFixed(2);
+          evalText = (scoreCp > 0 ? "+" : "") + pawns + " a favor de " + moverLabel;
+        }
+        if (!engineUsed) evalText += " (estimado por material)";
 
-      document
-        .getElementById("exercise-modal")
-        .addEventListener("click", (e) => {
-          if (e.target.id === "exercise-modal") closeExercise();
-        });
+        return { san: mv.san, text, evalText };
+      }
 
-      document.querySelectorAll(".exercise-filter").forEach((button) => {
-        button.addEventListener("click", () => {
-          document
-            .querySelectorAll(".exercise-filter")
-            .forEach((b) => b.classList.remove("active"));
-          button.classList.add("active");
+      async function requestTutorSuggestion() {
+        if (!gameStarted || game.game_over()) {
+          toast("Iniciá una partida para pedirle ayuda al tutor.");
+          return;
+        }
 
-          const filter = button.dataset.exerciseFilter;
-          document.querySelectorAll("[data-exercise-card]").forEach((card) => {
-            card.style.display =
-              filter === "all" || card.dataset.category === filter
-                ? ""
-                : "none";
-          });
-        });
-      });
+        const myToken = ++tutorRunToken;
+        const btn = document.getElementById("tutor-suggest-btn");
+        const output = document.getElementById("tutor-output");
+        const loading = document.getElementById("tutor-loading");
+        btn.disabled = true;
+        output.style.display = "none";
+        loading.style.display = "block";
 
-      updateExerciseStats();
+        const fen = game.fen();
+        const result = await evalPosition(fen, TUTOR_DEPTH);
+        if (myToken !== tutorRunToken) return; // se pidió otra sugerencia mientras tanto
+
+        loading.style.display = "none";
+        btn.disabled = false;
+
+        if (!result.bestMove) {
+          output.style.display = "block";
+          document.getElementById("tutor-move-san").textContent = "—";
+          document.getElementById("tutor-eval").textContent = "";
+          document.getElementById("tutor-explanation").textContent = "No hay jugadas para sugerir en esta posición.";
+          document.getElementById("tutor-tip").textContent = "";
+          document.getElementById("tutor-play-btn").style.display = "none";
+          return;
+        }
+
+        const { san, text, evalText } = explainTutorMove(fen, result.bestMove, result.score, result.engine);
+        const tip = pickTutorTip(fen);
+
+        lastTutorFen = fen;
+        lastTutorMove = result.bestMove;
+
+        document.getElementById("tutor-move-san").textContent = san;
+        document.getElementById("tutor-eval").textContent = evalText;
+        document.getElementById("tutor-explanation").textContent = text;
+        document.getElementById("tutor-tip").textContent = "💡 " + tip;
+        document.getElementById("tutor-play-btn").style.display = "block";
+        output.style.display = "block";
+      }
+
+      function playTutorMove() {
+        if (!lastTutorMove || game.fen() !== lastTutorFen) {
+          toast("La posición cambió: pedile una nueva sugerencia al tutor.");
+          return;
+        }
+        if (!gameStarted || game.game_over() || botThinking) return;
+        if (botEnabled && game.turn() === botColor) return;
+
+        const from = lastTutorMove.substring(0, 2);
+        const to = lastTutorMove.substring(2, 4);
+        const promotion = lastTutorMove.length > 4 ? lastTutorMove[4] : undefined;
+        const move = game.move({ from, to, promotion: promotion || "q" });
+        if (!move) return;
+
+        addIncrement();
+        selected = null;
+        validMoves = [];
+        document.getElementById("tutor-output").style.display = "none";
+        lastTutorMove = null;
+        lastTutorFen = null;
+        render();
+        checkGameOver();
+        maybeTriggerBotMove();
+      }
+
+      document.getElementById("tutor-suggest-btn").onclick = requestTutorSuggestion;
+      document.getElementById("tutor-play-btn").onclick = playTutorMove;
     </script>
   </body>
 </html>
