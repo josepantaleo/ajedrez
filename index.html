@@ -4473,10 +4473,13 @@
         toast("↺ Tema predeterminado restaurado");
       };
 
-      document.getElementById("theme-toggle").onclick = () => {
-        const current = document.body.dataset.theme || "blue";
-        applyTheme(current === "light" ? "blue" : "light");
-      };
+      const themeToggleBtn = document.getElementById("theme-toggle");
+      if (themeToggleBtn) {
+        themeToggleBtn.onclick = () => {
+          const current = document.body.dataset.theme || "blue";
+          applyTheme(current === "light" ? "blue" : "light");
+        };
+      }
 
       applyTheme(localStorage.getItem("chessTheme") || "blue", false);
 
