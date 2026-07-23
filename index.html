@@ -1797,6 +1797,29 @@
                     Modo de juego
                     <select id="mode">
                       <option value="pvp">👥 Dos jugadores</option>
+                      <option value="bot">🤖 Contra la IA</option>
+                    </select>
+                  </label>
+
+                  <label
+                    for="bot-difficulty"
+                    id="bot-difficulty-label"
+                    style="display: none"
+                  >
+                    Dificultad de la IA
+                    <select id="bot-difficulty">
+                      <option value="facil">🌱 Fácil</option>
+                      <option value="medio" selected>⚙️ Medio</option>
+                      <option value="dificil">🔥 Difícil</option>
+                      <option value="experto">🧠 Experto</option>
+                    </select>
+                  </label>
+
+                  <label for="bot-color" id="bot-color-label" style="display: none">
+                    Jugás con
+                    <select id="bot-color">
+                      <option value="w" selected>⚪ Blancas (vos primero)</option>
+                      <option value="b">⚫ Negras (la IA primero)</option>
                     </select>
                   </label>
 
@@ -4040,6 +4063,227 @@
       const game = new ChessGame();
       let selected = null;
       let valid = [];
+
+      /* =========================
+         IA · MOTOR DEL BOT
+      ========================== */
+      let botEnabled = false;
+      let botColor = "b";
+      let botDifficulty = "medio";
+      let botThinking = false;
+
+      const BOT_LEVELS = {
+        facil: { depth: 1, timeBudget: 400, randomness: 250, label: "Fácil" },
+        medio: { depth: 2, timeBudget: 800, randomness: 100, label: "Medio" },
+        dificil: {
+          depth: 3,
+          timeBudget: 1500,
+          randomness: 40,
+          label: "Difícil",
+        },
+        experto: {
+          depth: 4,
+          timeBudget: 3000,
+          randomness: 0,
+          label: "Experto",
+        },
+      };
+
+      // Aplica un movimiento directamente sobre el estado interno para la
+      // búsqueda, sin tocar notación/historial (más rápido). Siempre corona
+      // a dama para simplificar el árbol de búsqueda. Devuelve un snapshot
+      // que permite deshacer con simRestore().
+      function simApplyMove(g, fr, fc, m) {
+        const snap = g.snapshot();
+        const p = g.board[fr][fc];
+        const col = p[0];
+        const type = p[1];
+
+        g.applyTemporary(fr, fc, m);
+        if (m.promotion) {
+          g.board[m.r][m.c] = col + "Q";
+        }
+
+        if (type === "K") {
+          g.castling[col].K = false;
+          g.castling[col].Q = false;
+        }
+        if (type === "R") {
+          if (col === "w" && fr === 7 && fc === 0) g.castling.w.Q = false;
+          if (col === "w" && fr === 7 && fc === 7) g.castling.w.K = false;
+          if (col === "b" && fr === 0 && fc === 0) g.castling.b.Q = false;
+          if (col === "b" && fr === 0 && fc === 7) g.castling.b.K = false;
+        }
+
+        g.enPassant = null;
+        if (type === "P" && Math.abs(m.r - fr) === 2) {
+          g.enPassant = [(m.r + fr) / 2, fc];
+        }
+
+        g.turn = opposite(g.turn);
+        return snap;
+      }
+
+      function simRestore(g, snap) {
+        g.restore(snap);
+      }
+
+      // Ordena movimientos para mejorar la poda alfa-beta: capturas y
+      // coronaciones primero.
+      function moveHeuristic(g, mv) {
+        const target = g.board[mv.to.r][mv.to.c];
+        const mover = g.board[mv.from.r][mv.from.c];
+        let score = 0;
+        if (target) score += VALUES[target[1]] * 10 - VALUES[mover[1]];
+        if (mv.to.promotion) score += 900;
+        if (mv.to.castle) score += 50;
+        return score;
+      }
+
+      function orderMoves(g, moves) {
+        moves.sort((a, b) => moveHeuristic(g, b) - moveHeuristic(g, a));
+      }
+
+      // Negamax con poda alfa-beta. Devuelve la puntuación desde la
+      // perspectiva del jugador "color".
+      function negamax(g, depth, alpha, beta, color) {
+        const moves = g.all(color);
+
+        if (moves.length === 0) {
+          if (g.inCheck(color)) return -100000 - depth;
+          return 0;
+        }
+
+        if (depth === 0) {
+          return color === "w" ? g.evaluate() : -g.evaluate();
+        }
+
+        orderMoves(g, moves);
+        let best = -Infinity;
+
+        for (const mv of moves) {
+          const snap = simApplyMove(g, mv.from.r, mv.from.c, mv.to);
+          const score = -negamax(g, depth - 1, -beta, -alpha, opposite(color));
+          simRestore(g, snap);
+
+          if (score > best) best = score;
+          if (best > alpha) alpha = best;
+          if (alpha >= beta) break;
+        }
+
+        return best;
+      }
+
+      // Búsqueda con profundización iterativa y presupuesto de tiempo, para
+      // que la IA nunca se quede "pensando" demasiado tiempo.
+      function searchBotMove(g, maxDepth, timeBudgetMs) {
+        const color = g.turn;
+        let rootMoves = g.all(color);
+        if (!rootMoves.length) return [];
+
+        const deadline = performance.now() + timeBudgetMs;
+        let bestScored = rootMoves.map((mv) => ({ mv, score: 0 }));
+
+        for (let depth = 1; depth <= maxDepth; depth++) {
+          if (performance.now() > deadline) break;
+
+          orderMoves(g, rootMoves);
+          const scored = [];
+          let alpha = -Infinity;
+
+          for (const mv of rootMoves) {
+            const snap = simApplyMove(g, mv.from.r, mv.from.c, mv.to);
+            const score = -negamax(
+              g,
+              depth - 1,
+              -Infinity,
+              -alpha,
+              opposite(color),
+            );
+            simRestore(g, snap);
+            scored.push({ mv, score });
+            if (score > alpha) alpha = score;
+          }
+
+          scored.sort((a, b) => b.score - a.score);
+          bestScored = scored;
+          rootMoves = scored.map((s) => s.mv);
+
+          if (performance.now() > deadline) break;
+        }
+
+        return bestScored;
+      }
+
+      function chooseBotMove(difficultyKey) {
+        const level = BOT_LEVELS[difficultyKey] || BOT_LEVELS.medio;
+        const scored = searchBotMove(game, level.depth, level.timeBudget);
+        if (!scored.length) return null;
+
+        const bestScore = scored[0].score;
+        const candidates = scored.filter(
+          (s) => bestScore - s.score <= level.randomness,
+        );
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        return pick.mv;
+      }
+
+      function isBotTurn() {
+        return (
+          botEnabled &&
+          gameStarted &&
+          !game.over &&
+          !game.pending &&
+          game.turn === botColor
+        );
+      }
+
+      function playBotMove(fr, fc, move) {
+        if (!gameStarted) return;
+        let result = game.make(fr, fc, move);
+        if (result === "PROMOTION") {
+          result = game.promote("Q");
+        }
+        addIncrement();
+        selected = null;
+        valid = [];
+        render();
+        finishResult(result);
+        maybeTriggerBotMove();
+      }
+
+      function maybeTriggerBotMove() {
+        if (!isBotTurn()) return;
+        botThinking = true;
+        render();
+        setTimeout(() => {
+          if (!isBotTurn()) {
+            botThinking = false;
+            render();
+            return;
+          }
+          const mv = chooseBotMove(botDifficulty);
+          botThinking = false;
+          if (!mv) {
+            render();
+            return;
+          }
+          playBotMove(mv.from.r, mv.from.c, mv.to);
+        }, 350);
+      }
+
+      function updateModeUI() {
+        const modeSelect = document.getElementById("mode");
+        if (!modeSelect) return;
+        const isBot = modeSelect.value === "bot";
+        const difficultyLabel = document.getElementById(
+          "bot-difficulty-label",
+        );
+        const colorLabel = document.getElementById("bot-color-label");
+        if (difficultyLabel)
+          difficultyLabel.style.display = isBot ? "" : "none";
+        if (colorLabel) colorLabel.style.display = isBot ? "" : "none";
+      }
       let gameStarted = false;
 
       function render() {
@@ -4119,9 +4363,11 @@
 
         const statusText = !gameStarted
           ? "Pulsa 'Iniciar partida' para comenzar"
-          : game.over
-            ? "Partida terminada"
-            : `Turno de las ${game.turn === "w" ? "Blancas" : "Negras"}${check ? " · ¡Jaque!" : ""}`;
+          : botThinking
+            ? "🤖 La IA está pensando…"
+            : game.over
+              ? "Partida terminada"
+              : `Turno de las ${game.turn === "w" ? "Blancas" : "Negras"}${check ? " · ¡Jaque!" : ""}${botEnabled && game.turn === botColor ? " (IA)" : ""}`;
 
         document.getElementById("status").textContent = statusText;
 
@@ -4147,6 +4393,8 @@
 
       function clickSquare(r, c) {
         if (game.over) return;
+        if (botThinking) return;
+        if (botEnabled && game.turn === botColor) return;
         if (selected) {
           const move = valid.find((m) => m.r === r && m.c === c);
           if (move) {
@@ -4179,6 +4427,7 @@
           return;
         }
         finishResult(result);
+        maybeTriggerBotMove();
       }
 
       function showPromotion() {
@@ -4204,6 +4453,7 @@
             document.getElementById("promo").classList.remove("show");
             render();
             finishResult(result);
+            maybeTriggerBotMove();
           };
           box.appendChild(button);
         });
@@ -4356,7 +4606,17 @@
         button.onclick = () => showPage(button.dataset.pageAction);
       });
 
+      document.getElementById("mode").addEventListener("change", updateModeUI);
+      updateModeUI();
+
       document.getElementById("new-game").onclick = () => {
+        const modeValue = document.getElementById("mode").value;
+        botEnabled = modeValue === "bot";
+        botDifficulty = document.getElementById("bot-difficulty").value;
+        const humanColor = document.getElementById("bot-color").value;
+        botColor = opposite(humanColor);
+        botThinking = false;
+
         game.reset();
         selected = null;
         valid = [];
@@ -4364,11 +4624,21 @@
         initClock(true);
         render();
         document.getElementById("new-game").textContent = "🔄 Nueva partida";
-        toast("▶️ Partida iniciada");
+        toast(
+          botEnabled
+            ? `▶️ Partida iniciada · IA (${BOT_LEVELS[botDifficulty].label})`
+            : "▶️ Partida iniciada",
+        );
+        maybeTriggerBotMove();
       };
 
       document.getElementById("undo").onclick = () => {
-        if (game.undo()) {
+        if (botThinking) return;
+        const undone = game.undo();
+        if (undone && botEnabled && !game.over && game.turn === botColor) {
+          game.undo();
+        }
+        if (undone) {
           selected = null;
           valid = [];
           render();
