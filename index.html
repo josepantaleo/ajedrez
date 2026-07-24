@@ -3060,8 +3060,8 @@
 
             <div class="card">
               <div class="panel-title">💡 Consejo del día</div>
-              <h3>Controlá el centro</h3>
-              <p style="color: var(--muted)">
+              <h3 id="daily-tip-title">Controlá el centro</h3>
+              <p id="daily-tip-text" style="color: var(--muted)">
                 Las casillas centrales permiten que tus piezas tengan mayor
                 movilidad.
               </p>
@@ -3338,19 +3338,8 @@
                   </button>
                 </div>
 
-                <div style="margin-top: 16px; border-top: 1px solid var(--surface2); padding-top: 12px">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem">
-                    <input type="checkbox" id="beginner-mode-toggle" />
-                    🎓 Modo principiante: explicar cada jugada del rival
-                  </label>
-                  <div id="beginner-mode-output" style="display: none; margin-top: 12px">
-                    <div class="tutor-move-row">
-                      <span id="beginner-move-san" class="tutor-move-badge"></span>
-                      <span id="beginner-move-side" class="tutor-eval-text"></span>
-                    </div>
-                    <div class="tutor-comment" id="beginner-explanation"></div>
-                    <div class="tutor-tip" id="beginner-tip"></div>
-                  </div>
+                <div style="margin-top: 16px; border-top: 1px solid var(--surface2); padding-top: 12px; font-size: 0.8rem; color: var(--muted)">
+                  🎓 Activá o desactivá "Explicaciones" en el panel <strong>Modo educativo</strong> para recibir, en la tarjeta "Ayuda educativa", el porqué de cada jugada mientras jugás.
                 </div>
               </div>
             </div>
@@ -4637,6 +4626,7 @@
                   <th>Actividad</th>
                   <th>Resultado</th>
                   <th>XP</th>
+                  <th>Fecha</th>
                 </tr>
               </thead>
               <tbody id="history-table"></tbody>
@@ -5261,6 +5251,8 @@
       let validMoves = [];
       // Activa o desactiva el resaltado de jugadas posibles al seleccionar una pieza
       let showLegalMoves = localStorage.getItem("chessShowLegalMoves") !== "off";
+      // Activa o desactiva el resaltado de piezas atacadas (amenazas) en el tablero
+      let showThreats = localStorage.getItem("chessShowThreats") !== "off";
       let dragCtx = null;
       let justDraggedUntil = 0;
       const DRAG_THRESHOLD = 6;
@@ -5506,7 +5498,7 @@
               addIncrement();
               markMoveForAnimation(rndMove);
               playSoundForMove(rndMove, game);
-              showBeginnerExplanation(fenBeforeMove, rndMove);
+              showMoveExplanation(fenBeforeMove, rndMove);
               botThinking = false;
               render();
               checkGameOver();
@@ -5533,7 +5525,7 @@
               addIncrement();
               markMoveForAnimation(sfMove);
               playSoundForMove(sfMove, game);
-              showBeginnerExplanation(fenBeforeMove, sfMove);
+              showMoveExplanation(fenBeforeMove, sfMove);
             }
             botThinking = false;
             render();
@@ -5602,6 +5594,43 @@
         }
       }
 
+      // Calcula el conjunto de casillas ocupadas por piezas de "colorToMove"
+      // que serían alcanzables si le tocara mover a ese color en esta posición.
+      // Se usa para deducir qué piezas están bajo ataque (amenazadas).
+      function computeReachableSquares(fen, colorToMove) {
+        const parts = fen.split(" ");
+        parts[1] = colorToMove;
+        parts[3] = "-"; // se descarta la captura al paso al invertir el turno
+        try {
+          const temp = new Chess(parts.join(" "));
+          const moves = temp.moves({ verbose: true });
+          const set = new Set();
+          for (const m of moves) set.add(m.to);
+          return set;
+        } catch (e) {
+          return new Set();
+        }
+      }
+
+      // Devuelve el conjunto de casillas cuya pieza está atacada por el rival
+      function getThreatenedSquares(fen) {
+        const whiteTargets = computeReachableSquares(fen, "w");
+        const blackTargets = computeReachableSquares(fen, "b");
+        const temp = new Chess(fen);
+        const threatened = new Set();
+        const squares = ["a", "b", "c", "d", "e", "f", "g", "h"];
+        for (const file of squares) {
+          for (let rank = 1; rank <= 8; rank++) {
+            const sq = file + rank;
+            const p = temp.get(sq);
+            if (!p) continue;
+            if (p.color === "w" && blackTargets.has(sq)) threatened.add(sq);
+            if (p.color === "b" && whiteTargets.has(sq)) threatened.add(sq);
+          }
+        }
+        return threatened;
+      }
+
       function render() {
         const board = document.getElementById("board");
         const boardFrameEl = board.closest(".board-frame");
@@ -5609,6 +5638,10 @@
         board.innerHTML = "";
         const isCheck = game.in_check();
         const turn = game.turn();
+        const threatsEnabled = document.getElementById("toggle-threats")
+          ? document.getElementById("toggle-threats").checked
+          : showThreats;
+        const threatenedSquares = threatsEnabled ? getThreatenedSquares(game.fen()) : null;
 
         const pvpFlipEl = document.getElementById("pvp-flip");
         const pvpAutoFlip = !!(pvpFlipEl && pvpFlipEl.checked);
@@ -5649,8 +5682,8 @@
             }
 
             if (pieceObj) {
-              if (document.getElementById("toggle-threats").checked && pieceObj.color !== turn) {
-                // Amenaza visual simple
+              if (threatenedSquares && threatenedSquares.has(sqName)) {
+                square.classList.add("threat");
               }
               const pieceEl = document.createElement("div");
               pieceEl.className = "piece " + (pieceObj.color === "w" ? "white-piece" : "black-piece");
@@ -5885,7 +5918,7 @@
             validMoves = [];
             markMoveForAnimation(move);
             playSoundForMove(move, game);
-            showBeginnerExplanation(fenBeforeMove, move);
+            showMoveExplanation(fenBeforeMove, move);
             if (navigator.vibrate) {
               const isCapture = move.flags && (move.flags.includes("c") || move.flags.includes("e"));
               navigator.vibrate(isCapture ? [14, 30, 14] : 12);
@@ -5924,7 +5957,7 @@
             validMoves = [];
             markMoveForAnimation(move);
             playSoundForMove(move, game);
-            showBeginnerExplanation(fenBeforeMove, move);
+            showMoveExplanation(fenBeforeMove, move);
             render();
             checkGameOver();
             maybeTriggerBotMove();
@@ -5950,18 +5983,27 @@
         if (game.game_over()) {
           let resultText = "Partida terminada";
           if (game.in_checkmate()) {
-            const winner = game.turn() === 'w' ? 'Negras' : 'Blancas';
+            const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+            const winner = winnerColor === 'w' ? 'Blancas' : 'Negras';
             resultText = `Jaque mate · Ganaron las ${winner}`;
             state.games++;
-            state.wins++;
-            showAlert(`♚ ¡JAQUE MATE! Ganaron las ${winner}.`);
-            addXP(60, "Partida ganada", resultText);
+            const humanWon = !botEnabled || winnerColor !== botColor;
+            if (humanWon) {
+              state.wins++;
+              showAlert(`♚ ¡JAQUE MATE! Ganaron las ${winner}.`);
+              addXP(60, "Partida ganada", resultText);
+            } else {
+              state.losses++;
+              showAlert(`♚ Jaque mate. Ganó la IA jugando con ${winner.toLowerCase()}.`);
+              addXP(15, "Partida perdida", resultText);
+            }
           } else {
             state.games++;
             state.draws++;
             resultText = "Tablas";
             SoundFX.draw();
             showAlert("🤝 Partida tablas");
+            addXP(20, "Partida empatada", resultText);
           }
           const record = saveFinishedGame(resultText);
           save();
@@ -5989,6 +6031,7 @@
           result: resultText,
           mode: botEnabled ? "bot" : "pvp",
           difficulty: botEnabled ? botDifficulty : null,
+          humanColor: botEnabled ? (botColor === 'w' ? 'b' : 'w') : null,
           moves: history,
           positions: positions,
           analysis: null,
@@ -6127,22 +6170,93 @@
 
       let lastKnownLevel = null;
 
+      // Etiqueta de nivel según el XP acumulado (mismos rangos que las
+      // insignias de dificultad usadas en Lecciones/Ejercicios)
+      function levelLabel(level) {
+        if (level <= 3) return "Principiante";
+        if (level <= 7) return "Intermedio";
+        return "Avanzado";
+      }
+
       function updateProfile() {
         const level = Math.floor(state.xp / 1000) + 1;
         const progress = state.xp % 1000;
         document.getElementById("mini-name").textContent = state.name || "Alumno";
-        document.getElementById("mini-level").textContent = `Nivel ${level} · Principiante`;
+        document.getElementById("mini-level").textContent = `Nivel ${level} · ${levelLabel(level)}`;
         document.getElementById("mini-xp").style.width = (progress / 10) + "%";
         document.getElementById("mini-xp-text").textContent = `${progress} / 1000 XP`;
         document.getElementById("stat-xp").textContent = state.xp;
         document.getElementById("stat-wins").textContent = state.wins;
         document.getElementById("stat-puzzles").textContent = state.puzzles;
 
+        updateDashboardStats(level, progress);
+
         if (lastKnownLevel === null) {
           lastKnownLevel = level;
         } else if (level > lastKnownLevel) {
           celebrateLevelUp(level);
           lastKnownLevel = level;
+        }
+      }
+
+      // Calcula la precisión promedio del alumno a partir de las partidas
+      // guardadas que ya fueron analizadas por el motor (record.analysis)
+      function computeOverallAccuracy() {
+        const games = state.savedGames || [];
+        const values = [];
+        for (const g of games) {
+          if (!g.analysis || !g.analysis.accuracy) continue;
+          const humanColor = g.humanColor || "w"; // en PvP se toma la perspectiva de Blancas
+          const acc = g.analysis.accuracy[humanColor];
+          if (typeof acc === "number") values.push(acc);
+        }
+        if (!values.length) return null;
+        return values.reduce((a, b) => a + b, 0) / values.length;
+      }
+
+      // Rellena la tarjeta "Tu progreso" del inicio, las tarjetas de
+      // Estadísticas y la tabla de Historial con datos reales del alumno
+      function updateDashboardStats(level, progress) {
+        const progressTitleEl = document.getElementById("progress-title");
+        const mainProgressEl = document.getElementById("main-progress");
+        if (progressTitleEl) progressTitleEl.textContent = `Nivel ${level} · ${levelLabel(level)}`;
+        if (mainProgressEl) mainProgressEl.style.width = (progress / 10) + "%";
+
+        const accuracyEl = document.getElementById("stat-accuracy");
+        if (accuracyEl) {
+          const acc = computeOverallAccuracy();
+          accuracyEl.textContent = acc === null ? "—" : Math.round(acc) + "%";
+        }
+
+        const gamesTotalEl = document.getElementById("games-total");
+        const gamesWinsEl = document.getElementById("games-wins");
+        const gamesLossesEl = document.getElementById("games-losses");
+        const gamesDrawsEl = document.getElementById("games-draws");
+        if (gamesTotalEl) gamesTotalEl.textContent = state.games;
+        if (gamesWinsEl) gamesWinsEl.textContent = state.wins;
+        if (gamesLossesEl) gamesLossesEl.textContent = state.losses;
+        if (gamesDrawsEl) gamesDrawsEl.textContent = state.draws;
+
+        const historyBody = document.getElementById("history-table");
+        if (historyBody) {
+          historyBody.innerHTML = "";
+          const entries = (state.history || []).slice().reverse();
+          if (!entries.length) {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td colspan="4" style="color: var(--muted)">Todavía no hay actividad registrada.</td>`;
+            historyBody.appendChild(row);
+          } else {
+            for (const entry of entries) {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${entry.activity}</td>
+                <td>${entry.result}</td>
+                <td>+${entry.xp} XP</td>
+                <td>${entry.date}</td>
+              `;
+              historyBody.appendChild(row);
+            }
+          }
         }
       }
 
@@ -6269,6 +6383,19 @@
       }
       syncLegalMovesUI();
 
+      // Activar/desactivar el resaltado de piezas amenazadas (checkbox del
+      // panel "Modo educativo")
+      const threatsCheckbox = document.getElementById("toggle-threats");
+      if (threatsCheckbox) {
+        threatsCheckbox.checked = showThreats;
+        threatsCheckbox.addEventListener("change", () => {
+          showThreats = threatsCheckbox.checked;
+          localStorage.setItem("chessShowThreats", showThreats ? "on" : "off");
+          if (gameStarted) render();
+          toast(showThreats ? "⚔️ Amenazas activadas" : "⚔️ Amenazas desactivadas");
+        });
+      }
+
       document.getElementById("new-game").onclick = () => {
         const modeValue = document.getElementById("mode").value;
         botEnabled = modeValue === "bot";
@@ -6281,6 +6408,7 @@
         selected = null;
         validMoves = [];
         gameStarted = true;
+        resetEduPanel();
         initClock(true);
         render();
         document.getElementById("new-game").textContent = "🔄 Nueva partida";
@@ -6308,6 +6436,7 @@
         const record = saveFinishedGame("Rendición");
         showAlert("🏳️ Te rendiste.");
         save();
+        updateProfile();
         if (record) offerAnalysis(record.id);
       };
 
@@ -6923,6 +7052,45 @@
         "Con torres en el tablero, la actividad de las piezas suele valer más que el material.",
       ];
 
+      // =========================
+      // CONSEJO DEL DÍA (tarjeta de inicio): cambia una vez por día, igual
+      // para todos los que entren ese día, en vez de quedar fijo siempre.
+      // =========================
+      const DAILY_TIPS = [
+        { title: "Desarrollá tus piezas primero", text: "En la apertura, priorizá desarrollar tus piezas menores (caballos y alfiles) antes de sacar la dama." },
+        { title: "Enrocá pronto", text: "Tratá de enrocar pronto: pone a tu rey a salvo y conecta las torres." },
+        { title: "Controlá el centro", text: "Las casillas centrales (d4, d5, e4, e5) permiten que tus piezas tengan mayor movilidad." },
+        { title: "No repitas piezas sin razón", text: "Evitá mover la misma pieza dos veces en la apertura sin una buena razón." },
+        { title: "Cuidado con sacar la dama temprano", text: "No saques la dama demasiado pronto: puede convertirse en blanco de ataques con pérdida de tiempo." },
+        { title: "Preguntate qué amenaza el rival", text: "Antes de mover, preguntate siempre: ¿qué amenaza mi rival con su última jugada?" },
+        { title: "Buscá piezas mal defendidas", text: "Las piezas rivales mal defendidas suelen ser un buen objetivo táctico." },
+        { title: "Ocupá columnas abiertas", text: "Una torre en columna abierta o un caballo bien plantado en el centro valen mucho." },
+        { title: "Simplificá con ventaja de material", text: "Si tenés ventaja de material, buscá cambiar piezas para simplificar la posición." },
+        { title: "Protegé a tu rey", text: "Cuidá la seguridad de tu rey: no debilites innecesariamente los peones que lo protegen." },
+        { title: "Jugá siempre con un plan", text: "Pensá en tu plan antes de cada jugada, no solo en la jugada en sí." },
+        { title: "Activá tu rey en el final", text: "En el final, activá a tu rey: se convierte en una pieza de ataque muy importante." },
+        { title: "Valorá los peones pasados", text: "Los peones pasados son muy valiosos en el final: intentá coronarlos o bloquearlos." },
+        { title: "Contá bien los tiempos", text: "En los finales, un tempo de más puede decidir la partida." },
+        { title: "Priorizá la actividad de tus piezas", text: "Con torres en el tablero, la actividad de las piezas suele valer más que el material." },
+      ];
+
+      function dayOfYear(date) {
+        const start = new Date(date.getFullYear(), 0, 0);
+        return Math.floor((date - start) / 86400000);
+      }
+
+      function renderDailyTip() {
+        const titleEl = document.getElementById("daily-tip-title");
+        const textEl = document.getElementById("daily-tip-text");
+        if (!titleEl || !textEl) return;
+        const idx = dayOfYear(new Date()) % DAILY_TIPS.length;
+        const tip = DAILY_TIPS[idx];
+        titleEl.textContent = tip.title;
+        textEl.textContent = tip.text;
+      }
+
+      renderDailyTip();
+
       const PIECE_NAMES = { p: "peón", n: "caballo", b: "alfil", r: "torre", q: "dama", k: "rey" };
       const TUTOR_START_SQUARES = { n: ["b1", "g1", "b8", "g8"], b: ["c1", "f1", "c8", "f8"] };
       const TUTOR_CENTER_SQUARES = ["d4", "d5", "e4", "e5"];
@@ -7050,19 +7218,28 @@
       }
 
       // =========================
-      // MODO PRINCIPIANTE (explica cada jugada del rival apenas se juega)
+      // EXPLICACIONES (panel "Modo educativo"): explica cada jugada apenas se
+      // juega, actualizando en vivo la tarjeta "Ayuda educativa".
       // =========================
-      let beginnerMode = localStorage.getItem("beginnerMode") === "1";
-      const beginnerToggleEl = document.getElementById("beginner-mode-toggle");
-      if (beginnerToggleEl) {
-        beginnerToggleEl.checked = beginnerMode;
-        beginnerToggleEl.onchange = () => {
-          beginnerMode = beginnerToggleEl.checked;
-          localStorage.setItem("beginnerMode", beginnerMode ? "1" : "0");
-          if (!beginnerMode) {
-            const out = document.getElementById("beginner-mode-output");
-            if (out) out.style.display = "none";
-          }
+      let explainMode = localStorage.getItem("chessExplainMode") !== "off";
+      const explainToggleEl = document.getElementById("toggle-explain");
+      const EDU_DEFAULT_TITLE = "Pensá antes de mover";
+      const EDU_DEFAULT_TEXT = "Antes de jugar, preguntate: ¿qué amenaza mi rival?";
+
+      function resetEduPanel() {
+        const titleEl = document.getElementById("edu-title");
+        const textEl = document.getElementById("edu-text");
+        if (titleEl) titleEl.textContent = EDU_DEFAULT_TITLE;
+        if (textEl) textEl.textContent = EDU_DEFAULT_TEXT;
+      }
+
+      if (explainToggleEl) {
+        explainToggleEl.checked = explainMode;
+        explainToggleEl.onchange = () => {
+          explainMode = explainToggleEl.checked;
+          localStorage.setItem("chessExplainMode", explainMode ? "on" : "off");
+          if (!explainMode) resetEduPanel();
+          toast(explainMode ? "📚 Explicaciones activadas" : "📚 Explicaciones desactivadas");
         };
       }
 
@@ -7071,11 +7248,11 @@
         return !botEnabled || moverColor === botColor;
       }
 
-      function showBeginnerExplanation(fenBefore, mv) {
-        if (!beginnerMode || !mv) return;
+      function showMoveExplanation(fenBefore, mv) {
+        if (!explainMode || !mv) return;
         if (!shouldExplainMover(mv.color)) return;
 
-        const sideLabel = mv.color === "w" ? "Las Blancas" : "Las Negras";
+        const sideLabel = mv.color === "w" ? "Las Blancas jugaron" : "Las Negras jugaron";
         const reasons = getMoveReasons(mv);
         let text;
         if (reasons.length) {
@@ -7085,13 +7262,11 @@
         }
         const tip = pickTutorTip(fenBefore);
 
-        const out = document.getElementById("beginner-mode-output");
-        if (!out) return;
-        document.getElementById("beginner-move-san").textContent = mv.san;
-        document.getElementById("beginner-move-side").textContent = sideLabel + " jugaron";
-        document.getElementById("beginner-explanation").textContent = capitalizeFirst(text);
-        document.getElementById("beginner-tip").textContent = "💡 " + tip;
-        out.style.display = "block";
+        const titleEl = document.getElementById("edu-title");
+        const textEl = document.getElementById("edu-text");
+        if (!titleEl || !textEl) return;
+        titleEl.textContent = mv.san + " · " + sideLabel;
+        textEl.textContent = capitalizeFirst(text) + " 💡 " + tip;
       }
 
       async function requestTutorSuggestion() {
