@@ -815,6 +815,19 @@
         display: none !important;
       }
 
+      /* IMPORTANTE: ".page.active" tiene "filter: blur(0)" de forma
+         permanente (no solo durante la animación de transición). Un
+         "filter" con cualquier valor —incluso blur(0)— crea un nuevo
+         "containing block", así que el position:fixed del tablero
+         quedaba atrapado dentro de la página en vez de ocupar toda
+         la pantalla. Por eso se veía solo una parte del tablero. */
+      body.fullscreen-game .page,
+      body.fullscreen-game .page.active {
+        filter: none !important;
+        transform: none !important;
+        animation: none !important;
+      }
+
       /* Contenedor único: columna flex que reparte el espacio real
          entre reloj / tablero / controles, sin adivinar alturas */
       body.fullscreen-game .main,
