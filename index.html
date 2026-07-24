@@ -486,15 +486,44 @@
         padding: 12px 16px;
         font-size: 0.95rem;
         min-width: 90px;
+        min-height: 44px;
         font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        line-height: 1.15;
+        cursor: pointer;
         transition:
           transform 0.15s ease,
           filter 0.15s ease,
-          box-shadow 0.15s ease;
+          box-shadow 0.15s ease,
+          opacity 0.15s ease;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         position: relative;
         overflow: hidden;
         isolation: isolate;
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--accent2);
+        outline-offset: 2px;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        filter: none;
+        transform: none;
+      }
+
+      /* Estado "apagado" para botones que funcionan como interruptor
+         (por ejemplo, mostrar/ocultar las jugadas posibles) */
+      .btn.off {
+        background: transparent;
+        color: var(--muted);
+        box-shadow: none;
+        border-style: dashed;
       }
 
       .btn::after {
@@ -752,11 +781,14 @@
       }
 
       /* =========================================================
-         MODO FULLSCREEN LIMPIO CON CRONÓMETROS FLOTANTES SUPERIORES
+         MODO FULLSCREEN LIMPIO — LAYOUT FLEX REAL (se adapta a
+         cualquier alto/ancho de pantalla, notch y barras del
+         navegador, en vez de medidas fijas en px)
       ========================================================= */
 
       body.fullscreen-game {
         height: 100vh;
+        height: 100dvh;
         width: 100vw;
         overflow: hidden;
         padding: 0;
@@ -765,10 +797,8 @@
 
       body.fullscreen-game .app {
         display: flex !important;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
         height: 100vh;
+        height: 100dvh;
         width: 100vw;
       }
 
@@ -785,19 +815,24 @@
         display: none !important;
       }
 
+      /* Contenedor único: columna flex que reparte el espacio real
+         entre reloj / tablero / controles, sin adivinar alturas */
       body.fullscreen-game .main,
       body.fullscreen-game .game-layout,
       body.fullscreen-game .board-area,
       body.fullscreen-game #game-card {
         width: 100vw !important;
         height: 100vh !important;
+        height: 100dvh !important;
         margin: 0 !important;
         padding: 0 !important;
-        position: absolute !important;
+        position: fixed !important;
         inset: 0 !important;
         display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
+        gap: clamp(8px, 1.6vh, 18px);
         background: radial-gradient(
           circle at center,
           #0b1d35 0%,
@@ -806,9 +841,15 @@
         border: none !important;
         box-shadow: none !important;
         z-index: 10;
+        box-sizing: border-box;
+        padding-top: max(10px, env(safe-area-inset-top)) !important;
+        padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+        padding-left: max(10px, env(safe-area-inset-left)) !important;
+        padding-right: max(10px, env(safe-area-inset-right)) !important;
       }
 
-      /* CRONÓMETROS FLOTANTES EN LA PARTE SUPERIOR EN PANTALLA COMPLETA */
+      /* CRONÓMETRO: ahora es un elemento más del flujo (flex),
+         no queda flotando encima ni tapa nada */
       @keyframes fs-clock-pulse {
         0% {
           box-shadow:
@@ -823,32 +864,32 @@
       }
 
       body.fullscreen-game .clock {
-        position: fixed !important;
-        top: 20px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
+        position: static !important;
+        flex: 0 0 auto !important;
         display: flex !important;
-        gap: 20px !important;
+        gap: clamp(8px, 2vw, 20px) !important;
         align-items: center !important;
+        justify-content: center;
         z-index: 60 !important;
         background: rgba(6, 14, 28, 0.85) !important;
-        padding: 10px 20px !important;
+        padding: clamp(6px, 1vh, 10px) clamp(10px, 2vw, 20px) !important;
         border-radius: 20px !important;
         border: 1px solid rgba(92, 200, 255, 0.25) !important;
         backdrop-filter: blur(14px) !important;
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4) !important;
+        max-width: 100%;
       }
 
       body.fullscreen-game .clock div {
-        padding: 10px 24px !important;
-        min-width: 140px !important;
+        padding: clamp(6px, 1vh, 10px) clamp(12px, 3vw, 24px) !important;
+        min-width: 0 !important;
         text-align: center !important;
         background: linear-gradient(135deg, #0f2c52, #1c4b8c) !important;
         border-radius: 14px !important;
         border: 1px solid rgba(120, 210, 255, 0.35) !important;
         font-weight: 900 !important;
-        font-size: 1.6rem !important;
-        letter-spacing: 0.12em !important;
+        font-size: clamp(1rem, 3.4vh, 1.6rem) !important;
+        letter-spacing: 0.1em !important;
         color: #ffffff !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
         animation: fs-clock-pulse 2.5s ease-in-out infinite alternate !important;
@@ -861,14 +902,23 @@
         box-shadow: 0 0 30px rgba(242, 184, 75, 0.4) !important;
       }
 
-      /* Tablero centrado y maximizado teniendo en cuenta el espacio del reloj superior */
+      /* El tablero ocupa todo el espacio disponible entre el reloj y
+         los controles. El tamaño exacto (cuadrado, sin recortes) lo
+         calcula JS con precisión en cada resize/orientationchange,
+         estas reglas son el respaldo si JS no llegó a correr aún */
       body.fullscreen-game .board-frame {
-        margin: auto !important;
-        width: min(calc(100vh - 140px), calc(100vw - 80px)) !important;
-        height: min(calc(100vh - 140px), calc(100vw - 80px)) !important;
-        max-width: 100% !important;
-        max-height: 100% !important;
+        flex: 0 0 auto;
+        min-height: 0;
+        min-width: 0;
+        width: min(92vw, calc(100dvh - 190px));
+        height: min(92vw, calc(100dvh - 190px));
+        max-width: 100%;
+        max-height: 100%;
+        margin: 0 !important;
         padding: 10px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background:
           radial-gradient(
             circle at 30% 30%,
@@ -882,6 +932,7 @@
           0 30px 80px rgba(0, 0, 0, 0.6),
           inset 0 0 40px rgba(0, 0, 0, 0.5);
         z-index: 15;
+        box-sizing: border-box;
       }
 
       body.fullscreen-game .board {
@@ -894,14 +945,14 @@
         overflow: hidden;
       }
 
-      /* Controles esenciales flotando discretamente en la parte inferior */
+      /* Controles: parte del flujo normal (ya no position:fixed),
+         así nunca se superponen al tablero ni quedan cortados */
       body.fullscreen-game .controls-panel {
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
+        position: static !important;
+        flex: 0 0 auto !important;
         display: flex !important;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 8px;
         padding: 10px 14px;
         background: rgba(8, 16, 32, 0.85);
@@ -910,6 +961,7 @@
         backdrop-filter: blur(16px);
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         z-index: 60;
+        max-width: 100%;
       }
 
       body.fullscreen-game .controls-panel .btn {
@@ -918,10 +970,16 @@
         min-width: auto;
       }
 
-      @media (max-width: 900px) {
-        body.fullscreen-game .board-frame {
-          width: min(calc(100vw - 20px), calc(100vh - 160px)) !important;
-          height: min(calc(100vw - 20px), calc(100vh - 160px)) !important;
+      /* Pantallas muy bajas (celular en horizontal): reloj y
+         controles más compactos para no robarle aire al tablero */
+      @media (max-height: 480px) {
+        body.fullscreen-game .clock div {
+          font-size: 1rem !important;
+          padding: 5px 10px !important;
+        }
+        body.fullscreen-game .controls-panel .btn {
+          padding: 6px 10px;
+          font-size: 0.78rem;
         }
       }
 
@@ -1174,7 +1232,7 @@
       .controls {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
         justify-content: flex-end;
       }
 
@@ -1189,6 +1247,7 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        justify-content: center;
         gap: 10px;
         padding: 14px 16px;
         background: rgba(7, 13, 25, 0.92);
@@ -1196,6 +1255,28 @@
         border-radius: 22px;
         backdrop-filter: blur(20px);
         box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* En celulares, en vez de amontonar botones en varias líneas
+         irregulares, se ordenan en una grilla prolija de 2 columnas */
+      @media (max-width: 560px) {
+        .controls-panel {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .controls-panel .btn {
+          width: 100%;
+          min-width: 0;
+        }
+        body.fullscreen-game .controls-panel {
+          display: flex;
+          width: auto;
+        }
+        body.fullscreen-game .controls-panel .btn {
+          width: auto;
+        }
       }
 
       .moves {
@@ -1239,21 +1320,31 @@
         margin: 0;
       }
 
+      /* Antes quedaba siempre en position:fixed y tapaba el tablero
+         en tablets/celulares. Ahora es parte normal del flujo y solo
+         se "flota" (sticky, sin tapar nada) cuando hay pantalla ancha */
       .floating-moves-card {
-        position: fixed;
-        top: 110px;
-        right: 22px;
-        width: 320px;
-        max-height: calc(100vh - 140px);
+        position: static;
+        width: 100%;
+        max-height: 320px;
         padding: 18px;
         background: rgba(9, 17, 31, 0.96);
         border: 1px solid rgba(109, 171, 255, 0.16);
         box-shadow: 0 26px 70px rgba(0, 0, 0, 0.34);
         backdrop-filter: blur(20px);
-        z-index: 30;
+        z-index: 5;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        box-sizing: border-box;
+      }
+
+      @media (min-width: 1300px) {
+        .floating-moves-card {
+          position: sticky;
+          top: 110px;
+          max-height: calc(100vh - 140px);
+        }
       }
 
       .floating-moves-card .panel-title {
@@ -2894,6 +2985,15 @@
                   <button class="btn" id="undo" data-tooltip="Deshacer la última jugada">↩️ Deshacer</button>
                   <button class="btn danger" id="resign" data-tooltip="Abandonar la partida actual">🏳️ Rendirse</button>
                   <button class="btn" id="copy-game" data-tooltip="Copiar la notación de la partida">📋 Copiar partida</button>
+                  <button
+                    class="btn secondary"
+                    id="toggle-legal-btn"
+                    type="button"
+                    data-tooltip="Activar o desactivar las jugadas posibles resaltadas en el tablero"
+                    aria-pressed="true"
+                  >
+                    🎯 Jugadas: ON
+                  </button>
                   <button
                     class="btn secondary"
                     id="game-fullscreen"
@@ -4612,6 +4712,8 @@
       const game = new Chess();
       let selected = null;
       let validMoves = [];
+      // Activa o desactiva el resaltado de jugadas posibles al seleccionar una pieza
+      let showLegalMoves = localStorage.getItem("chessShowLegalMoves") !== "off";
       let dragCtx = null;
       let justDraggedUntil = 0;
       const DRAG_THRESHOLD = 6;
@@ -4990,7 +5092,7 @@
               square.classList.add("check");
             }
 
-            if (validMoves.includes(sqName)) {
+            if (validMoves.includes(sqName) && showLegalMoves) {
               square.classList.add("hint");
             }
 
@@ -5580,6 +5682,36 @@
       // Los navegadores requieren un gesto del usuario para habilitar audio
       document.body.addEventListener("pointerdown", () => SoundFX.unlock(), { once: true });
 
+      // Activar/desactivar el resaltado de jugadas posibles (checkbox del
+      // panel "Modo educativo" + botón rápido, disponible también en pantalla completa)
+      const legalMovesCheckbox = document.getElementById("toggle-legal");
+      const legalMovesBtn = document.getElementById("toggle-legal-btn");
+
+      function syncLegalMovesUI() {
+        if (legalMovesCheckbox) legalMovesCheckbox.checked = showLegalMoves;
+        if (legalMovesBtn) {
+          legalMovesBtn.textContent = showLegalMoves ? "🎯 Jugadas: ON" : "🎯 Jugadas: OFF";
+          legalMovesBtn.classList.toggle("off", !showLegalMoves);
+          legalMovesBtn.setAttribute("aria-pressed", String(showLegalMoves));
+        }
+      }
+
+      function setShowLegalMoves(value) {
+        showLegalMoves = value;
+        localStorage.setItem("chessShowLegalMoves", value ? "on" : "off");
+        syncLegalMovesUI();
+        render();
+        toast(showLegalMoves ? "🎯 Jugadas posibles activadas" : "🎯 Jugadas posibles desactivadas");
+      }
+
+      if (legalMovesCheckbox) {
+        legalMovesCheckbox.addEventListener("change", () => setShowLegalMoves(legalMovesCheckbox.checked));
+      }
+      if (legalMovesBtn) {
+        legalMovesBtn.addEventListener("click", () => setShowLegalMoves(!showLegalMoves));
+      }
+      syncLegalMovesUI();
+
       document.getElementById("new-game").onclick = () => {
         const modeValue = document.getElementById("mode").value;
         botEnabled = modeValue === "bot";
@@ -5638,17 +5770,110 @@
       function setupFullscreenToggle(buttonId) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
+
+        function updateBtnLabel() {
+          const isFs = document.body.classList.contains("fullscreen-game");
+          btn.textContent = isFs
+            ? (btn.dataset.exitText || "❎ Salir")
+            : (btn.dataset.enterText || "📺 Pantalla completa");
+        }
+
         btn.onclick = async () => {
-          if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen().catch(() => {});
+          if (!document.body.classList.contains("fullscreen-game")) {
+            // Activamos primero la clase (así el tablero se ve "completo" ya
+            // mismo aunque el navegador no soporte o rechace la Fullscreen API,
+            // como pasa en iPhone) y luego intentamos la API nativa.
             document.body.classList.add("fullscreen-game");
+            updateBtnLabel();
+            await document.documentElement.requestFullscreen().catch(() => {});
+            requestAnimationFrame(sizeFullscreenBoard);
           } else {
-            await document.exitFullscreen().catch(() => {});
             document.body.classList.remove("fullscreen-game");
+            updateBtnLabel();
+            resetBoardFrameSize();
+            if (document.fullscreenElement) {
+              await document.exitFullscreen().catch(() => {});
+            }
           }
         };
+
+        // Si el usuario sale con ESC, el botón "atrás" o un gesto del sistema,
+        // sincronizamos la clase igual para no quedar en un estado inconsistente
+        document.addEventListener("fullscreenchange", () => {
+          if (!document.fullscreenElement && document.body.classList.contains("fullscreen-game")) {
+            document.body.classList.remove("fullscreen-game");
+            updateBtnLabel();
+            resetBoardFrameSize();
+          }
+        });
+
+        updateBtnLabel();
       }
       setupFullscreenToggle("game-fullscreen");
+
+      // Calcula con precisión (en píxeles reales, no medidas fijas adivinadas)
+      // el tamaño cuadrado máximo que puede tener el tablero en pantalla
+      // completa, dejando el espacio real que ocupan el reloj y los controles
+      // en CADA dispositivo (celular, tablet, notebook, con o sin notch).
+      function sizeFullscreenBoard() {
+        if (!document.body.classList.contains("fullscreen-game")) return;
+        const boardFrame = document.querySelector(".board-frame");
+        const gameCard = document.getElementById("game-card");
+        if (!boardFrame || !gameCard) return;
+
+        const clockEl = gameCard.querySelector(".clock");
+        const controlsEl = gameCard.querySelector(".controls-panel");
+        const cardStyle = getComputedStyle(gameCard);
+        const gap = parseFloat(cardStyle.rowGap || cardStyle.gap || "12") || 12;
+        const paddingV =
+          (parseFloat(cardStyle.paddingTop) || 0) + (parseFloat(cardStyle.paddingBottom) || 0);
+        const paddingH =
+          (parseFloat(cardStyle.paddingLeft) || 0) + (parseFloat(cardStyle.paddingRight) || 0);
+
+        const viewportW = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const viewportH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const cardRect = gameCard.getBoundingClientRect();
+        const clockH = clockEl ? clockEl.getBoundingClientRect().height : 0;
+        const controlsH = controlsEl ? controlsEl.getBoundingClientRect().height : 0;
+
+        const availableH =
+          (cardRect.height || viewportH) - clockH - controlsH - gap * 2 - paddingV;
+        const availableW = (cardRect.width || viewportW) - paddingH;
+
+        const side = Math.max(140, Math.floor(Math.min(availableW, availableH)));
+        boardFrame.style.width = side + "px";
+        boardFrame.style.height = side + "px";
+      }
+
+      function resetBoardFrameSize() {
+        const boardFrame = document.querySelector(".board-frame");
+        if (boardFrame) {
+          boardFrame.style.width = "";
+          boardFrame.style.height = "";
+        }
+      }
+
+      (function setupFullscreenResize() {
+        let resizeTimer = null;
+        const scheduleResize = () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(sizeFullscreenBoard, 60);
+        };
+        window.addEventListener("resize", scheduleResize);
+        window.addEventListener("orientationchange", () => setTimeout(sizeFullscreenBoard, 200));
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", scheduleResize);
+        }
+        const gameCard = document.getElementById("game-card");
+        if (gameCard && "ResizeObserver" in window) {
+          const ro = new ResizeObserver(scheduleResize);
+          ro.observe(gameCard);
+          const clockEl = gameCard.querySelector(".clock");
+          const controlsEl = gameCard.querySelector(".controls-panel");
+          if (clockEl) ro.observe(clockEl);
+          if (controlsEl) ro.observe(controlsEl);
+        }
+      })();
 
       // Temas
       const THEMES = { blue: "Azul moderno", wood: "Madera clásica", green: "Verde torneo", purple: "Violeta", red: "Rojo intenso", ocean: "Océano", midnight: "Medianoche", light: "Claro elegante" };
