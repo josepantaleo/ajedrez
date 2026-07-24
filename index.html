@@ -2101,6 +2101,68 @@
         background: rgba(128, 150, 180, 0.08);
       }
 
+      .puzzle-box {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--surface2);
+      }
+
+      .puzzle-prompt {
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text);
+      }
+
+      .puzzle-board-wrap {
+        width: min(280px, 70vw);
+        margin: 0 auto 14px;
+      }
+
+      .puzzle-board .square {
+        cursor: pointer;
+      }
+
+      .puzzle-board .piece {
+        font-size: clamp(20px, 6vw, 34px);
+        pointer-events: none;
+      }
+
+      .puzzle-board .square.wrong-flash {
+        background: color-mix(in srgb, var(--danger) 55%, transparent) !important;
+      }
+
+      .puzzle-board .square.solved-flash {
+        background: color-mix(in srgb, var(--success) 55%, transparent) !important;
+      }
+
+      .puzzle-feedback {
+        min-height: 24px;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+
+      .puzzle-feedback.correct {
+        color: var(--success);
+      }
+
+      .puzzle-feedback.wrong {
+        color: var(--danger);
+      }
+
+      .puzzle-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .lesson-gate-note {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+
       @media (max-width: 800px) {
         .learning-head {
           display: block;
@@ -3956,6 +4018,30 @@
                 practicarla.</label
               >
             </div>
+            <div class="puzzle-box">
+              <div class="puzzle-prompt" id="lesson-puzzle-prompt"></div>
+              <div class="puzzle-board-wrap">
+                <div class="board puzzle-board" id="lesson-puzzle-board"></div>
+              </div>
+              <div class="puzzle-feedback" id="lesson-puzzle-feedback"></div>
+              <div class="puzzle-actions">
+                <button class="btn" id="lesson-puzzle-hint" type="button">
+                  💡 Pista
+                </button>
+                <button
+                  class="btn"
+                  id="lesson-puzzle-retry"
+                  type="button"
+                  style="display: none"
+                >
+                  ↺ Reintentar
+                </button>
+              </div>
+            </div>
+            <p class="lesson-gate-note" id="lesson-gate-note">
+              Resolvé la posición y tildá los 3 casilleros para poder marcar
+              la lección como completada.
+            </p>
             <div
               style="
                 display: flex;
@@ -3964,7 +4050,7 @@
                 margin-top: 22px;
               "
             >
-              <button class="btn primary" id="lesson-complete">
+              <button class="btn primary" id="lesson-complete" disabled>
                 ✓ Marcar como completada
               </button>
               <button class="btn" id="lesson-close">Cerrar</button>
@@ -4558,8 +4644,30 @@
                 🔥 Racha: 0
               </div>
               <div class="exercise-question" id="exercise-question"></div>
-              <div class="exercise-options" id="exercise-options"></div>
-              <div class="exercise-feedback" id="exercise-feedback"></div>
+              <div class="puzzle-box">
+                <div class="puzzle-board-wrap">
+                  <div
+                    class="board puzzle-board"
+                    id="exercise-puzzle-board"
+                  ></div>
+                </div>
+                <div class="puzzle-feedback" id="puzzle-feedback"></div>
+                <div class="puzzle-actions">
+                  <button class="btn" id="exercise-puzzle-hint" type="button">
+                    💡 Pista
+                  </button>
+                  <button
+                    class="btn"
+                    id="exercise-puzzle-retry"
+                    type="button"
+                    style="display: none"
+                  >
+                    ↺ Reintentar
+                  </button>
+                </div>
+              </div>
+              <div class="exercise-options" id="exercise-options" style="display:none"></div>
+              <div class="exercise-feedback" id="exercise-feedback" style="display:none"></div>
               <div
                 id="exercise-result"
                 class="exercise-result"
@@ -4578,13 +4686,6 @@
                   margin-top: 22px;
                 "
               >
-                <button
-                  class="btn primary"
-                  id="exercise-next"
-                  style="display: none"
-                >
-                  Siguiente
-                </button>
                 <button class="btn" id="exercise-close">Cerrar</button>
               </div>
             </div>
@@ -5198,277 +5299,6 @@
         puzzles: 0,
         history: [],
         savedGames: [],
-        completedLessons: [],
-      };
-
-      // =========================
-      // CONTENIDO DE LAS 20 LECCIONES (página "Aprender")
-      // =========================
-      const LESSONS_DATA = {
-        1: {
-          category: "♟️ Fundamentos",
-          title: "♟️ Conocé las piezas",
-          xp: 25,
-          content: `
-            <p>El ajedrez se juega con 6 tipos de piezas, cada una con su propio movimiento:</p>
-            <h4>♙ Peón</h4>
-            <p>Avanza en línea recta (una casilla, o dos en su primer movimiento) pero captura en diagonal.</p>
-            <h4>♘ Caballo</h4>
-            <p>Se mueve en "L": dos casillas en una dirección y una perpendicular. Es la única pieza que salta por encima de otras.</p>
-            <h4>♗ Alfil</h4>
-            <p>Se mueve en diagonal, cualquier cantidad de casillas. Cada alfil queda siempre en casillas del mismo color.</p>
-            <h4>♖ Torre</h4>
-            <p>Se mueve en línea recta, horizontal o vertical, cualquier cantidad de casillas.</p>
-            <h4>♕ Dama</h4>
-            <p>Combina el movimiento de la torre y el alfil: es la pieza más poderosa del tablero.</p>
-            <h4>♔ Rey</h4>
-            <p>Se mueve una casilla en cualquier dirección. Hay que cuidarlo siempre, ¡si lo dan mate, se termina la partida!</p>
-            <div class="lesson-tip">💡 Valor aproximado: Peón = 1, Caballo/Alfil = 3, Torre = 5, Dama = 9. El rey no tiene valor numérico porque no se puede perder.</div>
-          `,
-        },
-        2: {
-          category: "♟️ Fundamentos",
-          title: "🎯 Capturas y valor de las piezas",
-          xp: 30,
-          content: `
-            <p>Capturar significa que una pieza propia ocupa la casilla de una pieza rival, sacándola del tablero.</p>
-            <p>No estás obligado a capturar salvo excepciones puntuales, así que antes de hacerlo preguntate:</p>
-            <h4>¿Conviene esta captura?</h4>
-            <p>Compará el valor de la pieza que capturás con el valor de la pieza con la que capturás. Si cambiás un caballo (3) por una torre (5), ganás material. Si cambiás una dama (9) por un peón (1), es una mala idea salvo que haya un motivo táctico detrás.</p>
-            <h4>Capturas defendidas</h4>
-            <p>Antes de capturar, fijate si la pieza rival está protegida. Si al capturar tu pieza también puede ser recapturada, calculá el resultado final del intercambio, no solo el primer movimiento.</p>
-            <div class="lesson-tip">💡 Regla simple: "capturá con la pieza de menor valor" cuando varias piezas propias puedan tomar la misma pieza rival.</div>
-          `,
-        },
-        3: {
-          category: "♟️ Fundamentos",
-          title: "👑 Jaque, jaque mate y tablas",
-          xp: 35,
-          content: `
-            <h4>Jaque</h4>
-            <p>El rey está en jaque cuando una pieza rival lo amenaza directamente. Ante un jaque hay que responder de inmediato: mover el rey, bloquear el ataque con otra pieza, o capturar a la pieza atacante.</p>
-            <h4>Jaque mate</h4>
-            <p>Si estás en jaque y no existe ninguna manera de salir de esa situación, es jaque mate y la partida termina: gana quien dio mate.</p>
-            <h4>Tablas (empate)</h4>
-            <p>Una partida puede terminar en empate por varios motivos: ahogado (el rey no está en jaque pero el jugador no tiene ninguna jugada legal), acuerdo mutuo, triple repetición de posición, o material insuficiente para dar mate.</p>
-            <div class="lesson-tip">💡 El "ahogado" es un error muy común entre principiantes: ganando de sobra, un descuido puede convertir la victoria en empate.</div>
-          `,
-        },
-        4: {
-          category: "🎯 Estrategia",
-          title: "🌟 El control del centro",
-          xp: 40,
-          content: `
-            <p>Las casillas centrales (d4, d5, e4, e5) son las más importantes del tablero.</p>
-            <h4>¿Por qué son tan valiosas?</h4>
-            <p>Una pieza ubicada en el centro controla más casillas y puede trasladarse más rápido a cualquier sector del tablero. Un caballo en el centro ataca hasta 8 casillas; en una esquina, solo 2.</p>
-            <h4>Cómo ganar el centro</h4>
-            <p>Avanzar los peones centrales (como 1.e4 o 1.d4) y luego desarrollar piezas que lo apoyen es la estrategia clásica de apertura.</p>
-            <div class="lesson-tip">💡 Preguntate en cada apertura: "¿esta jugada ayuda a controlar o disputar el centro?"</div>
-          `,
-        },
-        5: {
-          category: "🎯 Estrategia",
-          title: "🚀 Desarrollo y seguridad del rey",
-          xp: 45,
-          content: `
-            <h4>Desarrollo</h4>
-            <p>"Desarrollar" significa sacar las piezas menores (caballos y alfiles) de sus casillas iniciales para que participen del juego. En los primeros movimientos, tratá de no mover la misma pieza dos veces ni salir con la dama demasiado pronto.</p>
-            <h4>Seguridad del rey</h4>
-            <p>Mientras desarrollás, cuidá a tu rey: no abras líneas hacia él innecesariamente y buscá enrocar pronto para ponerlo a resguardo detrás de tus peones.</p>
-            <div class="lesson-tip">💡 Regla de oro de la apertura: no muevas la dama temprano, no repitas jugadas con la misma pieza, y enrocá antes del movimiento 10 si podés.</div>
-          `,
-        },
-        6: {
-          category: "🎯 Estrategia",
-          title: "🏰 El enroque",
-          xp: 45,
-          content: `
-            <p>El enroque es el único movimiento donde se mueven dos piezas propias a la vez: el rey y una torre.</p>
-            <h4>Cómo se hace</h4>
-            <p>El rey se mueve dos casillas hacia la torre elegida, y la torre "salta" a la casilla que el rey dejó libre. El enroque corto va hacia el lado del rey; el enroque largo, hacia el lado de la dama.</p>
-            <h4>Condiciones para poder enrocar</h4>
-            <ul>
-              <li>Ni el rey ni la torre involucrada se movieron antes.</li>
-              <li>No hay piezas entre el rey y la torre.</li>
-              <li>El rey no está en jaque, ni pasa, ni termina en una casilla atacada.</li>
-            </ul>
-            <div class="lesson-tip">💡 Enrocar temprano protege al rey y conecta tus torres, dos beneficios en una sola jugada.</div>
-          `,
-        },
-        7: {
-          category: "⚡ Táctica",
-          title: "⚡ El ataque doble",
-          xp: 50,
-          content: `
-            <p>Un ataque doble ocurre cuando una sola pieza amenaza a dos objetivos rivales al mismo tiempo, y el rival no puede defender ambos.</p>
-            <h4>El más famoso: la horquilla de caballo</h4>
-            <p>Por su movimiento en "L", el caballo es ideal para atacar dos piezas a la vez, incluso al rey, sin que ninguna de ellas pueda capturarlo de vuelta.</p>
-            <p>También la dama, la torre y hasta un peón pueden generar ataques dobles si la posición lo permite.</p>
-            <div class="lesson-tip">💡 Antes de mover, buscá si alguna de tus piezas puede "pinchar" dos piezas rivales a la vez.</div>
-          `,
-        },
-        8: {
-          category: "⚡ Táctica",
-          title: "📌 La clavada",
-          xp: 50,
-          content: `
-            <p>Una clavada inmoviliza (total o parcialmente) a una pieza rival porque, si se mueve, queda expuesta una pieza más valiosa detrás.</p>
-            <h4>Clavada absoluta</h4>
-            <p>Cuando la pieza detrás es el rey, la pieza clavada no se puede mover porque sería una jugada ilegal (dejaría al rey en jaque).</p>
-            <h4>Clavada relativa</h4>
-            <p>Cuando detrás hay otra pieza de valor (por ejemplo la dama), la pieza clavada podría moverse, pero hacerlo perdería material.</p>
-            <div class="lesson-tip">💡 Las clavadas suelen prepararse con alfiles y torres alineados con el rey o la dama rival.</div>
-          `,
-        },
-        9: {
-          category: "⚡ Táctica",
-          title: "💥 El ataque descubierto",
-          xp: 55,
-          content: `
-            <p>Un ataque descubierto se produce cuando movés una pieza y, al hacerlo, "descubrís" el ataque de otra pieza que estaba detrás en la misma línea.</p>
-            <h4>La variante más fuerte: el jaque descubierto</h4>
-            <p>Si la pieza que queda liberada da jaque, la pieza que se movió queda libre para hacer casi cualquier cosa (capturar, atacar, lo que sea), porque el rival está obligado a atender el jaque primero.</p>
-            <div class="lesson-tip">💡 Fijate si tenés una torre, alfil o dama "tapada" por una pieza propia alineada con el rey rival: ahí puede haber un ataque descubierto esperando.</div>
-          `,
-        },
-        10: {
-          category: "⚡ Táctica",
-          title: "🧲 La desviación",
-          xp: 60,
-          content: `
-            <p>La desviación consiste en obligar a una pieza defensora a abandonar la casilla o la función que estaba cumpliendo, generalmente con una amenaza que no puede ignorar (un jaque, una captura, o una promoción).</p>
-            <p>Una vez que la pieza defensora se aparta, el objetivo que protegía queda vulnerable.</p>
-            <div class="lesson-tip">💡 Preguntate: "¿qué pieza rival está defendiendo algo importante?" y buscá una manera de forzarla a moverse.</div>
-          `,
-        },
-        11: {
-          category: "⚡ Táctica",
-          title: "🔗 La sobrecarga",
-          xp: 60,
-          content: `
-            <p>Una pieza está "sobrecargada" cuando tiene que defender dos (o más) cosas importantes al mismo tiempo.</p>
-            <p>Si atacás el segundo objetivo que esa pieza defiende, no podrá atender ambos: al defender uno, dejará el otro sin protección.</p>
-            <div class="lesson-tip">💡 Buscá piezas rivales que cumplan "doble función" defensiva: suelen ser el punto débil de la posición.</div>
-          `,
-        },
-        12: {
-          category: "🎯 Estrategia",
-          title: "🏆 Pensamiento ajedrecístico",
-          xp: 100,
-          content: `
-            <p>Antes de cada jugada, un buen jugador sigue un pequeño proceso mental:</p>
-            <h4>1. ¿Qué amenaza mi rival?</h4>
-            <p>Revisá la última jugada rival: ¿ataca alguna pieza mía? ¿prepara un jaque o una combinación?</p>
-            <h4>2. Jugadas candidatas</h4>
-            <p>Pensá 2 o 3 posibles jugadas propias, no solo la primera que se te ocurra.</p>
-            <h4>3. Calculá consecuencias</h4>
-            <p>Para cada candidata, pensá "si juego esto, ¿qué responde el rival?" al menos un par de jugadas hacia adelante.</p>
-            <h4>4. Elegí y jugá</h4>
-            <p>Elegí la jugada que más te convenza y jugala con confianza.</p>
-            <div class="lesson-tip">💡 Este hábito, repetido en cada jugada, es lo que más mejora el nivel de un jugador con el tiempo.</div>
-          `,
-        },
-        13: {
-          category: "♟️ Fundamentos",
-          title: "🧭 La notación algebraica",
-          xp: 40,
-          content: `
-            <p>La notación algebraica permite anotar y leer cualquier partida de ajedrez.</p>
-            <h4>Las casillas</h4>
-            <p>Las columnas se nombran de la "a" a la "h" (de izquierda a derecha para las Blancas) y las filas del 1 al 8. Cada casilla tiene un nombre único, como "e4" o "g7".</p>
-            <h4>Las piezas</h4>
-            <p>Se anotan con una letra mayúscula: R (rey), D (dama), T (torre), A (alfil), C (caballo). Los peones no llevan letra.</p>
-            <h4>Símbolos comunes</h4>
-            <p>"x" indica captura, "+" indica jaque, "#" indica jaque mate, "O-O" es el enroque corto y "O-O-O" el enroque largo.</p>
-            <div class="lesson-tip">💡 Anotar tus propias partidas es una de las mejores formas de aprender a analizarlas después.</div>
-          `,
-        },
-        14: {
-          category: "♟️ Fundamentos",
-          title: "🔄 El cambio de piezas",
-          xp: 45,
-          content: `
-            <p>Cambiar piezas (intercambiarlas una por una de igual valor) no es ni bueno ni malo en sí mismo: depende del contexto.</p>
-            <h4>¿Cuándo conviene cambiar?</h4>
-            <p>Cuando estás mejor posicionalmente o tenés más material, cambiar piezas simplifica la posición y acerca la victoria. También conviene cambiar una pieza rival muy activa o peligrosa.</p>
-            <h4>¿Cuándo conviene evitarlo?</h4>
-            <p>Cuando estás peor o con menos material, evitar cambios mantiene más complicaciones y chances de remontar la partida.</p>
-            <div class="lesson-tip">💡 "Si estás mejor, cambiá piezas; si estás peor, evitalo" es una guía simple para la mayoría de las posiciones.</div>
-          `,
-        },
-        15: {
-          category: "🎯 Estrategia",
-          title: "🛣️ Columnas abiertas",
-          xp: 55,
-          content: `
-            <p>Una columna abierta es aquella que no tiene peones (de ningún color). Una semiabierta tiene solo peones rivales.</p>
-            <h4>Por qué importan</h4>
-            <p>Las torres son mucho más fuertes sobre columnas abiertas o semiabiertas porque pueden moverse libremente e infiltrarse en el campo rival.</p>
-            <h4>Cómo usarlas</h4>
-            <p>Colocá tus torres en esas columnas, idealmente duplicadas (una detrás de la otra), para presionar al máximo.</p>
-            <div class="lesson-tip">💡 "Torre detrás de torre en columna abierta" es una de las formaciones más fuertes del medio juego.</div>
-          `,
-        },
-        16: {
-          category: "🎯 Estrategia",
-          title: "🐴 Caballo bueno y caballo malo",
-          xp: 55,
-          content: `
-            <p>No todas las piezas del mismo tipo valen lo mismo en una posición concreta: depende de qué tan activas o limitadas estén.</p>
-            <h4>Caballo bueno</h4>
-            <p>Un caballo bien ubicado, sobre todo en un "puesto avanzado" que no puede ser atacado por peones rivales, puede ser tan fuerte como una torre.</p>
-            <h4>Alfil malo</h4>
-            <p>Un alfil "malo" es aquel bloqueado por sus propios peones, ubicados en casillas del mismo color, lo que limita mucho su movilidad.</p>
-            <div class="lesson-tip">💡 Antes de cambiar piezas, preguntate si estás entregando una pieza "buena" a cambio de una "mala": el cambio puede no convenir aunque el valor numérico sea igual.</div>
-          `,
-        },
-        17: {
-          category: "⚡ Táctica",
-          title: "🎯 La doble amenaza",
-          xp: 60,
-          content: `
-            <p>Una doble amenaza combina dos problemas distintos para el rival en la misma jugada: por ejemplo, amenazar mate en una zona y ganar material en otra.</p>
-            <p>A diferencia del ataque doble (una pieza ataca dos objetivos), aquí el peligro puede venir de piezas distintas o de planes diferentes, y el rival solo puede resolver uno de los dos.</p>
-            <div class="lesson-tip">💡 Buscá jugadas que "maten dos pájaros de un tiro": crean más de un problema a la vez, aunque no parezcan espectaculares.</div>
-          `,
-        },
-        18: {
-          category: "⚡ Táctica",
-          title: "🪤 La intermedia",
-          xp: 70,
-          content: `
-            <p>Una jugada intermedia (o "zwischenzug") es una jugada fuerte e inesperada que se inserta antes de completar una secuencia esperada, como una recaptura.</p>
-            <p>En vez de recapturar de inmediato, el jugador aprovecha para dar un jaque, ganar material o mejorar su posición, y recién después completa la recaptura.</p>
-            <div class="lesson-tip">💡 Antes de "responder automáticamente" a una captura rival, mirá si hay una jugada más fuerte para intercalar primero.</div>
-          `,
-        },
-        19: {
-          category: "⚡ Táctica",
-          title: "💣 El sacrificio",
-          xp: 80,
-          content: `
-            <p>Sacrificar es entregar material voluntariamente a cambio de algo más valioso: un ataque decisivo, la seguridad del rey rival, o una ventaja posicional duradera.</p>
-            <h4>Cómo evaluarlo</h4>
-            <p>Un buen sacrificio se calcula: hay que verificar que la compensación (jaque mate, recuperación de material, o ventaja clara) sea real y no solo una esperanza.</p>
-            <div class="lesson-tip">💡 "Material por tiempo y ataque" es la lógica detrás de la mayoría de los sacrificios correctos.</div>
-          `,
-        },
-        20: {
-          category: "🎯 Estrategia",
-          title: "🧠 Planificar una partida",
-          xp: 120,
-          content: `
-            <p>Una partida de ajedrez tiene tres fases, y cada una necesita un plan distinto.</p>
-            <h4>Apertura</h4>
-            <p>Controlá el centro, desarrollá tus piezas y poné a resguardo al rey (enroque).</p>
-            <h4>Medio juego</h4>
-            <p>Buscá debilidades en la posición rival, mejorá la actividad de tus piezas y aprovechá oportunidades tácticas.</p>
-            <h4>Final</h4>
-            <p>Activá al rey (ya no corre tanto peligro), avanzá tus peones pasados y buscá coronar o simplificar hacia una posición ganadora.</p>
-            <div class="lesson-tip">💡 Un plan simple pero cumplido vale más que una idea brillante que no se termina de ejecutar.</div>
-          `,
-        },
       };
 
       let state = loadState();
@@ -6582,116 +6412,6 @@
         updateProfile();
       }
 
-      // =========================
-      // LÓGICA DE LA PÁGINA "APRENDER" (lecciones)
-      // =========================
-      let currentLessonId = null;
-
-      function isLessonCompleted(id) {
-        return state.completedLessons.includes(String(id));
-      }
-
-      function openLessonModal(id) {
-        const lesson = LESSONS_DATA[id];
-        if (!lesson) return;
-        currentLessonId = String(id);
-
-        document.getElementById("lesson-modal-category").textContent = lesson.category;
-        document.getElementById("lesson-title").textContent = lesson.title;
-        document.getElementById("lesson-content").innerHTML = lesson.content;
-
-        document.querySelectorAll("#lesson-modal .lesson-check").forEach((cb) => {
-          cb.checked = false;
-        });
-
-        const completeBtn = document.getElementById("lesson-complete");
-        if (isLessonCompleted(id)) {
-          completeBtn.textContent = "✓ Lección ya completada";
-        } else {
-          completeBtn.textContent = "✓ Marcar como completada";
-        }
-
-        document.getElementById("lesson-modal").style.display = "flex";
-      }
-
-      function closeLessonModal() {
-        document.getElementById("lesson-modal").style.display = "none";
-        currentLessonId = null;
-      }
-
-      function completeCurrentLesson() {
-        if (!currentLessonId) return;
-        const lesson = LESSONS_DATA[currentLessonId];
-        if (!lesson) return;
-
-        if (!isLessonCompleted(currentLessonId)) {
-          state.completedLessons.push(currentLessonId);
-          save();
-          addXP(lesson.xp, "Lección completada", lesson.title);
-          renderLearningProgress();
-        }
-
-        closeLessonModal();
-      }
-
-      function renderLearningProgress() {
-        const total = Object.keys(LESSONS_DATA).length;
-        const done = state.completedLessons.filter((id) => LESSONS_DATA[id]).length;
-        const pct = total ? Math.round((done / total) * 100) : 0;
-
-        const bar = document.getElementById("learning-progress-bar");
-        const text = document.getElementById("learning-progress-text");
-        const detail = document.getElementById("learning-progress-detail");
-        if (bar) bar.style.width = pct + "%";
-        if (text) text.textContent = pct + "%";
-        if (detail) detail.textContent = done + " de " + total + " lecciones completadas";
-
-        document.querySelectorAll("[data-lesson-card]").forEach((card) => {
-          const id = card.dataset.lessonId;
-          const completed = isLessonCompleted(id);
-          card.classList.toggle("completed", completed);
-          const btn = card.querySelector(".lesson-btn");
-          if (btn) btn.textContent = completed ? "Repasar" : "Comenzar";
-        });
-      }
-
-      function initLearningPage() {
-        document.querySelectorAll(".lesson-btn").forEach((btn) => {
-          btn.onclick = () => openLessonModal(btn.dataset.lesson);
-        });
-
-        const modal = document.getElementById("lesson-modal");
-        const closeBtn = document.getElementById("lesson-close");
-        const completeBtn = document.getElementById("lesson-complete");
-        if (closeBtn) closeBtn.onclick = closeLessonModal;
-        if (completeBtn) completeBtn.onclick = completeCurrentLesson;
-        if (modal) {
-          modal.onclick = (e) => {
-            if (e.target === modal) closeLessonModal();
-          };
-        }
-
-        document.querySelectorAll("[data-learning-filter]").forEach((btn) => {
-          btn.onclick = () => {
-            document.querySelectorAll("[data-learning-filter]").forEach((b) => b.classList.remove("active"));
-            btn.classList.add("active");
-            const filter = btn.dataset.learningFilter;
-            let visibleCount = 0;
-            document.querySelectorAll("[data-lesson-card]").forEach((card) => {
-              const show = filter === "all" || card.dataset.category === filter;
-              card.style.display = show ? "" : "none";
-              if (show) visibleCount++;
-            });
-            const empty = document.getElementById("learning-empty");
-            if (empty) empty.style.display = visibleCount === 0 ? "block" : "none";
-          };
-        });
-
-        renderLearningProgress();
-      }
-
-      initLearningPage();
-
       function showPage(name) {
         document.querySelectorAll(".page").forEach((page) => {
           page.classList.toggle("active", page.id === "page-" + name);
@@ -7733,6 +7453,1005 @@
 
       document.getElementById("tutor-suggest-btn").onclick = requestTutorSuggestion;
       document.getElementById("tutor-play-btn").onclick = playTutorMove;
+
+      // =========================
+      // ESCUELA DE AJEDREZ: LECCIONES Y EJERCICIOS
+      // =========================
+
+      // Cada lección tiene contenido teórico y un mini-puzzle de control
+      // (una sola jugada) que hay que resolver antes de poder completarla.
+      const LESSONS = {
+        1: {
+          category: "fundamentos",
+          xp: 25,
+          content: `
+            <h4>¿Cómo se mueve cada pieza?</h4>
+            <p>El <b>peón</b> avanza una casilla (dos en su primer movimiento) y captura en diagonal. El <b>caballo</b> se mueve en "L" y es la única pieza que salta por encima de otras. El <b>alfil</b> se mueve en diagonal y siempre queda en casillas del mismo color. La <b>torre</b> se mueve en línea recta, por filas y columnas. La <b>dama</b> combina los movimientos de torre y alfil. El <b>rey</b> se mueve una casilla en cualquier dirección.</p>
+            <h4>Valor aproximado</h4>
+            <p>Peón = 1, Caballo = 3, Alfil = 3, Torre = 5, Dama = 9. El rey no tiene valor material: si lo pierden, pierden la partida.</p>
+            <div class="lesson-tip">💡 Los caballos son mejores cerca del centro; en el borde del tablero controlan muy pocas casillas.</div>
+          `,
+          puzzle: {
+            fen: "4k3/8/8/8/8/8/8/1N2K3 w - - 0 1",
+            solution: ["b1c3"],
+            prompt: "Es tu turno. Desarrollá el caballo hacia una casilla central.",
+            success: "¡Muy bien! Cc3 lleva al caballo cerca del centro, donde controla más casillas.",
+            fail: "Probá otra casilla: buscá acercar el caballo al centro del tablero.",
+            hint: "El caballo se mueve en forma de L. Desde b1, una buena casilla central es c3.",
+          },
+        },
+        2: {
+          category: "fundamentos",
+          xp: 30,
+          content: `
+            <h4>¿Cuándo conviene capturar?</h4>
+            <p>No todas las capturas son buenas. Antes de capturar, comparen el valor de la pieza que capturan con el valor de la pieza que arriesgan. Capturar una pieza de mayor valor que la propia siempre es una ganancia de material.</p>
+            <h4>Piezas "colgadas"</h4>
+            <p>Una pieza está colgada cuando no tiene ninguna defensa y puede ser capturada gratis. Antes de cada jugada, revisen si el rival dejó alguna pieza sin proteger.</p>
+            <div class="lesson-tip">💡 Contá siempre: ¿qué gano y qué puedo llegar a perder con esta captura?</div>
+          `,
+          puzzle: {
+            fen: "4k3/8/8/3n4/8/8/8/3QK3 w - - 0 1",
+            solution: ["d1d5"],
+            prompt: "El caballo negro en d5 no tiene ninguna defensa. Capturalo.",
+            success: "¡Correcto! Dxd5 gana una pieza completamente gratis.",
+            fail: "Todavía se puede ganar material gratis. Fijate qué pieza negra no tiene ninguna defensa.",
+            hint: "La dama en d1 y el caballo en d5 están en la misma columna.",
+          },
+        },
+        3: {
+          category: "fundamentos",
+          xp: 35,
+          content: `
+            <h4>Jaque</h4>
+            <p>Hay jaque cuando el rey está siendo atacado. Deben responder de inmediato: mover el rey, bloquear el ataque o capturar la pieza que da jaque.</p>
+            <h4>Jaque mate</h4>
+            <p>Si están en jaque y no hay ninguna manera de solucionarlo, es <b>jaque mate</b> y la partida termina.</p>
+            <h4>Tablas</h4>
+            <p>La partida puede terminar en tablas por ahogado (el jugador en turno no está en jaque pero no tiene jugadas legales), por acuerdo mutuo, o por repetición de posición.</p>
+            <div class="lesson-tip">💡 Un patrón clásico: si el rey rival quedó encerrado detrás de sus propios peones, una torre o dama en la última fila puede dar jaque mate.</div>
+          `,
+          puzzle: {
+            fen: "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1",
+            solution: ["a1a8"],
+            checkmate: true,
+            prompt: "El rey negro está encerrado por sus propios peones. Encontrá el jaque mate en una jugada.",
+            success: "¡Jaque mate! La torre controla toda la octava fila y el rey no tiene escapatoria.",
+            fail: "Esa jugada no es mate. Pensá en llevar la torre a la última fila.",
+            hint: "Mové la torre a lo largo de la columna 'a' hasta la última fila.",
+          },
+        },
+        4: {
+          category: "estrategia",
+          xp: 40,
+          content: `
+            <h4>¿Por qué importa el centro?</h4>
+            <p>Las casillas centrales (d4, d5, e4, e5) son las más valiosas del tablero: desde ahí, las piezas controlan más casillas y se pueden trasladar rápido a cualquier sector.</p>
+            <h4>Cómo ocuparlo</h4>
+            <p>En la apertura, lo habitual es avanzar los peones centrales (e4/d4 o e5/d5) para ganar espacio y abrir líneas para el desarrollo de las piezas menores.</p>
+            <div class="lesson-tip">💡 "Quien domina el centro, domina el tablero." Evitá mover peones de torre o de alfil temprano sin una buena razón.</div>
+          `,
+          puzzle: {
+            fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            solution: ["e2e4", "d2d4"],
+            prompt: "Es la posición inicial. Jugá un movimiento que luche por el centro.",
+            success: "¡Excelente! Ese avance central abre líneas para el alfil y la dama.",
+            fail: "Esa jugada no pelea por el centro. Pensá en los peones de reina o de rey.",
+            hint: "Los peones 'e' y 'd' son los que controlan las casillas centrales.",
+          },
+        },
+        5: {
+          category: "estrategia",
+          xp: 45,
+          content: `
+            <h4>Desarrollo antes que ataques prematuros</h4>
+            <p>Antes de buscar amenazas, saquen sus piezas menores (caballos y alfiles) de la fila inicial. Un desarrollo rápido permite enrocar antes y evita perder tiempos.</p>
+            <h4>La regla de "una pieza por jugada"</h4>
+            <p>En la apertura, eviten mover dos veces la misma pieza o sacar la dama demasiado pronto: le da tiempo al rival para desarrollarse mientras la atacan.</p>
+            <div class="lesson-tip">💡 Un buen orden típico: peón central, caballo, alfil, enroque.</div>
+          `,
+          puzzle: {
+            fen: "4k3/8/8/4p3/4P3/8/8/4KBNR w - - 0 1",
+            solution: ["g1f3"],
+            prompt: "Elegí la jugada que mejor combina desarrollo y preparación para enrocar.",
+            success: "¡Muy bien! Cf3 desarrolla una pieza y deja el camino libre para el enroque corto.",
+            fail: "Esa jugada no desarrolla una pieza nueva. Buscá sacar el caballo.",
+            hint: "El caballo en g1 puede saltar a una casilla útil sin bloquear el enroque.",
+          },
+        },
+        6: {
+          category: "estrategia",
+          xp: 45,
+          content: `
+            <h4>¿Qué es el enroque?</h4>
+            <p>El enroque es la única jugada donde se mueven dos piezas a la vez: el rey se desplaza dos casillas hacia una torre, y esa torre salta al otro lado del rey. Sirve para poner al rey a resguardo y conectar las torres.</p>
+            <h4>Condiciones</h4>
+            <p>No pueden haber piezas entre el rey y la torre, ninguno de los dos se movió antes, el rey no puede estar en jaque, y no puede pasar ni terminar en una casilla atacada.</p>
+            <div class="lesson-tip">💡 Como regla general, enrocá lo antes posible: un rey en el centro es un blanco fácil.</div>
+          `,
+          puzzle: {
+            fen: "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            solution: ["e1g1"],
+            prompt: "El camino está despejado. Enrocá corto para poner a resguardo al rey.",
+            success: "¡Perfecto! El enroque corto pone al rey a salvo y activa la torre.",
+            fail: "Esa no es la jugada de enroque. El rey se mueve dos casillas hacia la torre.",
+            hint: "Mové el rey de e1 a g1 (enroque corto).",
+          },
+        },
+        7: {
+          category: "tactica",
+          xp: 50,
+          content: `
+            <h4>El ataque doble (horquilla)</h4>
+            <p>Un ataque doble ocurre cuando una sola pieza amenaza a dos objetivos al mismo tiempo. El rival solo puede salvar uno de ellos, así que ustedes ganan material.</p>
+            <h4>El caballo, especialista en horquillas</h4>
+            <p>Por su movimiento en "L", el caballo es ideal para dar horquillas: puede atacar dos piezas que están lejos entre sí y que no se defienden mutuamente.</p>
+            <div class="lesson-tip">💡 Antes de saltar con el caballo, revisen si la casilla de destino ataca al rey y a otra pieza valiosa a la vez.</div>
+          `,
+          puzzle: {
+            fen: "2r1k3/8/8/1N6/8/8/8/6K1 w - - 0 1",
+            solution: ["b5d6"],
+            prompt: "Encontrá la jugada de caballo que ataca al rey y a la torre al mismo tiempo.",
+            success: "¡Horquilla perfecta! Cd6+ da jaque y ataca la torre en c8: la ganás en la próxima jugada.",
+            fail: "Esa jugada no ataca dos piezas a la vez. Buscá una casilla de caballo que dé jaque.",
+            hint: "Desde d6, el caballo controla e8 y c8 al mismo tiempo.",
+          },
+        },
+        8: {
+          category: "tactica",
+          xp: 50,
+          content: `
+            <h4>¿Qué es una clavada?</h4>
+            <p>Una pieza está clavada cuando no se puede (o no conviene) mover porque detrás de ella hay una pieza más valiosa, generalmente el rey. Las clavadas absolutas (contra el rey) son ilegales de romper.</p>
+            <h4>Cómo aprovecharla</h4>
+            <p>Una vez clavada una pieza, suele ser un buen objetivo: pueden sumar más atacantes sobre ella, ya que no se puede escapar sin exponer al rey.</p>
+            <div class="lesson-tip">💡 Los alfiles y torres son las piezas que suelen clavar; siempre a lo largo de una línea recta o diagonal.</div>
+          `,
+          puzzle: {
+            fen: "6k1/8/4n3/8/8/8/B7/6K1 w - - 0 1",
+            solution: ["a2c4"],
+            prompt: "Colocá el alfil en la diagonal para clavar el caballo negro contra el rey.",
+            success: "¡Bien visto! Ac4 clava el caballo: si se mueve, queda expuesto el rey.",
+            fail: "Esa jugada no clava ninguna pieza. Buscá la diagonal que une al alfil con el rey rival.",
+            hint: "El alfil debe quedar en la misma diagonal que el caballo y el rey negro.",
+          },
+        },
+        9: {
+          category: "tactica",
+          xp: 55,
+          content: `
+            <h4>El ataque descubierto</h4>
+            <p>Ocurre cuando mueven una pieza que estaba bloqueando el ataque de otra pieja propia (torre, alfil o dama), y al apartarse, esa pieza de atrás queda atacando algo. La pieza que se mueve también puede capturar o amenazar algo por su cuenta: es un "dos por uno".</p>
+            <h4>El jaque descubierto</h4>
+            <p>Es el más peligroso: al descubrir jaque, la pieza que se movió queda libre para capturar cualquier cosa, porque el rival está obligado a resolver el jaque primero.</p>
+            <div class="lesson-tip">💡 Busquen piezas propias alineadas con el rey rival, con solo una pieza propia en el medio.</div>
+          `,
+          puzzle: {
+            fen: "r2k4/8/8/3B4/8/8/8/3R2K1 w - - 0 1",
+            solution: ["d5a8"],
+            prompt: "El alfil bloquea a tu propia torre. Movelo para ganar material con jaque descubierto.",
+            success: "¡Excelente! Al capturar la torre en a8, además descubrís el jaque de tu torre en d1 sobre el rey.",
+            fail: "Esa jugada no aprovecha el ataque descubierto. Fijate qué pieza tuya bloquea a la torre en d1.",
+            hint: "El alfil está sobre la misma columna que tu torre y el rey rival. Movelo capturando algo.",
+          },
+        },
+        10: {
+          category: "tactica",
+          xp: 60,
+          content: `
+            <h4>La desviación</h4>
+            <p>La desviación consiste en eliminar u obligar a moverse a la pieza que defiende algo importante (una casilla de mate, una pieza valiosa). Sin su defensor, ese punto débil queda a merced del ataque.</p>
+            <h4>Cómo identificarla</h4>
+            <p>Busquen qué pieza rival cumple una tarea defensiva clave, y pregúntense: "¿puedo capturarla, atacarla o forzarla a moverse?"</p>
+            <div class="lesson-tip">💡 Si una sola pieza defiende dos cosas importantes, suele ser el blanco ideal para una desviación.</div>
+          `,
+          puzzle: {
+            fen: "6k1/5p1p/5n2/8/8/2B5/8/6K1 w - - 0 1",
+            solution: ["c3f6"],
+            prompt: "El caballo negro es el único defensor de casillas clave cerca del rey. Eliminalo.",
+            success: "¡Muy bien! Al capturar el caballo, eliminás al defensor y dejás al rey negro mucho más débil.",
+            fail: "Esa jugada no elimina al defensor. Buscá una captura con el alfil.",
+            hint: "El alfil en c3 y el caballo en f6 están en la misma diagonal.",
+          },
+        },
+        11: {
+          category: "tactica",
+          xp: 60,
+          content: `
+            <h4>La sobrecarga</h4>
+            <p>Una pieza está sobrecargada cuando tiene que defender dos cosas a la vez. Si la atacan con una tercera amenaza, no va a poder cumplir con las dos tareas: al resolver una, dejará la otra sin protección.</p>
+            <h4>Ejemplo típico</h4>
+            <p>Una torre que defiende simultáneamente la última fila (contra el mate) y una pieza propia está sobrecargada: pueden ganar esa pieza sabiendo que, si recaptura, se abre una debilidad mayor.</p>
+            <div class="lesson-tip">💡 Contá cuántas tareas defensivas tiene cada pieza rival antes de decidir un plan táctico.</div>
+          `,
+          puzzle: {
+            fen: "3r2k1/8/8/3n4/8/1B6/8/3Q2K1 w - - 0 1",
+            solution: ["b3d5"],
+            prompt: "La torre negra defiende al caballo y, a la vez, la última fila. Aprovechá la sobrecarga.",
+            success: "¡Bien! Si la torre recaptura en d5, la última fila queda débil frente a tu dama.",
+            fail: "Esa jugada no explota la sobrecarga. Buscá una captura con el alfil sobre el caballo.",
+            hint: "El alfil puede capturar el caballo en d5.",
+          },
+        },
+        12: {
+          category: "estrategia",
+          xp: 100,
+          content: `
+            <h4>Pensar antes de mover</h4>
+            <p>Un buen método de pensamiento ajedrecístico combina varias preguntas: ¿tengo jaques, capturas o amenazas disponibles? ¿qué pieza rival está peor colocada? ¿cuál es mi pieza menos activa y cómo la mejoro?</p>
+            <h4>El plan general</h4>
+            <p>El ajedrez no se juega jugada por jugada sin rumbo: conviene tener siempre una idea de fondo (ganar espacio, atacar al rey, mejorar la peor pieza) y elegir jugadas que se acerquen a ese objetivo.</p>
+            <div class="lesson-tip">💡 Si no ven ninguna jugada táctica forzada, la mejor jugada suele ser la que mejora su pieza peor colocada.</div>
+          `,
+          puzzle: {
+            fen: "6k1/8/8/8/8/N7/8/6K1 w - - 0 1",
+            solution: ["a3c4"],
+            prompt: "El caballo está mal ubicado en el borde. Centralizalo para mejorar tu peor pieza.",
+            success: "¡Excelente aplicación del método! Un caballo centralizado vale mucho más que uno en el borde.",
+            fail: "Esa jugada no mejora la posición del caballo. Buscá acercarlo al centro.",
+            hint: "Desde a3, el caballo tiene una buena casilla central disponible.",
+          },
+        },
+        13: {
+          category: "fundamentos",
+          xp: 40,
+          content: `
+            <h4>¿Cómo se lee una jugada?</h4>
+            <p>Cada casilla se nombra con una letra (columna, de "a" a "h") y un número (fila, de 1 a 8). Las piezas se abrevian: R=Rey (K en inglés), D=Dama (Q), T=Torre (R), A=Alfil (B), C=Caballo (N). Los peones no llevan letra.</p>
+            <h4>Ejemplos</h4>
+            <p>"e4" significa que un peón avanza a e4. "Cf3" significa que un caballo se mueve a f3. "Cxf3" indica que esa jugada captura una pieza. "O-O" es el enroque corto.</p>
+            <div class="lesson-tip">💡 Practicar la notación les permite seguir partidas de otros jugadores y analizar las suyas.</div>
+          `,
+          puzzle: {
+            fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            solution: ["g1f3"],
+            prompt: "Jugá el movimiento que en notación se escribe 'Cf3'.",
+            success: "¡Correcto! Esa es exactamente la jugada Cf3: el caballo de rey se desarrolla.",
+            fail: "Esa no es la jugada Cf3. Recordá: C = caballo, y f3 es la casilla de destino.",
+            hint: "Buscá el caballo que puede llegar a la casilla f3 en una jugada.",
+          },
+        },
+        14: {
+          category: "fundamentos",
+          xp: 45,
+          content: `
+            <h4>¿Cuándo conviene cambiar piezas?</h4>
+            <p>Cambiar piezas (intercambiarlas por otras de valor similar) suele convenir cuando están mejor posicionados, cuando tienen ventaja material (simplificar ayuda a concretar la ventaja) o cuando eliminan la pieza más activa del rival.</p>
+            <h4>Cuándo evitarlo</h4>
+            <p>Si están peor o necesitan complicar la partida, evitar cambios suele dar más chances, ya que mantiene piezas en el tablero para generar contrajuego.</p>
+            <div class="lesson-tip">💡 Regla práctica: si están mejor, cambien piezas (no peones); si están peor, evítenlo.</div>
+          `,
+          puzzle: {
+            fen: "4k3/8/8/3q4/3Q4/1P6/8/4K3 w - - 0 1",
+            solution: ["d4d5"],
+            prompt: "Tenés una ventaja de material (un peón de más). Cambiá las damas para simplificar la posición.",
+            success: "¡Bien pensado! Al cambiar damas estando mejor, se acercan a ganar la partida con menos riesgo.",
+            fail: "Esa jugada no cambia las damas. Buscá la captura de dama por dama.",
+            hint: "Las dos damas están en la misma columna.",
+          },
+        },
+        15: {
+          category: "estrategia",
+          xp: 55,
+          content: `
+            <h4>¿Qué es una columna abierta?</h4>
+            <p>Es una columna sin peones de ningún color. Las torres son mucho más fuertes ahí porque pueden moverse libremente de un extremo al otro del tablero e infiltrarse en el campo rival.</p>
+            <h4>Cómo usarla</h4>
+            <p>Coloquen sus torres en columnas abiertas (o semiabiertas, sin peones propios) apenas puedan. Suele ser más importante que mover un peón más en el flanco.</p>
+            <div class="lesson-tip">💡 "Torre en columna abierta" es uno de los principios estratégicos más útiles para el medio juego.</div>
+          `,
+          puzzle: {
+            fen: "6k1/ppp1pppp/8/8/8/8/PPP1PPPP/R5K1 w - - 0 1",
+            solution: ["a1d1"],
+            prompt: "La columna 'd' está completamente abierta. Llevá tu torre ahí.",
+            success: "¡Perfecto! Td1 ocupa la única columna abierta del tablero.",
+            fail: "Esa jugada no coloca la torre en la columna abierta. Fijate qué columna no tiene peones.",
+            hint: "Ninguna de las dos partes tiene peones en la columna 'd'.",
+          },
+        },
+        16: {
+          category: "estrategia",
+          xp: 55,
+          content: `
+            <h4>Caballo bueno vs. caballo malo</h4>
+            <p>Un caballo en el borde del tablero (columnas 'a' u 'h') controla muy pocas casillas y suele estar "malo". Un caballo en el centro, apoyado por un peón y sin poder ser atacado por peones rivales, es una pieza excelente: se llama <b>outpost</b> o "casilla fuerte".</p>
+            <h4>Cómo mejorarlo</h4>
+            <p>Si su caballo está mal ubicado, busquen la ruta más corta para llevarlo a una casilla central protegida.</p>
+            <div class="lesson-tip">💡 Antes de mover otra pieza, revisen si su caballo peor colocado tiene una ruta de mejora disponible.</div>
+          `,
+          puzzle: {
+            fen: "6k1/8/8/8/N7/8/8/6K1 w - - 0 1",
+            solution: ["a4c5"],
+            prompt: "El caballo está en el borde, sin controlar casi nada. Llevalo a una casilla central.",
+            success: "¡Bien! Esa casilla central es mucho más fuerte que el borde del tablero.",
+            fail: "Esa jugada no mejora al caballo. Buscá una casilla más central.",
+            hint: "Desde a4, el caballo tiene una casilla central disponible en la columna 'c'.",
+          },
+        },
+        17: {
+          category: "tactica",
+          xp: 60,
+          content: `
+            <h4>El doble ataque con la dama</h4>
+            <p>La dama, al combinar los movimientos de torre y alfil, es ideal para atacar dos piezas a la vez desde una sola casilla, incluso en direcciones distintas (una por columna o fila, otra por diagonal).</p>
+            <h4>Cómo buscarlo</h4>
+            <p>Fíjense si hay dos piezas rivales sin defensa que compartan una fila, columna o diagonal con una misma casilla disponible para su dama.</p>
+            <div class="lesson-tip">💡 Un doble ataque de dama suele ganar material aunque el rival tenga jaque o amenazas propias, siempre que puedan calcular bien el orden de jugadas.</div>
+          `,
+          puzzle: {
+            fen: "4k3/3n4/8/r7/8/8/8/3Q2K1 w - - 0 1",
+            solution: ["d1a4"],
+            prompt: "Encontrá la jugada de dama que ataca la torre y el caballo negros al mismo tiempo.",
+            success: "¡Doble ataque perfecto! Dxa4 amenaza la torre por la columna y el caballo por la diagonal.",
+            fail: "Esa jugada no ataca las dos piezas a la vez. Buscá una casilla que una la columna de la torre con la diagonal del caballo.",
+            hint: "Buscá una casilla en la misma columna que la torre y en la misma diagonal que el caballo.",
+          },
+        },
+        18: {
+          category: "tactica",
+          xp: 70,
+          content: `
+            <h4>La jugada intermedia (zwischenzug)</h4>
+            <p>A veces, antes de resolver el intercambio o la jugada "obvia", conviene intercalar una jugada más fuerte (un jaque o una amenaza mayor) que cambie la evaluación de la posición. El rival debe responder a esa jugada primero.</p>
+            <h4>Cómo detectarla</h4>
+            <p>Antes de recapturar automáticamente, pregúntense: "¿tengo un jaque o una amenaza más fuerte disponible ahora mismo?"</p>
+            <div class="lesson-tip">💡 No siempre la jugada más obvia es la mejor: revisen si hay una jugada intermedia antes de continuar la secuencia esperada.</div>
+          `,
+          puzzle: {
+            fen: "4k3/8/8/8/3r4/3B4/8/3Q2K1 w - - 0 1",
+            solution: ["d3b5"],
+            prompt: "Podrías capturar la torre directamente, pero hay una jugada intermedia mejor. Encontrala.",
+            success: "¡Excelente! Ab5+ es la jugada intermedia: da jaque y gana tiempo antes de ocuparte de la torre.",
+            fail: "Esa jugada no es la intermedia más fuerte. Pensá en un jaque con el alfil antes de capturar la torre.",
+            hint: "El alfil puede dar jaque en lugar de capturar directamente.",
+          },
+        },
+        19: {
+          category: "tactica",
+          xp: 80,
+          content: `
+            <h4>¿Qué es un sacrificio?</h4>
+            <p>Sacrificar es entregar material a cambio de una compensación mayor: un ataque decisivo, jaque mate, o una ventaja posicional muy grande. No todo sacrificio es correcto: hay que calcular bien lo que se obtiene a cambio.</p>
+            <h4>El "sacrificio griego" (Axh7+)</h4>
+            <p>Un patrón clásico: si el rey rival enrocó corto y su alfil apunta a h7 (o h2), a veces se puede sacrificar el alfil ahí para exponer al rey y lanzar un ataque decisivo con las piezas restantes.</p>
+            <div class="lesson-tip">💡 Antes de sacrificar, calculen al menos 2 o 3 jugadas del ataque resultante: un sacrificio sin seguimiento concreto suele ser solo pérdida de material.</div>
+          `,
+          puzzle: {
+            fen: "6k1/5ppp/8/8/8/3B4/8/6K1 w - - 0 1",
+            solution: ["d3h7"],
+            prompt: "El rey negro enrocó corto y tu alfil apunta directo a h7. Jugá el sacrificio clásico.",
+            success: "¡Sacrificio griego! Axh7+ expone al rey negro y abre las puertas a un fuerte ataque.",
+            fail: "Esa jugada no es el sacrificio en h7. Fijate en qué diagonal está tu alfil.",
+            hint: "El alfil en d3 apunta directo a la casilla h7, donde hay un peón negro.",
+          },
+        },
+        20: {
+          category: "estrategia",
+          xp: 120,
+          content: `
+            <h4>Cómo armar un plan</h4>
+            <p>Después de la apertura, cada posición pide un plan concreto: puede ser ganar espacio, atacar al rey, mejorar la peor pieza o crear una debilidad en el bando rival. Un plan da sentido a cada jugada individual.</p>
+            <h4>Señales para elegir un plan</h4>
+            <p>Miren la estructura de peones, la seguridad de ambos reyes y qué piezas están mejor o peor colocadas. Eso les va a indicar de qué lado del tablero conviene jugar.</p>
+            <div class="lesson-tip">💡 Un plan simple y consistente vence a una sucesión de jugadas sueltas sin conexión entre sí.</div>
+          `,
+          puzzle: {
+            fen: "6k1/8/5n2/8/4P3/8/8/6K1 w - - 0 1",
+            solution: ["e4e5"],
+            prompt: "Elegí la jugada que ejecuta un plan claro: ganar espacio y ganar tiempo atacando al caballo.",
+            success: "¡Gran plan! e5 gana espacio y obliga al caballo negro a retroceder, perdiendo tiempo.",
+            fail: "Esa jugada no sigue el plan de ganar espacio con tempo. Pensá en avanzar el peón central.",
+            hint: "El peón central puede avanzar una casilla y atacar al caballo negro.",
+          },
+        },
+      };
+
+      // Cada ejercicio es un mini-puzzle de una sola jugada, evaluado
+      // contra el tablero real mediante chess.js.
+      const EXERCISES = {
+        1: {
+          category: "principiante",
+          xp: 20,
+          fen: "3nk3/8/8/8/r2Q4/8/8/6K1 w - - 0 1",
+          solution: ["d4a4"],
+          prompt: "Tu dama puede capturar la torre o el caballo negros. Elegí la captura que gana más material.",
+          success: "¡Correcto! La torre vale más que el caballo: Dxa4 es la mejor captura.",
+          fail: "Esa captura suma menos material. Compará el valor de la torre y del caballo, y elegí la pieza más valiosa.",
+          hint: "Compará: torre = 5 puntos, caballo = 3 puntos.",
+        },
+        2: {
+          category: "principiante",
+          xp: 20,
+          fen: "4k3/8/8/8/6n1/8/8/4K2R w K - 0 1",
+          solution: ["e1g1"],
+          prompt: "Es tu turno. Poné a resguardo al rey con la mejor jugada de seguridad.",
+          success: "¡Bien! El enroque corto es la jugada más segura para tu rey en esta posición.",
+          fail: "Esa jugada no mejora la seguridad del rey. Pensá en enrocar.",
+          hint: "El rey puede enrocar corto: se mueve dos casillas hacia la torre.",
+        },
+        3: {
+          category: "estrategia",
+          xp: 30,
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          solution: ["e2e4", "d2d4", "g1f3", "c2c4"],
+          prompt: "Elegí una jugada de apertura sólida que luche por el centro o desarrolle una pieza.",
+          success: "¡Buena elección! Es una de las jugadas de apertura más sólidas y más jugadas a nivel mundial.",
+          fail: "Esa jugada no es la más recomendable para empezar. Pensá en los peones centrales o en desarrollar un caballo.",
+          hint: "e4, d4, Cf3 y c4 son las jugadas de apertura más comunes y sólidas.",
+        },
+        4: {
+          category: "tactica",
+          xp: 35,
+          fen: "2q3k1/8/2N5/8/8/8/8/6K1 w - - 0 1",
+          solution: ["c6e7"],
+          prompt: "Encontrá el salto de caballo que ataca al rey y a la dama negros a la vez.",
+          success: "¡Horquilla real! Ce7+ ataca al rey y a la dama: vas a ganar la dama.",
+          fail: "Esa jugada no genera un ataque doble. Buscá una casilla de caballo que dé jaque.",
+          hint: "Desde e7, el caballo controla tanto c8 como g8.",
+        },
+        5: {
+          category: "tactica",
+          xp: 35,
+          fen: "6k1/8/8/4n2q/8/8/8/1R4K1 w - - 0 1",
+          solution: ["b1b5"],
+          prompt: "Clavá el caballo negro contra la dama llevando tu torre a la quinta fila.",
+          success: "¡Bien visto! Tb5 clava el caballo: si se mueve, pierde la dama.",
+          fail: "Esa jugada no clava ninguna pieza. Buscá la fila que comparten el caballo y la dama negros.",
+          hint: "El caballo y la dama negros están en la misma fila (la 5).",
+        },
+        6: {
+          category: "tactica",
+          xp: 50,
+          fen: "r5kb/8/8/8/8/8/8/Q5K1 w - - 0 1",
+          solution: ["a1a8"],
+          prompt: "Tenés dos capturas con jaque disponibles. Elegí la que gana más material.",
+          success: "¡Correcto! Dxa8+ gana la torre (más valiosa que el alfil) y además da jaque.",
+          fail: "Esa captura suma menos material. Compará el valor de la torre y el del alfil antes de elegir.",
+          hint: "Torre = 5 puntos, alfil = 3 puntos. Elegí capturar la pieza más valiosa.",
+        },
+        7: {
+          category: "estrategia",
+          xp: 50,
+          fen: "6k1/8/5n2/8/8/8/8/2B3K1 w - - 0 1",
+          solution: ["c1g5"],
+          prompt: "Tu alfil sigue en la fila inicial. Activalo presionando al caballo negro.",
+          success: "¡Buena mejora de pieza! Ag5 activa tu peor pieza y presiona al caballo.",
+          fail: "Esa jugada no activa al alfil de la mejor manera. Buscá la diagonal larga hacia el caballo.",
+          hint: "El alfil puede salir por la diagonal hasta la casilla g5.",
+        },
+        8: {
+          category: "tactica",
+          xp: 75,
+          fen: "7k/6pp/8/8/8/8/8/1Q4K1 w - - 0 1",
+          solution: ["b1b8"],
+          checkmate: true,
+          prompt: "El rey negro está atrapado en la esquina por sus propios peones. Encontrá el mate en una jugada.",
+          success: "¡Jaque mate! La dama controla toda la última fila y el rey no tiene ninguna escapatoria.",
+          fail: "Esa jugada no es mate. Pensá en llevar la dama a la última fila.",
+          hint: "Llevá la dama por la columna 'b' hasta la última fila.",
+        },
+        9: {
+          category: "principiante",
+          xp: 25,
+          fen: "4k3/5p2/8/8/2B5/8/8/6K1 w - - 0 1",
+          solution: ["c4f7"],
+          prompt: "Leé bien la posición: hay un peón negro totalmente indefenso. Capturalo.",
+          success: "¡Bien leído! El peón en f7 no tenía ninguna defensa, y de paso das jaque.",
+          fail: "Todavía hay una captura gratis disponible. Revisá qué peón negro no tiene ninguna pieza que lo proteja.",
+          hint: "El alfil y el peón negro comparten la misma diagonal.",
+        },
+        10: {
+          category: "principiante",
+          xp: 25,
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          solution: ["e2e4"],
+          prompt: "Jugá exactamente el movimiento que en notación se escribe 'e4'.",
+          success: "¡Correcto! Esa jugada es exactamente 'e4': el peón de rey avanza dos casillas.",
+          fail: "Esa no es la jugada 'e4'. Fijate bien qué peón y qué casilla indica la notación.",
+          hint: "Buscá el peón que puede llegar a la casilla e4 en una sola jugada.",
+        },
+        11: {
+          category: "estrategia",
+          xp: 35,
+          fen: "6k1/pppp1ppp/8/8/8/8/PPPP1PPP/5RK1 w - - 0 1",
+          solution: ["f1e1"],
+          prompt: "Encontrá la única columna sin peones y colocá tu torre ahí.",
+          success: "¡Perfecto! La columna 'e' está completamente abierta: tu torre queda mucho más activa ahí.",
+          fail: "Esa jugada no coloca la torre en la columna abierta. Fijate cuál es la única columna sin peones.",
+          hint: "Ninguna de las dos partes tiene peones en la columna 'e'.",
+        },
+        12: {
+          category: "estrategia",
+          xp: 40,
+          fen: "4k3/8/8/8/8/8/8/4K2N w - - 0 1",
+          solution: ["h1g3"],
+          prompt: "Tu caballo está totalmente aislado en el borde. Mejoralo llevándolo hacia el centro.",
+          success: "¡Bien! Cg3 saca al caballo del borde y lo acerca a casillas mucho más útiles.",
+          fail: "Esa jugada no mejora al caballo. Buscá una casilla más cercana al centro.",
+          hint: "Desde h1, el caballo tiene una única casilla razonable de desarrollo.",
+        },
+        13: {
+          category: "estrategia",
+          xp: 50,
+          fen: "6k1/8/8/8/8/8/P7/6K1 w - - 0 1",
+          solution: ["a2a4"],
+          prompt: "Elegí la jugada que empieza un plan de expansión en el flanco de dama.",
+          success: "¡Buen plan! Avanzar el peón dos casillas gana espacio de inmediato en ese flanco.",
+          fail: "Esa jugada no es la más ambiciosa para empezar el plan. Pensá en avanzar el peón dos casillas.",
+          hint: "El peón todavía no se movió: puede avanzar una o dos casillas.",
+        },
+        14: {
+          category: "tactica",
+          xp: 40,
+          fen: "6k1/8/8/2n1b3/8/3P4/8/6K1 w - - 0 1",
+          solution: ["d3d4"],
+          prompt: "Encontrá el avance de peón que ataca al caballo y al alfil negros a la vez.",
+          success: "¡Horquilla de peón! d4 ataca simultáneamente al caballo y al alfil: vas a ganar una pieza.",
+          fail: "Esa jugada no genera la horquilla. Pensá en avanzar el peón una casilla.",
+          hint: "Un peón blanco ataca en diagonal hacia adelante. Buscá la casilla que ataque dos piezas a la vez.",
+        },
+        15: {
+          category: "tactica",
+          xp: 50,
+          fen: "r3k3/8/8/1N6/8/8/8/6K1 w - - 0 1",
+          solution: ["b5c7"],
+          prompt: "En vez de una jugada tranquila, encontrá la jugada intermedia que da jaque y ataca la torre.",
+          success: "¡Excelente intermedia! Cc7+ da jaque y ataca la torre en a8 al mismo tiempo.",
+          fail: "Esa jugada no es la intermedia más fuerte. Buscá un salto de caballo que dé jaque.",
+          hint: "Desde c7, el caballo ataca tanto al rey como a la torre.",
+        },
+        16: {
+          category: "tactica",
+          xp: 55,
+          fen: "6k1/5ppp/8/8/8/8/1B6/6K1 w - - 0 1",
+          solution: ["b2g7"],
+          prompt: "Evaluá si conviene sacrificar el alfil para exponer al rey negro. Jugalo.",
+          success: "¡Sacrificio correcto! Axg7 destruye el refugio del rey negro y abre la posición a tu favor.",
+          fail: "Esa jugada no es el sacrificio que expone al rey. Fijate en qué diagonal larga está tu alfil.",
+          hint: "El alfil en b2 apunta directo a la casilla g7 por la diagonal larga.",
+        },
+        17: {
+          category: "tactica",
+          xp: 60,
+          fen: "k7/pp6/8/8/8/8/8/2Q3K1 w - - 0 1",
+          solution: ["c1c8"],
+          checkmate: true,
+          prompt: "El rey negro está atrapado por sus propios peones. Encontrá el mate en una jugada.",
+          success: "¡Jaque mate! El rey no puede capturar la dama ni escapar: sus propios peones se lo impiden.",
+          fail: "Esa jugada no es mate. Pensá en llevar la dama a la última fila, lejos del alcance del rey.",
+          hint: "La dama puede llegar a la última fila por la columna 'c'.",
+        },
+        18: {
+          category: "tactica",
+          xp: 65,
+          fen: "3rk3/8/8/4N3/8/8/4R1K1 w - - 0 1",
+          solution: ["e5c6"],
+          prompt: "Calculá dos jugadas: encontrá el salto de caballo que descubre jaque y ataca la torre.",
+          success: "¡Cálculo perfecto! Cc6+ descubre el jaque de tu torre y además ataca la torre negra en d8.",
+          fail: "Esa jugada no descubre el jaque. Pensá en apartar el caballo de la columna 'e'.",
+          hint: "Tu torre en e1 y el rey negro están en la misma columna: el caballo la está tapando.",
+        },
+        19: {
+          category: "estrategia",
+          xp: 70,
+          fen: "2k5/8/8/8/8/8/2P5/2K5 w - - 0 1",
+          solution: ["c1b2", "c1d2", "c1b1", "c1d1"],
+          prompt: "Todavía no conviene avanzar el peón. Mejorá primero la posición de tu rey.",
+          success: "¡Buena decisión! En los finales de peones, conviene activar el rey antes de avanzar el peón.",
+          fail: "Avanzar el peón ahora no es la mejor decisión. Activá primero tu rey.",
+          hint: "Mové el rey hacia el centro o hacia el peón, en lugar de avanzar el peón.",
+        },
+        20: {
+          category: "tactica",
+          xp: 100,
+          fen: "6k1/5ppp/8/8/8/8/8/3Q2K1 w - - 0 1",
+          solution: ["d1d8"],
+          checkmate: true,
+          prompt: "Combiná todo lo aprendido y encontrá el jaque mate en una jugada.",
+          success: "¡Jaque mate! Dd8 controla toda la última fila y los propios peones negros sellan la suerte del rey.",
+          fail: "Esa jugada no es mate. Pensá en llevar la dama a la última fila por una columna despejada.",
+          hint: "La columna 'd' está completamente libre hasta la última fila.",
+        },
+      };
+
+      const LESSON_CATEGORY_LABEL = { fundamentos: "Fundamentos", estrategia: "Estrategia", tactica: "Táctica" };
+      const EXERCISE_CATEGORY_LABEL = { principiante: "Principiante", estrategia: "Estrategia", tactica: "Táctica" };
+
+      // -------- Progreso: filtros --------
+      function wireFilterButtons(selector, cardSelector, dataAttr, emptyElId) {
+        const buttons = document.querySelectorAll(selector);
+        buttons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            buttons.forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            const filter = btn.dataset[dataAttr];
+            const cards = document.querySelectorAll(cardSelector);
+            let visibleCount = 0;
+            cards.forEach((card) => {
+              const show = filter === "all" || card.dataset.category === filter;
+              card.style.display = show ? "" : "none";
+              if (show) visibleCount++;
+            });
+            const emptyEl = document.getElementById(emptyElId);
+            if (emptyEl) emptyEl.style.display = visibleCount === 0 ? "" : "none";
+          });
+        });
+      }
+      wireFilterButtons("[data-learning-filter]", "[data-lesson-card]", "learningFilter", "learning-empty");
+      wireFilterButtons("[data-exercise-filter]", "[data-exercise-card]", "exerciseFilter", null);
+
+      // -------- Progreso de lecciones --------
+      function updateLearningProgress() {
+        const completed = state.lessonsCompleted || [];
+        const total = Object.keys(LESSONS).length;
+        const pct = Math.round((completed.length / total) * 100);
+        const textEl = document.getElementById("learning-progress-text");
+        const barEl = document.getElementById("learning-progress-bar");
+        const detailEl = document.getElementById("learning-progress-detail");
+        if (textEl) textEl.textContent = pct + "%";
+        if (barEl) barEl.style.width = pct + "%";
+        if (detailEl) detailEl.textContent = `${completed.length} de ${total} lecciones completadas`;
+
+        document.querySelectorAll("[data-lesson-card]").forEach((card) => {
+          const id = card.dataset.lessonId;
+          const isDone = completed.includes(id);
+          card.classList.toggle("completed", isDone);
+          const btn = card.querySelector(".lesson-btn");
+          if (btn) btn.textContent = isDone ? "✓ Repasar" : "Comenzar";
+        });
+      }
+
+      function updateExerciseDashboard() {
+        const stats = state.exerciseStats || { solved: [], firstTry: 0, attempts: 0, streak: 0, bestStreak: 0 };
+        const totalEl = document.getElementById("exercise-total-stat");
+        const correctEl = document.getElementById("exercise-correct-stat");
+        const streakEl = document.getElementById("exercise-streak-stat");
+        const bestEl = document.getElementById("exercise-best-stat");
+        if (totalEl) totalEl.textContent = (stats.solved || []).length;
+        if (correctEl) {
+          const pct = stats.attempts ? Math.round((stats.firstTry / stats.attempts) * 100) : 0;
+          correctEl.textContent = pct + "%";
+        }
+        if (streakEl) streakEl.textContent = (stats.streak || 0) + " 🔥";
+        if (bestEl) bestEl.textContent = stats.bestStreak || 0;
+
+        document.querySelectorAll("[data-exercise-card]").forEach((card) => {
+          const id = card.dataset.exerciseId;
+          const isDone = (stats.solved || []).includes(id);
+          card.classList.toggle("completed", isDone);
+        });
+      }
+
+      function ensureLearningState() {
+        if (!state.lessonsCompleted) state.lessonsCompleted = [];
+        if (!state.exerciseStats) {
+          state.exerciseStats = { solved: [], firstTry: 0, attempts: 0, streak: 0, bestStreak: 0 };
+        }
+      }
+      ensureLearningState();
+
+      // -------- Mini-tablero interactivo (para lecciones y ejercicios) --------
+      function createPuzzleBoard(boardEl) {
+        const ctx = {
+          chess: null,
+          selected: null,
+          solvedOrFailed: false,
+          onResult: null,
+        };
+
+        function draw() {
+          boardEl.innerHTML = "";
+          const board = ctx.chess.board();
+          for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+              const sqName = FILES[c] + (8 - r);
+              const sq = document.createElement("div");
+              sq.className = "square " + ((r + c) % 2 ? "dark" : "light");
+              sq.dataset.square = sqName;
+              if (ctx.selected === sqName) sq.classList.add("selected");
+              const p = board[r][c];
+              if (p) {
+                const piece = document.createElement("div");
+                piece.className = "piece";
+                piece.textContent = PIECES[p.color + p.type.toUpperCase()];
+                sq.appendChild(piece);
+              }
+              sq.addEventListener("click", () => onSquareClick(sqName));
+              boardEl.appendChild(sq);
+            }
+          }
+        }
+
+        function flash(sqName, className) {
+          const sqEl = boardEl.querySelector(`[data-square="${sqName}"]`);
+          if (!sqEl) return;
+          sqEl.classList.add(className);
+          setTimeout(() => sqEl.classList.remove(className), 500);
+        }
+
+        function onSquareClick(sqName) {
+          if (ctx.solvedOrFailed) return;
+          const piece = ctx.chess.get(sqName);
+          if (ctx.selected === sqName) {
+            ctx.selected = null;
+            draw();
+            return;
+          }
+          if (ctx.selected) {
+            const from = ctx.selected;
+            const attempt = { from, to: sqName, promotion: "q" };
+            const uci = from + sqName;
+            ctx.selected = null;
+            attemptMove(uci, attempt);
+            return;
+          }
+          if (piece && piece.color === ctx.chess.turn()) {
+            ctx.selected = sqName;
+            draw();
+          }
+        }
+
+        function attemptMove(uci, attempt) {
+          if (ctx.onAttempt) ctx.onAttempt(uci, attempt);
+        }
+
+        ctx.load = function (fen) {
+          ctx.chess = new Chess(fen);
+          ctx.selected = null;
+          ctx.solvedOrFailed = false;
+          draw();
+        };
+        ctx.draw = draw;
+        ctx.flash = flash;
+        return ctx;
+      }
+
+      const lessonBoardCtx = createPuzzleBoard(document.getElementById("lesson-puzzle-board"));
+      const exerciseBoardCtx = createPuzzleBoard(document.getElementById("exercise-puzzle-board"));
+
+      // -------- Modal de lección --------
+      let currentLessonId = null;
+      let lessonPuzzleSolved = false;
+
+      function checklistAllChecked() {
+        const boxes = document.querySelectorAll("#lesson-modal .lesson-check");
+        return Array.from(boxes).every((b) => b.checked);
+      }
+
+      function refreshLessonCompleteButton() {
+        const btn = document.getElementById("lesson-complete");
+        if (!btn) return;
+        const alreadyDone = (state.lessonsCompleted || []).includes(String(currentLessonId));
+        if (alreadyDone) {
+          btn.disabled = true;
+          btn.textContent = "✓ Lección completada";
+          return;
+        }
+        btn.textContent = "✓ Marcar como completada";
+        btn.disabled = !(lessonPuzzleSolved && checklistAllChecked());
+      }
+
+      function openLessonModal(id) {
+        const lesson = LESSONS[id];
+        if (!lesson) return;
+        currentLessonId = id;
+        lessonPuzzleSolved = (state.lessonsCompleted || []).includes(String(id));
+
+        const card = document.querySelector(`[data-lesson-card][data-lesson-id="${id}"]`);
+        const titleText = card ? card.querySelector("h3").textContent : "Lección";
+        document.getElementById("lesson-modal-category").textContent =
+          "📚 " + (LESSON_CATEGORY_LABEL[lesson.category] || "Lección");
+        document.getElementById("lesson-title").textContent = titleText;
+        document.getElementById("lesson-content").innerHTML = lesson.content;
+
+        document.querySelectorAll("#lesson-modal .lesson-check").forEach((b) => {
+          b.checked = lessonPuzzleSolved;
+          b.onchange = refreshLessonCompleteButton;
+        });
+
+        document.getElementById("lesson-puzzle-prompt").textContent = lesson.puzzle.prompt;
+        const feedbackEl = document.getElementById("lesson-puzzle-feedback");
+        feedbackEl.textContent = "";
+        feedbackEl.className = "puzzle-feedback";
+        document.getElementById("lesson-puzzle-retry").style.display = "none";
+
+        lessonBoardCtx.load(lesson.puzzle.fen);
+        lessonBoardCtx.solvedOrFailed = lessonPuzzleSolved;
+        if (lessonPuzzleSolved) {
+          feedbackEl.textContent = "✓ Ya resolviste esta posición.";
+          feedbackEl.classList.add("correct");
+        }
+
+        lessonBoardCtx.onAttempt = function (uci, attempt) {
+          if (lessonPuzzleSolved) return;
+          const testChess = new Chess(lessonBoardCtx.chess.fen());
+          const move = testChess.move(attempt);
+          if (!move) {
+            lessonBoardCtx.draw();
+            return;
+          }
+          const isCorrect = lesson.puzzle.checkmate
+            ? testChess.in_checkmate()
+            : lesson.puzzle.solution.includes(uci);
+          if (isCorrect) {
+            lessonPuzzleSolved = true;
+            lessonBoardCtx.solvedOrFailed = true;
+            lessonBoardCtx.chess = testChess;
+            lessonBoardCtx.draw();
+            lessonBoardCtx.flash(attempt.to, "solved-flash");
+            feedbackEl.textContent = "✅ " + lesson.puzzle.success;
+            feedbackEl.className = "puzzle-feedback correct";
+          } else {
+            lessonBoardCtx.draw();
+            lessonBoardCtx.flash(attempt.to, "wrong-flash");
+            feedbackEl.textContent = "❌ " + lesson.puzzle.fail;
+            feedbackEl.className = "puzzle-feedback wrong";
+            document.getElementById("lesson-puzzle-retry").style.display = "";
+          }
+          refreshLessonCompleteButton();
+        };
+
+        refreshLessonCompleteButton();
+        document.getElementById("lesson-modal").style.display = "flex";
+      }
+
+      function closeLessonModal() {
+        document.getElementById("lesson-modal").style.display = "none";
+        currentLessonId = null;
+      }
+
+      document.querySelectorAll(".lesson-btn").forEach((btn) => {
+        btn.addEventListener("click", () => openLessonModal(btn.dataset.lesson));
+      });
+      document.getElementById("lesson-close").addEventListener("click", closeLessonModal);
+      document.getElementById("lesson-modal").addEventListener("click", (e) => {
+        if (e.target.id === "lesson-modal") closeLessonModal();
+      });
+      document.getElementById("lesson-puzzle-hint").addEventListener("click", () => {
+        const lesson = LESSONS[currentLessonId];
+        if (!lesson) return;
+        toast("💡 " + lesson.puzzle.hint);
+      });
+      document.getElementById("lesson-puzzle-retry").addEventListener("click", () => {
+        const lesson = LESSONS[currentLessonId];
+        if (!lesson) return;
+        document.getElementById("lesson-puzzle-retry").style.display = "none";
+        const feedbackEl = document.getElementById("lesson-puzzle-feedback");
+        feedbackEl.textContent = "";
+        feedbackEl.className = "puzzle-feedback";
+        lessonBoardCtx.load(lesson.puzzle.fen);
+      });
+
+      document.getElementById("lesson-complete").addEventListener("click", () => {
+        if (!currentLessonId) return;
+        const lesson = LESSONS[currentLessonId];
+        const idStr = String(currentLessonId);
+        if ((state.lessonsCompleted || []).includes(idStr)) return;
+        state.lessonsCompleted.push(idStr);
+        save();
+        addXP(lesson.xp, "Lección completada", "Completada");
+        updateLearningProgress();
+        refreshLessonCompleteButton();
+      });
+
+      // -------- Modal de ejercicios --------
+      let currentExerciseId = null;
+      let exercisePuzzleResolved = false;
+
+      function openExerciseModal(id) {
+        const ex = EXERCISES[id];
+        if (!ex) return;
+        currentExerciseId = id;
+        exercisePuzzleResolved = false;
+
+        const card = document.querySelector(`[data-exercise-card][data-exercise-id="${id}"]`);
+        const titleText = card ? card.querySelector("h3").textContent : "Ejercicio";
+        document.getElementById("exercise-modal-category").textContent =
+          "⚡ " + (EXERCISE_CATEGORY_LABEL[ex.category] || "Ejercicio");
+        document.getElementById("exercise-modal-title").textContent = titleText;
+        document.getElementById("exercise-modal-streak").textContent =
+          "🔥 Racha: " + ((state.exerciseStats && state.exerciseStats.streak) || 0);
+        document.getElementById("exercise-question").textContent = ex.prompt;
+
+        const feedbackEl = document.getElementById("puzzle-feedback");
+        feedbackEl.textContent = "";
+        feedbackEl.className = "puzzle-feedback";
+        document.getElementById("exercise-puzzle-retry").style.display = "none";
+        document.getElementById("exercise-result").style.display = "none";
+
+        exerciseBoardCtx.load(ex.fen);
+
+        exerciseBoardCtx.onAttempt = function (uci, attempt) {
+          if (exercisePuzzleResolved) return;
+          const testChess = new Chess(exerciseBoardCtx.chess.fen());
+          const move = testChess.move(attempt);
+          if (!move) {
+            exerciseBoardCtx.draw();
+            return;
+          }
+          const isCorrect = ex.checkmate ? testChess.in_checkmate() : ex.solution.includes(uci);
+          ensureLearningState();
+          const stats = state.exerciseStats;
+          const idStr = String(id);
+          const alreadySolved = (stats.solved || []).includes(idStr);
+
+          if (isCorrect) {
+            exercisePuzzleResolved = true;
+            exerciseBoardCtx.solvedOrFailed = true;
+            exerciseBoardCtx.chess = testChess;
+            exerciseBoardCtx.draw();
+            exerciseBoardCtx.flash(attempt.to, "solved-flash");
+            feedbackEl.textContent = "✅ " + ex.success;
+            feedbackEl.className = "puzzle-feedback correct";
+
+            if (!alreadySolved) {
+              stats.attempts = (stats.attempts || 0) + 1;
+              stats.firstTry = (stats.firstTry || 0) + 1;
+              stats.streak = (stats.streak || 0) + 1;
+              stats.bestStreak = Math.max(stats.bestStreak || 0, stats.streak);
+              stats.solved = stats.solved || [];
+              stats.solved.push(idStr);
+              save();
+              addXP(ex.xp, "Ejercicio resuelto", "Correcto");
+            }
+            document.getElementById("exercise-modal-streak").textContent = "🔥 Racha: " + stats.streak;
+            document.getElementById("exercise-result-score").textContent = "1/1";
+            document.getElementById("exercise-result-text").textContent = alreadySolved
+              ? "Ya habías resuelto este ejercicio antes. ¡Repaso completado!"
+              : `¡Resuelto! Ganaste ${ex.xp} XP.`;
+            document.getElementById("exercise-result").style.display = "";
+            updateExerciseDashboard();
+          } else {
+            exerciseBoardCtx.draw();
+            exerciseBoardCtx.flash(attempt.to, "wrong-flash");
+            feedbackEl.textContent = "❌ " + ex.fail;
+            feedbackEl.className = "puzzle-feedback wrong";
+            document.getElementById("exercise-puzzle-retry").style.display = "";
+
+            if (!alreadySolved) {
+              stats.attempts = (stats.attempts || 0) + 1;
+              stats.streak = 0;
+              save();
+              document.getElementById("exercise-modal-streak").textContent = "🔥 Racha: 0";
+              updateExerciseDashboard();
+            }
+          }
+        };
+
+        document.getElementById("exercise-modal").style.display = "flex";
+      }
+
+      function closeExerciseModal() {
+        document.getElementById("exercise-modal").style.display = "none";
+        currentExerciseId = null;
+      }
+
+      document.querySelectorAll(".exercise-start").forEach((btn) => {
+        btn.addEventListener("click", () => openExerciseModal(btn.dataset.exercise));
+      });
+      document.getElementById("exercise-close").addEventListener("click", closeExerciseModal);
+      document.getElementById("exercise-modal").addEventListener("click", (e) => {
+        if (e.target.id === "exercise-modal") closeExerciseModal();
+      });
+      document.getElementById("exercise-puzzle-hint").addEventListener("click", () => {
+        const ex = EXERCISES[currentExerciseId];
+        if (!ex) return;
+        toast("💡 " + ex.hint);
+      });
+      document.getElementById("exercise-puzzle-retry").addEventListener("click", () => {
+        const ex = EXERCISES[currentExerciseId];
+        if (!ex) return;
+        exercisePuzzleResolved = false;
+        document.getElementById("exercise-puzzle-retry").style.display = "none";
+        const feedbackEl = document.getElementById("puzzle-feedback");
+        feedbackEl.textContent = "";
+        feedbackEl.className = "puzzle-feedback";
+        document.getElementById("exercise-result").style.display = "none";
+        exerciseBoardCtx.load(ex.fen);
+      });
+
+      updateLearningProgress();
+      updateExerciseDashboard();
     </script>
   </body>
 </html>
