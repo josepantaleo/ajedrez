@@ -1188,6 +1188,254 @@
         text-shadow: 0 1px 3px #fff;
       }
 
+      /* =========================
+         ESTILOS DE FICHAS
+      ========================== */
+      .pstyle-bold .piece {
+        filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.55));
+      }
+      .pstyle-bold .white-piece {
+        color: #ffffff;
+        text-shadow: none;
+        -webkit-text-stroke: 1.5px #262626;
+      }
+      .pstyle-bold .black-piece {
+        color: #0a0a0a;
+        text-shadow: none;
+        -webkit-text-stroke: 1.5px #f0f0f0;
+      }
+
+      .pstyle-outline .piece {
+        color: transparent;
+        text-shadow: none;
+        filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.45));
+      }
+      .pstyle-outline .white-piece {
+        -webkit-text-stroke: 2px #fdfdfd;
+      }
+      .pstyle-outline .black-piece {
+        -webkit-text-stroke: 2px #151515;
+      }
+
+      .pstyle-neon .piece {
+        text-shadow: none;
+        filter: none;
+      }
+      .pstyle-neon .white-piece {
+        color: #eafcff;
+        text-shadow: 0 0 4px #6ff2ff, 0 0 12px #35d6ff, 0 0 22px #35d6ff;
+      }
+      .pstyle-neon .black-piece {
+        color: #ffd6fb;
+        text-shadow: 0 0 4px #ff6bd8, 0 0 12px #ff2fc7, 0 0 22px #ff2fc7;
+      }
+
+      .pstyle-minimal .piece {
+        position: relative;
+        color: transparent !important;
+        text-shadow: none !important;
+        -webkit-text-stroke: 0 !important;
+        filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+      }
+      .pstyle-minimal .piece::after {
+        content: attr(data-piece);
+        position: absolute;
+        inset: 6%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 800;
+        font-size: 0.42em;
+        line-height: 1;
+      }
+      .pstyle-minimal .white-piece::after {
+        background: #fbfbf6;
+        color: #1a1a1a;
+        border: 2px solid #2a2a2a;
+      }
+      .pstyle-minimal .black-piece::after {
+        background: #1c1c1c;
+        color: #f5f5f5;
+        border: 2px solid #eee;
+      }
+
+      .pstyle-gold .piece {
+        text-shadow: none;
+        filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.5));
+      }
+      .pstyle-gold .white-piece {
+        background: linear-gradient(180deg, #fff6d8 0%, #f2c94c 35%, #b8791a 70%, #8a5a12 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-stroke: 1px #6e4711;
+      }
+      .pstyle-gold .black-piece {
+        background: linear-gradient(180deg, #e6e6e6 0%, #9a9a9a 35%, #3a3a3a 70%, #151515 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-stroke: 1px #0a0a0a;
+      }
+
+      .pstyle-glass .piece {
+        text-shadow: none;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+      }
+      .pstyle-glass .white-piece {
+        color: rgba(255, 255, 255, 0.4);
+        -webkit-text-stroke: 1px rgba(255, 255, 255, 0.85);
+        text-shadow: 0 -2px 3px rgba(255, 255, 255, 0.7), 0 3px 4px rgba(0, 0, 0, 0.25);
+      }
+      .pstyle-glass .black-piece {
+        color: rgba(20, 25, 35, 0.45);
+        -webkit-text-stroke: 1px rgba(230, 240, 250, 0.75);
+        text-shadow: 0 -2px 3px rgba(255, 255, 255, 0.35), 0 3px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .pstyle-retro .piece {
+        font-family: "Courier New", monospace;
+        text-shadow: none;
+        filter: none;
+      }
+      .pstyle-retro .white-piece {
+        color: #39ff88;
+        text-shadow: 2px 0 0 #0a3d1e, -2px 0 0 #0a3d1e, 0 2px 0 #0a3d1e, 0 -2px 0 #0a3d1e, 0 0 10px rgba(57, 255, 136, 0.6);
+      }
+      .pstyle-retro .black-piece {
+        color: #ffb000;
+        text-shadow: 2px 0 0 #4a2c00, -2px 0 0 #4a2c00, 0 2px 0 #4a2c00, 0 -2px 0 #4a2c00, 0 0 10px rgba(255, 176, 0, 0.6);
+      }
+
+      .pstyle-wood .piece {
+        text-shadow: none;
+        filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45));
+      }
+      .pstyle-wood .white-piece {
+        color: #f0d9b5;
+        text-shadow: 1px 1px 0 #fff3d6, -1px -1px 2px #6b4423, 0 2px 3px rgba(0, 0, 0, 0.4);
+      }
+      .pstyle-wood .black-piece {
+        color: #6b4423;
+        text-shadow: 1px 1px 0 #3a2512, -1px -1px 1px #d9b98a, 0 2px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      .pstyle-fire .piece {
+        text-shadow: none;
+        filter: none;
+      }
+      .pstyle-fire .white-piece {
+        background: linear-gradient(180deg, #fff3c4 0%, #ffb347 30%, #ff5f2e 65%, #b8251a 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 14px rgba(255, 110, 40, 0.65);
+      }
+      .pstyle-fire .black-piece {
+        background: linear-gradient(180deg, #ffd9a0 0%, #d1481f 35%, #7a1a0d 70%, #3a0a04 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 14px rgba(180, 40, 10, 0.7);
+      }
+
+      .pstyle-ice .piece {
+        text-shadow: none;
+        filter: none;
+      }
+      .pstyle-ice .white-piece {
+        background: linear-gradient(180deg, #ffffff 0%, #cdeeff 40%, #7fd4ff 75%, #3a9fe0 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 12px rgba(120, 210, 255, 0.7);
+      }
+      .pstyle-ice .black-piece {
+        background: linear-gradient(180deg, #e3f7ff 0%, #8fc6e8 35%, #2f6f96 70%, #143c52 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 12px rgba(90, 170, 220, 0.7);
+      }
+
+      .pstyle-pastel .piece {
+        text-shadow: none;
+        -webkit-text-stroke: 0;
+        filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.15));
+      }
+      .pstyle-pastel .white-piece {
+        color: #ffd6e7;
+        -webkit-text-stroke: 1.5px #ff9fc4;
+      }
+      .pstyle-pastel .black-piece {
+        color: #cdeeff;
+        -webkit-text-stroke: 1.5px #7fbfe0;
+      }
+
+      .pstyle-rainbow .piece {
+        text-shadow: none;
+        filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+      }
+      .pstyle-rainbow .white-piece {
+        background: linear-gradient(90deg, #ff5c5c, #ffb347, #f7e463, #7ee787, #5cc8ff, #b57bff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-stroke: 1px rgba(255, 255, 255, 0.6);
+      }
+      .pstyle-rainbow .black-piece {
+        background: linear-gradient(90deg, #b8004a, #b85c00, #8a7a00, #1e7a3d, #10537d, #4a1e8a);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-stroke: 1px rgba(0, 0, 0, 0.55);
+      }
+
+      .pstyle-longshadow .piece {
+        text-shadow: none;
+        filter: none;
+      }
+      .pstyle-longshadow .white-piece {
+        color: #f5f7fa;
+        text-shadow:
+          1px 1px 0 #c9ccd1, 2px 2px 0 #b6b9be, 3px 3px 0 #a3a6ab,
+          4px 4px 0 #909398, 5px 5px 0 #7d8085, 6px 6px 0 #6a6d72,
+          7px 7px 0 #575a5f, 8px 8px 6px rgba(0, 0, 0, 0.35);
+      }
+      .pstyle-longshadow .black-piece {
+        color: #21252b;
+        text-shadow:
+          1px 1px 0 #3a3f47, 2px 2px 0 #4d525b, 3px 3px 0 #60656f,
+          4px 4px 0 #737883, 5px 5px 0 #868b97, 6px 6px 0 #999eab,
+          7px 7px 0 #acb1bf, 8px 8px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      .piece-style-preview {
+        height: 90px;
+        border-radius: 14px;
+        margin: -4px -4px 16px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-evenly;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--surface2), var(--surface));
+      }
+      .piece-style-preview .piece {
+        font-size: 2.4rem;
+        line-height: 1;
+        cursor: default;
+        filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+      }
+      .piece-style-preview.pstyle-minimal .piece {
+        position: relative;
+        width: 46px;
+        height: 46px;
+        display: inline-block;
+      }
+
       .coord {
         position: absolute;
         font-size: 0.65rem;
@@ -2474,6 +2722,29 @@
         color: var(--muted);
       }
 
+      .tutor-pv {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(128, 150, 180, 0.05);
+        border: 1px dashed color-mix(in srgb, var(--muted) 35%, transparent);
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: var(--text);
+        font-family: "Courier New", monospace;
+        word-break: break-word;
+      }
+
+      .tutor-pv-label {
+        display: block;
+        font-family: Inter, system-ui, Arial, sans-serif;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+
       .analysis-eval-graph {
         display: flex;
         align-items: center;
@@ -3057,10 +3328,29 @@
                     <span id="tutor-eval" class="tutor-eval-text"></span>
                   </div>
                   <div class="tutor-comment" id="tutor-explanation"></div>
+                  <div class="tutor-pv" id="tutor-pv" style="display: none">
+                    <span class="tutor-pv-label">📖 Línea principal sugerida</span>
+                    <span id="tutor-pv-text"></span>
+                  </div>
                   <div class="tutor-tip" id="tutor-tip"></div>
                   <button class="btn" id="tutor-play-btn" style="width: 100%; margin-top: 10px">
                     ▶️ Jugar esta jugada
                   </button>
+                </div>
+
+                <div style="margin-top: 16px; border-top: 1px solid var(--surface2); padding-top: 12px">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem">
+                    <input type="checkbox" id="beginner-mode-toggle" />
+                    🎓 Modo principiante: explicar cada jugada del rival
+                  </label>
+                  <div id="beginner-mode-output" style="display: none; margin-top: 12px">
+                    <div class="tutor-move-row">
+                      <span id="beginner-move-san" class="tutor-move-badge"></span>
+                      <span id="beginner-move-side" class="tutor-eval-text"></span>
+                    </div>
+                    <div class="tutor-comment" id="beginner-explanation"></div>
+                    <div class="tutor-tip" id="beginner-tip"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4547,6 +4837,250 @@
               </div>
             </div>
           </div>
+
+          <div class="card" style="margin-top: 20px">
+            <div class="panel-title">♟️ Fichas</div>
+            <h2>Elegí el estilo de las fichas</h2>
+            <p style="color: var(--muted); margin-bottom: 0">
+              Cambiá la forma en que se ven las piezas sobre el tablero.
+            </p>
+
+            <div class="theme-toolbar">
+              <div class="theme-current">
+                Estilo de fichas actual:
+                <strong id="current-piece-style-name">Clásico</strong>
+              </div>
+              <button class="btn" id="reset-piece-style">
+                ↺ Restaurar predeterminado
+              </button>
+            </div>
+          </div>
+
+          <div class="grid theme-grid" style="margin-top: 20px">
+            <div class="card theme-card" data-piece-style-card="classic">
+              <div class="piece-style-preview pstyle-classic">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">♔ Clásico</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn primary piece-style-btn" data-piece-style="classic">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="bold">
+              <div class="piece-style-preview pstyle-bold">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">⬛ Sólido</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="bold">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="outline">
+              <div class="piece-style-preview pstyle-outline">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">◇ Contorno</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="outline">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="neon">
+              <div class="piece-style-preview pstyle-neon">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">💡 Neón</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="neon">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="minimal">
+              <div class="piece-style-preview pstyle-minimal">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">⚪ Minimalista</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="minimal">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="gold">
+              <div class="piece-style-preview pstyle-gold">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">🏆 Dorado</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="gold">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="glass">
+              <div class="piece-style-preview pstyle-glass">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">💎 Cristal</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="glass">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="retro">
+              <div class="piece-style-preview pstyle-retro">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">🕹️ Retro</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="retro">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="wood">
+              <div class="piece-style-preview pstyle-wood">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">🪵 Madera</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="wood">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="fire">
+              <div class="piece-style-preview pstyle-fire">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">🔥 Fuego</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="fire">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="ice">
+              <div class="piece-style-preview pstyle-ice">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">❄️ Hielo</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="ice">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="pastel">
+              <div class="piece-style-preview pstyle-pastel">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">🌸 Pastel</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="pastel">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="rainbow">
+              <div class="piece-style-preview pstyle-rainbow">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">🌈 Arcoíris</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="rainbow">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <div class="card theme-card" data-piece-style-card="longshadow">
+              <div class="piece-style-preview pstyle-longshadow">
+                <div class="piece white-piece" data-piece="K">♔</div>
+                <div class="piece black-piece" data-piece="N">♞</div>
+              </div>
+              <div class="theme-meta">
+                <div>
+                  <h3 style="margin: 0">📐 Sombra larga</h3>
+                  <span class="theme-status">✓ ACTIVO</span>
+                </div>
+                <button class="btn piece-style-btn" data-piece-style="longshadow">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="page" id="page-configuracion">
@@ -4967,10 +5501,12 @@
             const moves = game.ugly_moves({ verbose: true });
             if (moves.length > 0) {
               const m = moves[Math.floor(Math.random() * moves.length)];
+              const fenBeforeMove = game.fen();
               const rndMove = game.move({ from: m.from, to: m.to, promotion: m.promotion || 'q' });
               addIncrement();
               markMoveForAnimation(rndMove);
               playSoundForMove(rndMove, game);
+              showBeginnerExplanation(fenBeforeMove, rndMove);
               botThinking = false;
               render();
               checkGameOver();
@@ -4992,10 +5528,12 @@
               const to = bestMove.substring(2, 4);
               const promotion = bestMove.length > 4 ? bestMove[4] : undefined;
               
+              const fenBeforeMove = game.fen();
               const sfMove = game.move({ from, to, promotion: promotion || 'q' });
               addIncrement();
               markMoveForAnimation(sfMove);
               playSoundForMove(sfMove, game);
+              showBeginnerExplanation(fenBeforeMove, sfMove);
             }
             botThinking = false;
             render();
@@ -5058,6 +5596,7 @@
           const ghost = document.createElement("div");
           ghost.className = "piece piece-captured-ghost " + (anim.capturedColor === "w" ? "white-piece" : "black-piece");
           ghost.textContent = PIECES[anim.capturedColor + anim.capturedType.toUpperCase()];
+          ghost.dataset.piece = anim.capturedType.toUpperCase();
           capturedSquareEl.appendChild(ghost);
           setTimeout(() => ghost.remove(), 280);
         }
@@ -5116,6 +5655,7 @@
               const pieceEl = document.createElement("div");
               pieceEl.className = "piece " + (pieceObj.color === "w" ? "white-piece" : "black-piece");
               pieceEl.textContent = PIECES[pieceObj.color + pieceObj.type.toUpperCase()];
+              pieceEl.dataset.piece = pieceObj.type.toUpperCase();
               square.appendChild(pieceEl);
               attachPieceDrag(pieceEl, sqName);
               if (justMovedAnim && justMovedAnim.to === sqName) {
@@ -5337,6 +5877,7 @@
         document.querySelectorAll(".square.drag-origin").forEach((sq) => sq.classList.remove("drag-origin"));
 
         if (to && validMoves.includes(to)) {
+          const fenBeforeMove = game.fen();
           const move = game.move({ from: ctx.from, to, promotion: "q" });
           if (move) {
             addIncrement();
@@ -5344,6 +5885,7 @@
             validMoves = [];
             markMoveForAnimation(move);
             playSoundForMove(move, game);
+            showBeginnerExplanation(fenBeforeMove, move);
             if (navigator.vibrate) {
               const isCapture = move.flags && (move.flags.includes("c") || move.flags.includes("e"));
               navigator.vibrate(isCapture ? [14, 30, 14] : 12);
@@ -5374,6 +5916,7 @@
         }
 
         if (selected) {
+          const fenBeforeMove = game.fen();
           const move = game.move({ from: selected, to: sqName, promotion: 'q' });
           if (move) {
             addIncrement();
@@ -5381,6 +5924,7 @@
             validMoves = [];
             markMoveForAnimation(move);
             playSoundForMove(move, game);
+            showBeginnerExplanation(fenBeforeMove, move);
             render();
             checkGameOver();
             maybeTriggerBotMove();
@@ -5908,6 +6452,29 @@
 
       applyTheme(localStorage.getItem("chessTheme") || "blue");
 
+      // Estilos de fichas
+      const PIECE_STYLES = { classic: "Clásico", bold: "Sólido", outline: "Contorno", neon: "Neón", minimal: "Minimalista", gold: "Dorado", glass: "Cristal", retro: "Retro", wood: "Madera", fire: "Fuego", ice: "Hielo", pastel: "Pastel", rainbow: "Arcoíris", longshadow: "Sombra larga" };
+
+      function applyPieceStyle(style) {
+        const current = PIECE_STYLES[style] ? style : "classic";
+        document.body.classList.remove(
+          ...Object.keys(PIECE_STYLES).map((s) => "pstyle-" + s)
+        );
+        document.body.classList.add("pstyle-" + current);
+        localStorage.setItem("chessPieceStyle", current);
+        document.getElementById("current-piece-style-name").textContent = PIECE_STYLES[current];
+        document.querySelectorAll("[data-piece-style-card]").forEach((c) => {
+          c.classList.toggle("active", c.dataset.pieceStyleCard === current);
+        });
+      }
+
+      document.querySelectorAll(".piece-style-btn").forEach((btn) => {
+        btn.onclick = () => applyPieceStyle(btn.dataset.pieceStyle);
+      });
+      document.getElementById("reset-piece-style").onclick = () => applyPieceStyle("classic");
+
+      applyPieceStyle(localStorage.getItem("chessPieceStyle") || "classic");
+
       updateProfile();
       initClock(false);
       render();
@@ -5978,12 +6545,13 @@
             return;
           }
           let lastScore = 0;
+          let lastPv = [];
           let settled = false;
           const timeout = setTimeout(() => {
             if (settled) return;
             settled = true;
             sfAnalysisWorker.removeEventListener("message", handler);
-            resolve({ score: heuristicEval(fen), bestMove: null, engine: false });
+            resolve({ score: heuristicEval(fen), bestMove: null, engine: false, pv: [] });
           }, 8000);
 
           function handler(e) {
@@ -5998,6 +6566,10 @@
                   lastScore = mateIn > 0 ? (MATE_SCORE - mateIn) : (-MATE_SCORE - mateIn);
                 }
               }
+              const pvMatch = line.match(/ pv (.+)$/);
+              if (pvMatch) {
+                lastPv = pvMatch[1].trim().split(/\s+/);
+              }
             }
             if (line.startsWith("bestmove")) {
               if (settled) return;
@@ -6006,7 +6578,7 @@
               sfAnalysisWorker.removeEventListener("message", handler);
               const parts = line.split(" ");
               const bm = parts[1] && parts[1] !== "(none)" ? parts[1] : null;
-              resolve({ score: lastScore, bestMove: bm, engine: true });
+              resolve({ score: lastScore, bestMove: bm, engine: true, pv: lastPv });
             }
           }
           sfAnalysisWorker.addEventListener("message", handler);
@@ -6018,8 +6590,8 @@
       // Evalúa una posición: usa el motor salvo que ya sea jaque mate/ahogado
       async function evalPosition(fen, depth) {
         const temp = new Chess(fen);
-        if (temp.in_checkmate()) return { score: -MATE_SCORE, bestMove: null };
-        if (temp.game_over()) return { score: 0, bestMove: null };
+        if (temp.in_checkmate()) return { score: -MATE_SCORE, bestMove: null, pv: [] };
+        if (temp.game_over()) return { score: 0, bestMove: null, pv: [] };
         return sfEvalFen(fen, depth);
       }
 
@@ -6246,6 +6818,7 @@
               const piece = document.createElement("div");
               piece.className = "piece " + (p.color === "w" ? "white-piece" : "black-piece");
               piece.textContent = PIECES[p.color + p.type.toUpperCase()];
+              piece.dataset.piece = p.type.toUpperCase();
               sq.appendChild(piece);
             }
             boardEl.appendChild(sq);
@@ -6377,6 +6950,66 @@
         return pool[Math.floor(Math.random() * pool.length)];
       }
 
+      // Genera las razones tácticas/posicionales de una jugada ya aplicada (objeto move de chess.js)
+      function getMoveReasons(mv) {
+        const reasons = [];
+        if (mv.flags.includes("k") || mv.flags.includes("q")) {
+          reasons.push("enroca, poniendo al rey a resguardo y activando la torre");
+        }
+        if (mv.san.includes("#")) {
+          reasons.push("¡es jaque mate, termina la partida!");
+        } else if (mv.san.includes("+")) {
+          reasons.push("da jaque, obligando a responder de inmediato");
+        }
+        if (mv.flags.includes("c") || mv.flags.includes("e")) {
+          reasons.push("captura una pieza rival" + (mv.captured ? " (" + PIECE_NAMES[mv.captured] + ")" : "") + ", ganando material");
+        }
+        if (mv.flags.includes("p")) {
+          reasons.push("corona un peón, convirtiéndolo en una pieza mucho más poderosa");
+        }
+        if (TUTOR_START_SQUARES[mv.piece] && TUTOR_START_SQUARES[mv.piece].includes(mv.from)) {
+          reasons.push("desarrolla una pieza que todavía no había entrado en juego");
+        }
+        if (TUTOR_CENTER_SQUARES.includes(mv.to) && mv.piece !== "k") {
+          reasons.push("ocupa una casilla central, ganando espacio e influencia");
+        }
+        if (mv.piece === "k" && !mv.flags.includes("k") && !mv.flags.includes("q")) {
+          reasons.push("mueve al rey; hay que vigilar que quede seguro después de esta jugada");
+        }
+        return reasons;
+      }
+
+      // Convierte una línea principal (array de jugadas UCI) en notación SAN legible, numerada
+      function pvToSanLine(fen, pv) {
+        if (!pv || !pv.length) return "";
+        const temp = new Chess(fen);
+        const fenParts = fen.split(" ");
+        let turn = fenParts[1] === "b" ? "b" : "w";
+        let moveNumber = parseInt(fenParts[5], 10) || 1;
+        const parts = [];
+        for (let i = 0; i < pv.length; i++) {
+          const uci = pv[i];
+          if (!uci || uci.length < 4) break;
+          const from = uci.substring(0, 2);
+          const to = uci.substring(2, 4);
+          const promotion = uci.length > 4 ? uci[4] : undefined;
+          const mv = temp.move({ from, to, promotion: promotion || "q" });
+          if (!mv) break;
+          if (turn === "w") {
+            parts.push(moveNumber + ". " + mv.san);
+          } else {
+            if (i === 0) {
+              parts.push(moveNumber + "... " + mv.san);
+            } else {
+              parts.push(mv.san);
+            }
+            moveNumber++;
+          }
+          turn = turn === "w" ? "b" : "w";
+        }
+        return parts.join(" ");
+      }
+
       // Genera una explicación en español de por qué el motor recomienda esta jugada
       function explainTutorMove(fenBefore, uciMove, scoreCp, engineUsed) {
         const temp = new Chess(fenBefore);
@@ -6392,30 +7025,7 @@
           return { san: uciMove, text: "El motor recomienda esta jugada en la posición actual.", evalText: "" };
         }
 
-        const reasons = [];
-        if (mv.flags.includes("k") || mv.flags.includes("q")) {
-          reasons.push("enroca, poniendo al rey a resguardo y activando la torre");
-        }
-        if (mv.san.includes("#")) {
-          reasons.push("¡es jaque mate, termina la partida!");
-        } else if (mv.san.includes("+")) {
-          reasons.push("da jaque, obligando al rival a responder de inmediato");
-        }
-        if (mv.flags.includes("c") || mv.flags.includes("e")) {
-          reasons.push("captura una pieza rival" + (mv.captured ? " (" + PIECE_NAMES[mv.captured] + ")" : "") + ", ganando material");
-        }
-        if (mv.flags.includes("p")) {
-          reasons.push("corona un peón, convirtiéndolo en una pieza mucho más poderosa");
-        }
-        if (TUTOR_START_SQUARES[mv.piece] && TUTOR_START_SQUARES[mv.piece].includes(mv.from)) {
-          reasons.push("desarrolla una pieza que todavía no había entrado en juego");
-        }
-        if (TUTOR_CENTER_SQUARES.includes(mv.to) && mv.piece !== "k") {
-          reasons.push("ocupa una casilla central, ganando espacio e influencia");
-        }
-        if (mv.piece === "k" && !mv.flags.includes("k") && !mv.flags.includes("q")) {
-          reasons.push("mueve al rey; asegurate de que quede seguro después de esta jugada");
-        }
+        const reasons = getMoveReasons(mv);
 
         let text;
         if (reasons.length) {
@@ -6437,6 +7047,51 @@
         if (!engineUsed) evalText += " (estimado por material)";
 
         return { san: mv.san, text, evalText };
+      }
+
+      // =========================
+      // MODO PRINCIPIANTE (explica cada jugada del rival apenas se juega)
+      // =========================
+      let beginnerMode = localStorage.getItem("beginnerMode") === "1";
+      const beginnerToggleEl = document.getElementById("beginner-mode-toggle");
+      if (beginnerToggleEl) {
+        beginnerToggleEl.checked = beginnerMode;
+        beginnerToggleEl.onchange = () => {
+          beginnerMode = beginnerToggleEl.checked;
+          localStorage.setItem("beginnerMode", beginnerMode ? "1" : "0");
+          if (!beginnerMode) {
+            const out = document.getElementById("beginner-mode-output");
+            if (out) out.style.display = "none";
+          }
+        };
+      }
+
+      // Decide si corresponde explicar la jugada de "moverColor" (solo al rival del bot, o a todos en modo local)
+      function shouldExplainMover(moverColor) {
+        return !botEnabled || moverColor === botColor;
+      }
+
+      function showBeginnerExplanation(fenBefore, mv) {
+        if (!beginnerMode || !mv) return;
+        if (!shouldExplainMover(mv.color)) return;
+
+        const sideLabel = mv.color === "w" ? "Las Blancas" : "Las Negras";
+        const reasons = getMoveReasons(mv);
+        let text;
+        if (reasons.length) {
+          text = capitalizeFirst(reasons.slice(0, 2).join(", y además ")) + ".";
+        } else {
+          text = "Es una jugada de desarrollo o mejora posicional, sin un motivo táctico inmediato evidente.";
+        }
+        const tip = pickTutorTip(fenBefore);
+
+        const out = document.getElementById("beginner-mode-output");
+        if (!out) return;
+        document.getElementById("beginner-move-san").textContent = mv.san;
+        document.getElementById("beginner-move-side").textContent = sideLabel + " jugaron";
+        document.getElementById("beginner-explanation").textContent = capitalizeFirst(text);
+        document.getElementById("beginner-tip").textContent = "💡 " + tip;
+        out.style.display = "block";
       }
 
       async function requestTutorSuggestion() {
@@ -6465,6 +7120,7 @@
           document.getElementById("tutor-move-san").textContent = "—";
           document.getElementById("tutor-eval").textContent = "";
           document.getElementById("tutor-explanation").textContent = "No hay jugadas para sugerir en esta posición.";
+          document.getElementById("tutor-pv").style.display = "none";
           document.getElementById("tutor-tip").textContent = "";
           document.getElementById("tutor-play-btn").style.display = "none";
           return;
@@ -6472,6 +7128,7 @@
 
         const { san, text, evalText } = explainTutorMove(fen, result.bestMove, result.score, result.engine);
         const tip = pickTutorTip(fen);
+        const pvLine = pvToSanLine(fen, result.pv);
 
         lastTutorFen = fen;
         lastTutorMove = result.bestMove;
@@ -6479,6 +7136,13 @@
         document.getElementById("tutor-move-san").textContent = san;
         document.getElementById("tutor-eval").textContent = evalText;
         document.getElementById("tutor-explanation").textContent = text;
+        const pvEl = document.getElementById("tutor-pv");
+        if (pvLine && pvLine.split(" ").length > 1) {
+          document.getElementById("tutor-pv-text").textContent = pvLine;
+          pvEl.style.display = "block";
+        } else {
+          pvEl.style.display = "none";
+        }
         document.getElementById("tutor-tip").textContent = "💡 " + tip;
         document.getElementById("tutor-play-btn").style.display = "block";
         output.style.display = "block";
