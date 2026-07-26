@@ -3443,6 +3443,33 @@
 
             <div class="board-area">
               <div class="card" id="game-card">
+                <div id="tournament-match-bar" style="display: none; margin-bottom: 14px">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px">
+                    <div>
+                      <strong id="tournament-match-title">🏆 Partida de torneo</strong>
+                      <p class="muted" id="tournament-match-status" style="margin: 4px 0 0"></p>
+                    </div>
+                    <button class="btn" id="tournament-match-back-btn">← Volver al torneo</button>
+                  </div>
+                  <div
+                    id="tournament-match-color-picker"
+                    style="display: none; text-align: center; margin-top: 14px"
+                  >
+                    <p class="muted">¿Con qué color jugás vos en esta partida?</p>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap">
+                      <button class="btn primary" id="tournament-match-pick-white"></button>
+                      <button class="btn primary" id="tournament-match-pick-black"></button>
+                    </div>
+                  </div>
+                  <div
+                    id="tournament-match-controls"
+                    style="display: none; gap: 10px; margin-top: 14px; flex-wrap: wrap"
+                  >
+                    <button class="btn" id="tournament-match-draw-btn">🤝 Ofrecer/aceptar tablas</button>
+                    <button class="btn danger" id="tournament-match-resign-btn">🏳️ Abandonar</button>
+                  </div>
+                </div>
+
                 <div class="clock">
                   <div id="clock-w">05:00</div>
                   <div id="clock-b">05:00</div>
@@ -4921,36 +4948,10 @@
                 <div id="tournament-standings-list"></div>
               </div>
             </div>
-
-            <div class="card" id="tournament-board-box" style="display: none">
-              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px">
-                <h3 id="tournament-board-title">Tablero</h3>
-                <button class="btn" id="tournament-board-back-btn">← Volver al torneo</button>
-              </div>
-
-              <div id="tournament-color-picker" style="display: none; text-align: center; margin: 18px 0">
-                <p class="muted">¿Con qué color jugás vos en esta partida?</p>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap">
-                  <button class="btn primary" id="tournament-pick-white"></button>
-                  <button class="btn primary" id="tournament-pick-black"></button>
-                </div>
-              </div>
-
-              <div id="tournament-board-play-area" style="display: none">
-                <p class="muted" id="tournament-board-status"></p>
-                <div class="puzzle-board-wrap">
-                  <div class="board puzzle-board" id="tournament-chess-board"></div>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap">
-                  <button class="btn" id="tournament-draw-btn">🤝 Ofrecer/aceptar tablas</button>
-                  <button class="btn" id="tournament-resign-btn">🏳️ Abandonar la partida</button>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
-
+        <section class="page" id="page-estadisticas">
           <div class="grid dashboard-grid">
             <div class="card stat">
               <div class="icon">🎮</div>
@@ -5842,6 +5843,10 @@
       }
 
       function maybeTriggerBotMove() {
+        if (tournamentMatchActive) {
+          syncTournamentMove();
+          return;
+        }
         if (!botEnabled || !gameStarted || game.game_over() || game.turn() !== botColor) return;
         botThinking = true;
         render();
@@ -6184,6 +6189,7 @@
           if (e.button !== undefined && e.button !== 0) return;
           if (!gameStarted || game.game_over() || botThinking) return;
           if (botEnabled && game.turn() === botColor) return;
+          if (tournamentMatchActive && game.turn() !== tournamentMyColor()) return;
           const piece = game.get(sqName);
           if (!piece || piece.color !== game.turn()) return;
 
@@ -6299,6 +6305,7 @@
         if (Date.now() < justDraggedUntil) return;
         if (!gameStarted || game.game_over() || botThinking) return;
         if (botEnabled && game.turn() === botColor) return;
+        if (tournamentMatchActive && game.turn() !== tournamentMyColor()) return;
 
         if (selected === sqName) {
           selected = null;
@@ -6339,6 +6346,7 @@
       }
 
       function checkGameOver() {
+        if (tournamentMatchActive) return; // lo maneja syncTournamentMove()
         if (game.game_over()) {
           let resultText = "Partida terminada";
           if (game.in_checkmate()) {
@@ -8888,6 +8896,18 @@
         return res.json();
       }
 
+      // Versión liviana: solo lee la hoja Games de un tablero puntual,
+      // mucho más rápida que traer todo el torneo en cada sondeo.
+      async function tournamentGetGame(round, board) {
+        const url = getTournamentUrl();
+        if (!url) throw new Error("no-url");
+        const sep = url.includes("?") ? "&" : "?";
+        const res = await fetch(`${url}${sep}round=${round}&board=${board}`, { method: "GET" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        return data.game;
+      }
+
       async function tournamentPost(action, payload) {
         const url = getTournamentUrl();
         if (!url) throw new Error("no-url");
@@ -8979,7 +8999,7 @@
 
         listEl.querySelectorAll("button[data-play-round]").forEach((btn) => {
           btn.addEventListener("click", () => {
-            openTournamentBoard(
+            enterTournamentMatch(
               Number(btn.dataset.playRound),
               Number(btn.dataset.playBoard),
               btn.dataset.white,
@@ -9041,215 +9061,228 @@
         }
       }
 
-      // -------- Tablero en vivo de una partida del torneo --------
-      function createLiveBoard(boardEl) {
-        const ctx = { chess: null, selected: null, onMove: null, locked: true };
-        function draw() {
-          renderBoardGrid(boardEl, ctx.chess.board(), { selected: ctx.selected, onClick: onSquareClick });
-        }
-        function onSquareClick(sqName) {
-          if (ctx.locked) return;
-          const piece = ctx.chess.get(sqName);
-          if (ctx.selected === sqName) {
-            ctx.selected = null;
-            draw();
-            return;
-          }
-          if (ctx.selected) {
-            const from = ctx.selected;
-            ctx.selected = null;
-            const move = ctx.chess.move({ from, to: sqName, promotion: "q" });
-            draw();
-            if (move && ctx.onMove) ctx.onMove(move);
-            return;
-          }
-          if (piece && piece.color === ctx.chess.turn()) {
-            ctx.selected = sqName;
-            draw();
-          }
-        }
-        ctx.load = function (fen) {
-          ctx.chess = new Chess(fen);
-          ctx.selected = null;
-          draw();
-        };
-        ctx.draw = draw;
-        return ctx;
-      }
-
-      const tournamentBoardCtx = createLiveBoard(document.getElementById("tournament-chess-board"));
-      let tourBoardRound = null;
-      let tourBoardNumber = null;
-      let tourBoardWhite = "";
-      let tourBoardBlack = "";
-      let tourBoardPollTimer = null;
-      let tourBoardBusy = false;
+      // -------- Partida de torneo jugada en el tablero grande de "Jugar" --------
+      let tournamentMatchActive = false;
+      let tournamentMatchCtx = null; // {round, board, whiteName, blackName}
+      let tournamentMatchPollTimer = null;
+      let tournamentMatchBusy = false;
 
       function tourColorKey(round, board) {
         return `tourColor:${round}:${board}`;
       }
 
-      function myTourColor() {
-        return localStorage.getItem(tourColorKey(tourBoardRound, tourBoardNumber)) || "";
+      function tournamentMyColor() {
+        if (!tournamentMatchCtx) return "";
+        return localStorage.getItem(tourColorKey(tournamentMatchCtx.round, tournamentMatchCtx.board)) || "";
       }
 
-      function updateBoardStatusText(game) {
-        const statusEl = document.getElementById("tournament-board-status");
-        const myColor = myTourColor();
-        if (game && game.status === "finished") {
+      function updateTournamentMatchBar(gameRow) {
+        if (!tournamentMatchActive || !tournamentMatchCtx) return;
+        const statusEl = document.getElementById("tournament-match-status");
+        const myColor = tournamentMyColor();
+        if (gameRow && gameRow.status === "finished") {
           statusEl.textContent = "🏁 Partida terminada.";
-          tournamentBoardCtx.locked = true;
+          document.getElementById("tournament-match-controls").style.display = "none";
           return;
         }
-        const turn = tournamentBoardCtx.chess.turn();
-        const turnName = turn === "w" ? tourBoardWhite : tourBoardBlack;
-        tournamentBoardCtx.locked = myColor !== turn;
-        statusEl.textContent = tournamentBoardCtx.locked
-          ? `Turno de ${turnName}. Esperando la jugada...`
-          : `¡Tu turno! Jugás con ${myColor === "w" ? "blancas" : "negras"}.`;
+        const turn = game.turn();
+        const turnName = turn === "w" ? tournamentMatchCtx.whiteName : tournamentMatchCtx.blackName;
+        statusEl.textContent =
+          myColor === turn
+            ? `¡Tu turno! Jugás con ${myColor === "w" ? "blancas" : "negras"}.`
+            : `Turno de ${turnName}. Esperando la jugada...`;
       }
 
-      async function openTournamentBoard(round, board, whiteName, blackName) {
-        tourBoardRound = round;
-        tourBoardNumber = board;
-        tourBoardWhite = whiteName;
-        tourBoardBlack = blackName;
-
-        document.getElementById("tournament-pairings-card").style.display = "none";
-        document.getElementById("tournament-standings-card").style.display = "none";
-        document.getElementById("tournament-board-box").style.display = "";
-        document.getElementById("tournament-board-title").textContent = `#${board} · ${whiteName} vs ${blackName}`;
-
-        const savedColor = myTourColor();
-        const pickerEl = document.getElementById("tournament-color-picker");
-        const playAreaEl = document.getElementById("tournament-board-play-area");
-        if (!savedColor) {
-          pickerEl.style.display = "";
-          playAreaEl.style.display = "none";
-          document.getElementById("tournament-pick-white").textContent = "Soy " + whiteName + " (blancas)";
-          document.getElementById("tournament-pick-black").textContent = "Soy " + blackName + " (negras)";
-        } else {
-          pickerEl.style.display = "none";
-          playAreaEl.style.display = "";
-          await loadTournamentBoardGame();
-        }
-
-        clearInterval(tourBoardPollTimer);
-        tourBoardPollTimer = setInterval(() => {
-          if (document.getElementById("tournament-board-play-area").style.display !== "none") {
-            loadTournamentBoardGame();
-          }
-        }, 4000);
-      }
-
-      async function loadTournamentBoardGame() {
+      async function enterTournamentMatch(round, board, whiteName, blackName) {
         try {
           const state = await tournamentGet();
-          const game = (state.games || []).find(
-            (g) => g.round === tourBoardRound && g.board === tourBoardNumber
-          );
-          if (!game) return;
-          // No pisar el tablero si el usuario tiene una jugada propia recién hecha
-          // esperando confirmación (evita parpadeos); comparamos FEN.
-          if (!tournamentBoardCtx.chess || tournamentBoardCtx.chess.fen() !== game.fen) {
-            tournamentBoardCtx.load(game.fen);
+          const gameRow = (state.games || []).find((g) => g.round === round && g.board === board);
+          if (!gameRow) {
+            toast("❌ No se encontró esa partida");
+            return;
           }
-          updateBoardStatusText(game);
+
+          tournamentMatchCtx = { round, board, whiteName, blackName };
+          tournamentMatchActive = true;
+
+          botEnabled = false;
+          gameStarted = true;
+          game.load(gameRow.fen);
+          selected = null;
+          validMoves = [];
+
+          showPage("jugar");
+
+          document.getElementById("tournament-match-bar").style.display = "";
+          document.getElementById("tournament-match-title").textContent =
+            `🏆 Torneo · Ronda ${round}, tablero #${board}: ${whiteName} vs ${blackName}`;
+          const controlsPanel = document.querySelector("#page-jugar .controls-panel");
+          if (controlsPanel) controlsPanel.style.display = "none";
+          const clockEl = document.querySelector("#page-jugar .clock");
+          if (clockEl) clockEl.style.display = "none";
+
+          const savedColor = tournamentMyColor();
+          const pickerEl = document.getElementById("tournament-match-color-picker");
+          const controlsEl = document.getElementById("tournament-match-controls");
+          if (!savedColor) {
+            pickerEl.style.display = "";
+            controlsEl.style.display = "none";
+            document.getElementById("tournament-match-pick-white").textContent = "Soy " + whiteName + " (blancas)";
+            document.getElementById("tournament-match-pick-black").textContent = "Soy " + blackName + " (negras)";
+          } else {
+            pickerEl.style.display = "none";
+            controlsEl.style.display = "flex";
+          }
+
+          render();
+          updateTournamentMatchBar(gameRow);
+
+          clearInterval(tournamentMatchPollTimer);
+          tournamentMatchPollTimer = setInterval(pollTournamentMatch, 1500);
         } catch (err) {
-          // silencioso: el auto-refresh no debe interrumpir la partida
+          toast("❌ No se pudo abrir la partida: " + err.message);
         }
       }
 
-      document.getElementById("tournament-pick-white").addEventListener("click", () => {
-        localStorage.setItem(tourColorKey(tourBoardRound, tourBoardNumber), "w");
-        document.getElementById("tournament-color-picker").style.display = "none";
-        document.getElementById("tournament-board-play-area").style.display = "";
-        loadTournamentBoardGame();
-      });
-      document.getElementById("tournament-pick-black").addEventListener("click", () => {
-        localStorage.setItem(tourColorKey(tourBoardRound, tourBoardNumber), "b");
-        document.getElementById("tournament-color-picker").style.display = "none";
-        document.getElementById("tournament-board-play-area").style.display = "";
-        loadTournamentBoardGame();
-      });
+      function exitTournamentMatch() {
+        tournamentMatchActive = false;
+        tournamentMatchCtx = null;
+        clearInterval(tournamentMatchPollTimer);
 
-      tournamentBoardCtx.onMove = async function (move) {
-        if (tourBoardBusy) return;
-        tourBoardBusy = true;
+        document.getElementById("tournament-match-bar").style.display = "none";
+        const controlsPanel = document.querySelector("#page-jugar .controls-panel");
+        if (controlsPanel) controlsPanel.style.display = "";
+        const clockEl = document.querySelector("#page-jugar .clock");
+        if (clockEl) clockEl.style.display = "";
+
+        game = new Chess();
+        gameStarted = false;
+        selected = null;
+        validMoves = [];
+        render();
+
+        showPage("torneo");
+      }
+
+      let tournamentPollInFlight = false;
+
+      async function pollTournamentMatch() {
+        if (!tournamentMatchActive || !tournamentMatchCtx || tournamentMatchBusy || tournamentPollInFlight) return;
+        tournamentPollInFlight = true;
+        try {
+          const gameRow = await tournamentGetGame(tournamentMatchCtx.round, tournamentMatchCtx.board);
+          if (!gameRow) return;
+          if (gameRow.fen !== game.fen()) {
+            game.load(gameRow.fen);
+            selected = null;
+            validMoves = [];
+            render();
+          }
+          updateTournamentMatchBar(gameRow);
+          if (gameRow.status === "finished") {
+            clearInterval(tournamentMatchPollTimer);
+          }
+        } catch (err) {
+          // silencioso: el auto-refresh no debe interrumpir la partida
+        } finally {
+          tournamentPollInFlight = false;
+        }
+      }
+
+      async function syncTournamentMove() {
+        if (!tournamentMatchActive || !tournamentMatchCtx) return;
+        tournamentMatchBusy = true;
         try {
           let gameOverResult = null;
-          if (tournamentBoardCtx.chess.in_checkmate()) {
-            gameOverResult = tournamentBoardCtx.chess.turn() === "w" ? "0-1" : "1-0";
-          } else if (tournamentBoardCtx.chess.in_draw() || tournamentBoardCtx.chess.in_stalemate()) {
+          if (game.in_checkmate()) {
+            gameOverResult = game.turn() === "w" ? "0-1" : "1-0";
+          } else if (game.in_draw() || game.in_stalemate() || game.insufficient_material() || game.in_threefold_repetition()) {
             gameOverResult = "1/2-1/2";
           }
           const state = await tournamentPost("makeMove", {
-            round: tourBoardRound,
-            board: tourBoardNumber,
-            fen: tournamentBoardCtx.chess.fen(),
-            lastMoveSan: move.san,
+            round: tournamentMatchCtx.round,
+            board: tournamentMatchCtx.board,
+            fen: game.fen(),
+            lastMoveSan: game.history().slice(-1)[0] || "",
             gameOverResult,
           });
-          const game = (state.games || []).find(
-            (g) => g.round === tourBoardRound && g.board === tourBoardNumber
+          const gameRow = (state.games || []).find(
+            (g) => g.round === tournamentMatchCtx.round && g.board === tournamentMatchCtx.board
           );
-          updateBoardStatusText(game);
-          if (gameOverResult) toast("🏁 Partida terminada: " + resultLabel(gameOverResult));
+          updateTournamentMatchBar(gameRow);
+          if (gameOverResult) {
+            toast("🏁 Partida de torneo terminada: " + resultLabel(gameOverResult));
+            clearInterval(tournamentMatchPollTimer);
+          }
         } catch (err) {
-          toast("❌ No se pudo enviar la jugada: " + err.message);
+          toast("❌ No se pudo sincronizar la jugada: " + err.message);
         } finally {
-          tourBoardBusy = false;
+          tournamentMatchBusy = false;
         }
-      };
+      }
 
-      document.getElementById("tournament-board-back-btn").addEventListener("click", () => {
-        clearInterval(tourBoardPollTimer);
-        document.getElementById("tournament-board-box").style.display = "none";
-        document.getElementById("tournament-pairings-card").style.display = "";
-        document.getElementById("tournament-standings-card").style.display = "";
-        refreshTournament();
+      document.getElementById("tournament-match-pick-white").addEventListener("click", () => {
+        localStorage.setItem(tourColorKey(tournamentMatchCtx.round, tournamentMatchCtx.board), "w");
+        document.getElementById("tournament-match-color-picker").style.display = "none";
+        document.getElementById("tournament-match-controls").style.display = "flex";
+        updateTournamentMatchBar();
+      });
+      document.getElementById("tournament-match-pick-black").addEventListener("click", () => {
+        localStorage.setItem(tourColorKey(tournamentMatchCtx.round, tournamentMatchCtx.board), "b");
+        document.getElementById("tournament-match-color-picker").style.display = "none";
+        document.getElementById("tournament-match-controls").style.display = "flex";
+        updateTournamentMatchBar();
       });
 
-      document.getElementById("tournament-resign-btn").addEventListener("click", async () => {
-        const myColor = myTourColor();
+      document.getElementById("tournament-match-back-btn").addEventListener("click", exitTournamentMatch);
+
+      document.getElementById("tournament-match-resign-btn").addEventListener("click", async () => {
+        const myColor = tournamentMyColor();
         if (!myColor) return;
         if (!confirm("¿Seguro que te querés rendir en esta partida?")) return;
-        const result = myColor === "w" ? "0-1" : "1-0";
+        tournamentMatchBusy = true;
         try {
           const state = await tournamentPost("makeMove", {
-            round: tourBoardRound,
-            board: tourBoardNumber,
-            fen: tournamentBoardCtx.chess.fen(),
-            lastMoveSan: tournamentBoardCtx.chess.history().slice(-1)[0] || "",
-            gameOverResult: result,
+            round: tournamentMatchCtx.round,
+            board: tournamentMatchCtx.board,
+            fen: game.fen(),
+            lastMoveSan: game.history().slice(-1)[0] || "",
+            gameOverResult: myColor === "w" ? "0-1" : "1-0",
           });
-          const game = (state.games || []).find(
-            (g) => g.round === tourBoardRound && g.board === tourBoardNumber
+          const gameRow = (state.games || []).find(
+            (g) => g.round === tournamentMatchCtx.round && g.board === tournamentMatchCtx.board
           );
-          updateBoardStatusText(game);
+          updateTournamentMatchBar(gameRow);
+          clearInterval(tournamentMatchPollTimer);
           toast("🏳️ Te rendiste. Resultado cargado.");
         } catch (err) {
           toast("❌ " + err.message);
+        } finally {
+          tournamentMatchBusy = false;
         }
       });
 
-      document.getElementById("tournament-draw-btn").addEventListener("click", async () => {
+      document.getElementById("tournament-match-draw-btn").addEventListener("click", async () => {
         if (!confirm("¿Las dos partes están de acuerdo en tablas?")) return;
+        tournamentMatchBusy = true;
         try {
           const state = await tournamentPost("makeMove", {
-            round: tourBoardRound,
-            board: tourBoardNumber,
-            fen: tournamentBoardCtx.chess.fen(),
-            lastMoveSan: tournamentBoardCtx.chess.history().slice(-1)[0] || "",
+            round: tournamentMatchCtx.round,
+            board: tournamentMatchCtx.board,
+            fen: game.fen(),
+            lastMoveSan: game.history().slice(-1)[0] || "",
             gameOverResult: "1/2-1/2",
           });
-          const game = (state.games || []).find(
-            (g) => g.round === tourBoardRound && g.board === tourBoardNumber
+          const gameRow = (state.games || []).find(
+            (g) => g.round === tournamentMatchCtx.round && g.board === tournamentMatchCtx.board
           );
-          updateBoardStatusText(game);
+          updateTournamentMatchBar(gameRow);
+          clearInterval(tournamentMatchPollTimer);
           toast("🤝 Tablas cargadas.");
         } catch (err) {
           toast("❌ " + err.message);
+        } finally {
+          tournamentMatchBusy = false;
         }
       });
 
@@ -9311,14 +9344,14 @@
         }
       })();
 
-      // Auto-refresco liviano cada 12s mientras la pestaña Torneo está activa,
+      // Auto-refresco liviano cada 6s mientras la pestaña Torneo está activa,
       // para que los jugadores vean resultados que carguen otros dispositivos.
       setInterval(() => {
         const page = document.getElementById("page-torneo");
         if (page && page.classList.contains("active") && getTournamentUrl()) {
           refreshTournament();
         }
-      }, 12000);
+      }, 6000);
     </script>
   </body>
 </html>
