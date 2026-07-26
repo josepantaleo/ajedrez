@@ -2127,14 +2127,16 @@
         pointer-events: none;
       }
 
-      .puzzle-board .piece.piece-white {
+      .puzzle-board .piece.piece-white,
+      .mini-diagram-board .piece.piece-white {
         color: #f5f1e6;
         -webkit-text-stroke: 1.5px #2b1d0e;
         text-stroke: 1.5px #2b1d0e;
         filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
       }
 
-      .puzzle-board .piece.piece-black {
+      .puzzle-board .piece.piece-black,
+      .mini-diagram-board .piece.piece-black {
         color: #1a1512;
         -webkit-text-stroke: 1.5px #f2c265;
         text-stroke: 1.5px #f2c265;
@@ -2192,20 +2194,6 @@
 
       .mini-diagram-board .piece {
         font-size: clamp(24px, 8vw, 40px);
-      }
-
-      .mini-diagram-board .piece.piece-white {
-        color: #f5f1e6;
-        -webkit-text-stroke: 1.5px #2b1d0e;
-        text-stroke: 1.5px #2b1d0e;
-        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
-      }
-
-      .mini-diagram-board .piece.piece-black {
-        color: #1a1512;
-        -webkit-text-stroke: 1.5px #f2c265;
-        text-stroke: 1.5px #f2c265;
-        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
       }
 
       .mini-diagram-board .square.diagram-highlight::after {
@@ -7536,7 +7524,7 @@
             <div class="lesson-tip">💡 Los caballos son mejores cerca del centro; en el borde del tablero controlan muy pocas casillas.</div>
           `,
           puzzle: {
-            fen: "4k3/8/8/8/8/8/8/1N2K3 w - - 0 1",
+            fen: "2b1k3/pppppppp/8/8/8/8/PPPPPPPP/1N2KB2 w - - 0 1",
             solution: ["b1c3"],
             prompt: "Es tu turno. Desarrollá el caballo hacia una casilla central.",
             success: "¡Muy bien! Cc3 lleva al caballo cerca del centro, donde controla más casillas.",
@@ -7557,7 +7545,7 @@
             <div class="lesson-tip">💡 Contá siempre: ¿qué gano y qué puedo llegar a perder con esta captura?</div>
           `,
           puzzle: {
-            fen: "4k3/8/8/3n4/8/8/8/3QK3 w - - 0 1",
+            fen: "1nb1k3/ppp1pppp/8/3n4/8/8/PPP1PPPP/1N1QK3 w - - 0 1",
             solution: ["d1d5"],
             prompt: "El caballo negro en d5 no tiene ninguna defensa. Capturalo.",
             success: "¡Correcto! Dxd5 gana una pieza completamente gratis.",
@@ -7580,7 +7568,7 @@
             <div class="lesson-tip">💡 Un patrón clásico: si el rey rival quedó encerrado detrás de sus propios peones, una torre o dama en la última fila puede dar jaque mate.</div>
           `,
           puzzle: {
-            fen: "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1",
+            fen: "6k1/1ppppppp/8/8/8/8/1PPPP3/R5K1 w - - 0 1",
             solution: ["a1a8"],
             checkmate: true,
             prompt: "El rey negro está encerrado por sus propios peones. Encontrá el jaque mate en una jugada.",
@@ -7623,7 +7611,7 @@
             <div class="lesson-tip">💡 Un buen orden típico: peón central, caballo, alfil, enroque.</div>
           `,
           puzzle: {
-            fen: "4k3/8/8/4p3/4P3/8/8/4KBNR w - - 0 1",
+            fen: "1nb1k3/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/4KBNR w - - 0 1",
             solution: ["g1f3"],
             prompt: "Elegí la jugada que mejor combina desarrollo y preparación para enrocar.",
             success: "¡Muy bien! Cf3 desarrolla una pieza y deja el camino libre para el enroque corto.",
@@ -7644,7 +7632,7 @@
             <div class="lesson-tip">💡 Como regla general, enrocá lo antes posible: un rey en el centro es un blanco fácil.</div>
           `,
           puzzle: {
-            fen: "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            fen: "1nb1k3/pppppppp/8/8/8/8/PPPPPPPP/1NB1K2R w K - 0 1",
             solution: ["e1g1"],
             prompt: "El camino está despejado. Enrocá corto para poner a resguardo al rey.",
             success: "¡Perfecto! El enroque corto pone al rey a salvo y activa la torre.",
@@ -7665,7 +7653,7 @@
             <div class="lesson-tip">💡 Antes de saltar con el caballo, revisen si la casilla de destino ataca al rey y a otra pieza valiosa a la vez.</div>
           `,
           puzzle: {
-            fen: "2r1k3/8/8/1N6/8/8/8/6K1 w - - 0 1",
+            fen: "2r1k3/pppppppp/8/1N6/8/8/PPPPPPPP/1NB3K1 w - - 0 1",
             sequence: ["b5d6", "e8d8", "d6c8"],
             midMessage: "¡Cd6+ es jaque! El rey se aparta del jaque. Ahora terminá la horquilla.",
             prompt: "Encontrá la jugada de caballo que ataca al rey y a la torre al mismo tiempo, y después ganá la torre.",
@@ -7687,7 +7675,7 @@
             <div class="lesson-tip">💡 Los alfiles y torres son las piezas que suelen clavar; siempre a lo largo de una línea recta o diagonal.</div>
           `,
           puzzle: {
-            fen: "6k1/8/4n3/8/8/8/B7/6K1 w - - 0 1",
+            fen: "r5k1/pppppppp/4n3/8/8/8/BPPPPPPP/1N4K1 w - - 0 1",
             solution: ["a2c4"],
             prompt: "Colocá el alfil en la diagonal para clavar el caballo negro contra el rey.",
             success: "¡Bien visto! Ac4 clava el caballo: si se mueve, queda expuesto el rey.",
@@ -7708,7 +7696,7 @@
             <div class="lesson-tip">💡 Busquen piezas propias alineadas con el rey rival, con solo una pieza propia en el medio.</div>
           `,
           puzzle: {
-            fen: "r2k4/8/8/3B4/8/8/8/3R2K1 w - - 0 1",
+            fen: "rn1k4/p1p1pppp/8/3B4/8/8/PPP1PPPP/1N1R2K1 w - - 0 1",
             solution: ["d5a8"],
             prompt: "El alfil bloquea a tu propia torre. Movelo para ganar material con jaque descubierto.",
             success: "¡Excelente! Al capturar la torre en a8, además descubrís el jaque de tu torre en d1 sobre el rey.",
@@ -7729,7 +7717,7 @@
             <div class="lesson-tip">💡 Si una sola pieza defiende dos cosas importantes, suele ser el blanco ideal para una desviación.</div>
           `,
           puzzle: {
-            fen: "6k1/5p1p/5n2/8/8/2B5/8/6K1 w - - 0 1",
+            fen: "r5k1/pppppp1p/5n2/8/8/2B5/PPPPPPPP/1N4K1 w - - 0 1",
             solution: ["c3f6"],
             prompt: "El caballo negro es el único defensor de casillas clave cerca del rey. Eliminalo.",
             success: "¡Muy bien! Al capturar el caballo, eliminás al defensor y dejás al rey negro mucho más débil.",
@@ -7750,7 +7738,7 @@
             <div class="lesson-tip">💡 Contá cuántas tareas defensivas tiene cada pieza rival antes de decidir un plan táctico.</div>
           `,
           puzzle: {
-            fen: "3r2k1/5ppp/8/3n4/8/1B6/8/4R1K1 w - - 0 1",
+            fen: "1n1r2k1/ppp2ppp/8/3n4/8/1B6/PPPP4/4R1K1 w - - 0 1",
             sequence: ["b3d5", "d8d5", "e1e8"],
             checkmate: true,
             midMessage: "La torre recaptura en d5... pero eso le quita el control de la última fila.",
@@ -7773,7 +7761,7 @@
             <div class="lesson-tip">💡 Si no ven ninguna jugada táctica forzada, la mejor jugada suele ser la que mejora su pieza peor colocada.</div>
           `,
           puzzle: {
-            fen: "6k1/8/8/8/8/N7/8/6K1 w - - 0 1",
+            fen: "2b3k1/pppppppp/8/8/8/N7/PPPPPPPP/5BK1 w - - 0 1",
             solution: ["a3c4"],
             prompt: "El caballo está mal ubicado en el borde. Centralizalo para mejorar tu peor pieza.",
             success: "¡Excelente aplicación del método! Un caballo centralizado vale mucho más que uno en el borde.",
@@ -7815,7 +7803,7 @@
             <div class="lesson-tip">💡 Regla práctica: si están mejor, cambien piezas (no peones); si están peor, evítenlo.</div>
           `,
           puzzle: {
-            fen: "4k3/8/8/3q4/3Q4/1P6/8/4K3 w - - 0 1",
+            fen: "1n2k3/pppppppp/8/3q4/3Q4/1P6/P1PPPPPP/1N2K3 w - - 0 1",
             solution: ["d4d5"],
             prompt: "Tenés una ventaja de material (un peón de más). Cambiá las damas para simplificar la posición.",
             success: "¡Bien pensado! Al cambiar damas estando mejor, se acercan a ganar la partida con menos riesgo.",
@@ -7836,7 +7824,7 @@
             <div class="lesson-tip">💡 "Torre en columna abierta" es uno de los principios estratégicos más útiles para el medio juego.</div>
           `,
           puzzle: {
-            fen: "6k1/ppp1pppp/8/8/8/8/PPP1PPPP/R5K1 w - - 0 1",
+            fen: "1n3bk1/ppp1pppp/8/8/8/8/PPP1PPPP/R4BK1 w - - 0 1",
             solution: ["a1d1"],
             prompt: "La columna 'd' está completamente abierta. Llevá tu torre ahí.",
             success: "¡Perfecto! Td1 ocupa la única columna abierta del tablero.",
@@ -7857,7 +7845,7 @@
             <div class="lesson-tip">💡 Antes de mover otra pieza, revisen si su caballo peor colocado tiene una ruta de mejora disponible.</div>
           `,
           puzzle: {
-            fen: "6k1/8/8/8/N7/8/8/6K1 w - - 0 1",
+            fen: "2b3k1/pppppppp/8/8/N7/8/PPPPPPPP/5BK1 w - - 0 1",
             solution: ["a4c5"],
             prompt: "El caballo está en el borde, sin controlar casi nada. Llevalo a una casilla central.",
             success: "¡Bien! Esa casilla central es mucho más fuerte que el borde del tablero.",
@@ -7878,7 +7866,7 @@
             <div class="lesson-tip">💡 Un doble ataque de dama suele ganar material aunque el rival tenga jaque o amenazas propias, siempre que puedan calcular bien el orden de jugadas.</div>
           `,
           puzzle: {
-            fen: "4k3/3n4/8/r7/8/8/8/3Q2K1 w - - 0 1",
+            fen: "4k3/pppnpppp/8/r7/8/8/PP1PPPPP/3Q2K1 w - - 0 1",
             sequence: ["d1a4", "a5a6", "a4d7"],
             midMessage: "La torre se salva corriendo por la columna 'a'. El caballo quedó solo: andá por él.",
             prompt: "Encontrá la jugada de dama que ataca la torre y el caballo negros al mismo tiempo, y quedate con la pieza que no pueda salvar.",
@@ -7900,7 +7888,7 @@
             <div class="lesson-tip">💡 No siempre la jugada más obvia es la mejor: revisen si hay una jugada intermedia antes de continuar la secuencia esperada.</div>
           `,
           puzzle: {
-            fen: "4k3/8/8/8/3r4/3B4/8/3Q2K1 w - - 0 1",
+            fen: "1n2k3/pppp1ppp/8/8/3r4/3B4/PPP1PPPP/3Q2K1 w - - 0 1",
             sequence: ["d3b5", "e8e7", "d1d4"],
             midMessage: "Ab5+ obliga al rey a moverse antes de ocuparte de cualquier otra cosa.",
             prompt: "Podrías capturar la torre directamente, pero hay una jugada intermedia mejor. Encontrala, y después capturá la torre.",
@@ -7922,7 +7910,7 @@
             <div class="lesson-tip">💡 Antes de sacrificar, calculen al menos 2 o 3 jugadas del ataque resultante: un sacrificio sin seguimiento concreto suele ser solo pérdida de material.</div>
           `,
           puzzle: {
-            fen: "6k1/5ppp/8/8/8/3B1N2/8/6K1 w - - 0 1",
+            fen: "r5k1/pppppppp/8/8/8/3B1N2/PPPPPPPP/R5K1 w - - 0 1",
             sequence: ["d3h7", "g8h7", "f3g5"],
             midMessage: "El rey captura el alfil... y camina directo hacia el resto del ataque.",
             prompt: "El rey negro enrocó corto y tu alfil apunta directo a h7. Jugá el sacrificio clásico y continuá el ataque.",
@@ -7944,7 +7932,7 @@
             <div class="lesson-tip">💡 Un plan simple y consistente vence a una sucesión de jugadas sueltas sin conexión entre sí.</div>
           `,
           puzzle: {
-            fen: "6k1/8/5n2/8/4P3/8/8/6K1 w - - 0 1",
+            fen: "2b3k1/ppppp1pp/5n2/8/4P3/8/PPPP1PPP/2B3K1 w - - 0 1",
             solution: ["e4e5"],
             prompt: "Elegí la jugada que ejecuta un plan claro: ganar espacio y ganar tiempo atacando al caballo.",
             success: "¡Gran plan! e5 gana espacio y obliga al caballo negro a retroceder, perdiendo tiempo.",
@@ -7960,7 +7948,7 @@
         1: {
           category: "principiante",
           xp: 20,
-          fen: "3nk3/8/8/8/r2Q4/8/8/6K1 w - - 0 1",
+          fen: "3nkb2/1pp2ppp/8/8/r2Q4/8/1PP2PPP/1N4K1 w - - 0 1",
           solution: ["d4a4"],
           prompt: "Tu dama puede capturar la torre o el caballo negros. Elegí la captura que gana más material.",
           success: "¡Correcto! La torre vale más que el caballo: Dxa4 es la mejor captura.",
@@ -7970,7 +7958,7 @@
         2: {
           category: "principiante",
           xp: 20,
-          fen: "4k3/8/8/8/6n1/8/8/4K2R w K - 0 1",
+          fen: "2b1k3/pp3ppp/8/8/6n1/8/PP3PPP/1N2K2R w K - 0 1",
           solution: ["e1g1"],
           prompt: "Es tu turno. Poné a resguardo al rey con la mejor jugada de seguridad.",
           success: "¡Bien! El enroque corto es la jugada más segura para tu rey en esta posición.",
@@ -7990,7 +7978,7 @@
         4: {
           category: "tactica",
           xp: 35,
-          fen: "2q3k1/8/2N5/8/8/8/8/6K1 w - - 0 1",
+          fen: "r1q3k1/pp3ppp/2N5/8/8/8/PP3PPP/2B3K1 w - - 0 1",
           sequence: ["c6e7", "g8f8", "e7c8"],
           midMessage: "Ce7+ es jaque: el rey se aparta. Ahora completá la horquilla.",
           prompt: "Encontrá el salto de caballo que ataca al rey y a la dama negros a la vez, y después ganá la dama.",
@@ -8001,7 +7989,7 @@
         5: {
           category: "tactica",
           xp: 35,
-          fen: "6k1/8/8/4n2q/8/8/8/1R4K1 w - - 0 1",
+          fen: "2b3k1/p1p2ppp/8/4n2q/8/8/P1P2PPP/1RB3K1 w - - 0 1",
           solution: ["b1b5"],
           prompt: "Clavá el caballo negro contra la dama llevando tu torre a la quinta fila.",
           success: "¡Bien visto! Tb5 clava el caballo: si se mueve, pierde la dama.",
@@ -8011,7 +7999,7 @@
         6: {
           category: "tactica",
           xp: 50,
-          fen: "r5kb/8/8/8/8/8/8/Q5K1 w - - 0 1",
+          fen: "rn4kb/1ppppp1p/8/8/8/8/2PPPPPP/QN4K1 w - - 0 1",
           solution: ["a1a8"],
           prompt: "Tenés dos capturas con jaque disponibles. Elegí la que gana más material.",
           success: "¡Correcto! Dxa8+ gana la torre (más valiosa que el alfil) y además da jaque.",
@@ -8021,7 +8009,7 @@
         7: {
           category: "estrategia",
           xp: 50,
-          fen: "6k1/8/5n2/8/8/8/8/2B3K1 w - - 0 1",
+          fen: "r5k1/ppp1p1pp/5n2/8/8/8/PPP2PPP/1NB3K1 w - - 0 1",
           solution: ["c1g5"],
           prompt: "Tu alfil sigue en la fila inicial. Activalo presionando al caballo negro.",
           success: "¡Buena mejora de pieza! Ag5 activa tu peor pieza y presiona al caballo.",
@@ -8031,7 +8019,7 @@
         8: {
           category: "tactica",
           xp: 75,
-          fen: "7k/6pp/8/8/8/8/8/1Q4K1 w - - 0 1",
+          fen: "7k/2pp2pp/8/8/8/8/2PPP3/1Q4K1 w - - 0 1",
           solution: ["b1b8"],
           checkmate: true,
           prompt: "El rey negro está atrapado en la esquina por sus propios peones. Encontrá el mate en una jugada.",
@@ -8042,7 +8030,7 @@
         9: {
           category: "principiante",
           xp: 25,
-          fen: "4k3/5p2/8/8/2B5/8/8/6K1 w - - 0 1",
+          fen: "1n2k3/pppppppp/8/8/2B5/8/PP1PPPPP/1N4K1 w - - 0 1",
           solution: ["c4f7"],
           prompt: "Leé bien la posición: hay un peón negro totalmente indefenso. Capturalo.",
           success: "¡Bien leído! El peón en f7 no tenía ninguna defensa, y de paso das jaque.",
@@ -8072,7 +8060,7 @@
         12: {
           category: "estrategia",
           xp: 40,
-          fen: "4k3/8/8/8/8/8/8/4K2N w - - 0 1",
+          fen: "2b1k3/pppppppp/8/8/8/8/PPPP1PPP/4KB1N w - - 0 1",
           solution: ["h1g3"],
           prompt: "Tu caballo está totalmente aislado en el borde. Mejoralo llevándolo hacia el centro.",
           success: "¡Bien! Cg3 saca al caballo del borde y lo acerca a casillas mucho más útiles.",
@@ -8082,7 +8070,7 @@
         13: {
           category: "estrategia",
           xp: 50,
-          fen: "6k1/8/8/8/8/8/P7/6K1 w - - 0 1",
+          fen: "1nb3k1/1ppppppp/8/8/8/8/PPPPPPPP/1N4K1 w - - 0 1",
           solution: ["a2a4"],
           prompt: "Elegí la jugada que empieza un plan de expansión en el flanco de dama.",
           success: "¡Buen plan! Avanzar el peón dos casillas gana espacio de inmediato en ese flanco.",
@@ -8092,7 +8080,7 @@
         14: {
           category: "tactica",
           xp: 40,
-          fen: "6k1/8/8/2n1b3/8/3P4/8/6K1 w - - 0 1",
+          fen: "6k1/pppppppp/8/2n1b3/8/3P4/PPP1PPPP/6K1 w - - 0 1",
           sequence: ["d3d4", "e5f6", "d4c5"],
           midMessage: "Salvaron el alfil, que valía más. El caballo quedó indefenso: comelo.",
           prompt: "Encontrá el avance de peón que ataca al caballo y al alfil negros a la vez, y quedate con la pieza que no puedan salvar.",
@@ -8103,7 +8091,7 @@
         15: {
           category: "tactica",
           xp: 50,
-          fen: "r3k3/8/8/1N6/8/8/8/6K1 w - - 0 1",
+          fen: "r1b1k3/pp1p1ppp/8/1N6/8/8/PPPP1PPP/2B3K1 w - - 0 1",
           sequence: ["b5c7", "e8e7", "c7a8"],
           midMessage: "Cc7+ es jaque: el rey se aparta. Ahora terminá de ganar la torre.",
           prompt: "En vez de una jugada tranquila, encontrá la jugada intermedia que da jaque, y después ganá la torre.",
@@ -8114,7 +8102,7 @@
         16: {
           category: "tactica",
           xp: 55,
-          fen: "6k1/5ppp/8/8/8/4N3/1B6/6K1 w - - 0 1",
+          fen: "r5k1/pppppppp/8/8/8/4N3/PBPPPPPP/R5K1 w - - 0 1",
           sequence: ["b2g7", "g8g7", "e3f5"],
           midMessage: "El rey recaptura el alfil... y queda mucho más expuesto de lo que parece.",
           prompt: "Evaluá si conviene sacrificar el alfil para exponer al rey negro. Jugalo y seguí el ataque.",
@@ -8125,7 +8113,7 @@
         17: {
           category: "tactica",
           xp: 60,
-          fen: "k7/pp6/8/8/8/8/8/2Q3K1 w - - 0 1",
+          fen: "k7/pp2pp2/8/8/8/8/4PPP1/1NQ3K1 w - - 0 1",
           solution: ["c1c8"],
           checkmate: true,
           prompt: "El rey negro está atrapado por sus propios peones. Encontrá el mate en una jugada.",
@@ -8136,7 +8124,7 @@
         18: {
           category: "tactica",
           xp: 65,
-          fen: "3rk3/8/8/4N3/8/8/4R1K1 w - - 0 1",
+          fen: "3rk3/pppp1ppp/8/4N3/8/8/PPPP1PPP/4R1K1 w - - 0 1",
           sequence: ["e5c6", "e8e7", "c6d8"],
           midMessage: "El jaque descubierto obliga al rey a moverse. Ahora calculá la segunda jugada y quedate con la torre.",
           prompt: "Calculá dos jugadas: encontrá el salto de caballo que descubre jaque, y después ganá la torre negra.",
@@ -8157,7 +8145,7 @@
         20: {
           category: "tactica",
           xp: 100,
-          fen: "6k1/5ppp/8/8/8/8/8/3Q2K1 w - - 0 1",
+          fen: "1n4k1/ppp1pppp/8/8/8/8/PPP1PPPP/1N1Q2K1 w - - 0 1",
           solution: ["d1d8"],
           checkmate: true,
           prompt: "Combiná todo lo aprendido y encontrá el jaque mate en una jugada.",
@@ -8244,6 +8232,52 @@
       ensureLearningState();
 
       // -------- Mini-tablero interactivo (para lecciones y ejercicios) --------
+      // Construye una grilla de 8x8 (casillas + piezas) a partir de una matriz
+      // homogénea. La usan tanto el mini-tablero jugable como los diagramas
+      // estáticos, para no duplicar la lógica de dibujo en dos lugares.
+      function renderBoardGrid(boardEl, matrix, options = {}) {
+        boardEl.innerHTML = "";
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const sqName = FILES[c] + (8 - r);
+            const sq = document.createElement("div");
+            sq.className = "square " + ((r + c) % 2 ? "dark" : "light");
+            sq.dataset.square = sqName;
+            if (options.selected === sqName) sq.classList.add("selected");
+            if (options.highlight && options.highlight.includes(sqName)) sq.classList.add("diagram-highlight");
+            const p = matrix[r][c];
+            if (p) {
+              const piece = document.createElement("div");
+              piece.className = "piece " + (p.color === "w" ? "piece-white" : "piece-black");
+              piece.textContent = PIECES[p.color + p.type.toUpperCase()];
+              sq.appendChild(piece);
+            }
+            if (options.onClick) sq.addEventListener("click", () => options.onClick(sqName));
+            boardEl.appendChild(sq);
+          }
+        }
+      }
+
+      // Convierte la parte de posición de un FEN en la misma matriz 8x8
+      // (fila 0 = octava fila) que usa chess.js en .board(), para poder
+      // reusar renderBoardGrid con posiciones estáticas (sin new Chess()).
+      function fenBoardToMatrix(fen) {
+        const rows = fen.split(" ")[0].split("/");
+        const matrix = [];
+        for (let r = 0; r < 8; r++) {
+          const row = [];
+          for (const ch of rows[r]) {
+            if (/\d/.test(ch)) {
+              for (let k = 0; k < parseInt(ch, 10); k++) row.push(null);
+            } else {
+              row.push({ color: ch === ch.toUpperCase() ? "w" : "b", type: ch.toLowerCase() });
+            }
+          }
+          matrix.push(row);
+        }
+        return matrix;
+      }
+
       function createPuzzleBoard(boardEl) {
         const ctx = {
           chess: null,
@@ -8253,26 +8287,7 @@
         };
 
         function draw() {
-          boardEl.innerHTML = "";
-          const board = ctx.chess.board();
-          for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-              const sqName = FILES[c] + (8 - r);
-              const sq = document.createElement("div");
-              sq.className = "square " + ((r + c) % 2 ? "dark" : "light");
-              sq.dataset.square = sqName;
-              if (ctx.selected === sqName) sq.classList.add("selected");
-              const p = board[r][c];
-              if (p) {
-                const piece = document.createElement("div");
-                piece.className = "piece " + (p.color === "w" ? "piece-white" : "piece-black");
-                piece.textContent = PIECES[p.color + p.type.toUpperCase()];
-                sq.appendChild(piece);
-              }
-              sq.addEventListener("click", () => onSquareClick(sqName));
-              boardEl.appendChild(sq);
-            }
-          }
+          renderBoardGrid(boardEl, ctx.chess.board(), { selected: ctx.selected, onClick: onSquareClick });
         }
 
         function flash(sqName, className) {
@@ -8347,7 +8362,8 @@
           return rt.stepIndex === seq.length - 1;
         };
 
-        rt.attempt = function (uci, attempt, onSolved) {
+        rt.attempt = function (uci, attempt, callbacks) {
+          const { onSolved, onWrong } = callbacks || {};
           if (rt.resolved || boardCtx.solvedOrFailed) return;
           const testChess = new Chess(boardCtx.chess.fen());
           const move = testChess.move(attempt);
@@ -8372,7 +8388,9 @@
             feedbackEl.textContent = "❌ " + puzzle.fail;
             feedbackEl.className = "puzzle-feedback wrong";
             if (retryBtnEl) retryBtnEl.style.display = "";
+            const wasFirstFailure = !rt.failedOnce;
             rt.failedOnce = true;
+            if (onWrong) onWrong(wasFirstFailure);
             return;
           }
 
@@ -8385,7 +8403,7 @@
             boardCtx.solvedOrFailed = true;
             feedbackEl.textContent = "✅ " + puzzle.success;
             feedbackEl.className = "puzzle-feedback correct";
-            onSolved();
+            if (onSolved) onSolved();
             return;
           }
 
@@ -8439,40 +8457,10 @@
 
       function renderMiniDiagrams(containerEl) {
         containerEl.querySelectorAll(".mini-diagram[data-fen]").forEach((el) => {
-          const fen = el.dataset.fen;
           const highlight = (el.dataset.highlight || "").split(",").filter(Boolean);
-          const boardPosition = fen.split(" ")[0].split("/");
           const boardDiv = document.createElement("div");
           boardDiv.className = "board mini-diagram-board";
-          for (let r = 0; r < 8; r++) {
-            const row = boardPosition[r];
-            let file = 0;
-            for (const ch of row) {
-              if (/\d/.test(ch)) {
-                for (let k = 0; k < parseInt(ch, 10); k++) {
-                  addSquare(boardDiv, file, r, null);
-                  file++;
-                }
-              } else {
-                addSquare(boardDiv, file, r, ch);
-                file++;
-              }
-            }
-          }
-          function addSquare(container, file, rowIdx, pieceChar) {
-            const sqName = FILES[file] + (8 - rowIdx);
-            const sq = document.createElement("div");
-            sq.className = "square " + ((rowIdx + file) % 2 ? "dark" : "light");
-            if (highlight.includes(sqName)) sq.classList.add("diagram-highlight");
-            if (pieceChar) {
-              const color = pieceChar === pieceChar.toUpperCase() ? "w" : "b";
-              const piece = document.createElement("div");
-              piece.className = "piece " + (color === "w" ? "piece-white" : "piece-black");
-              piece.textContent = PIECES[color + pieceChar.toUpperCase()];
-              sq.appendChild(piece);
-            }
-            container.appendChild(sq);
-          }
+          renderBoardGrid(boardDiv, fenBoardToMatrix(el.dataset.fen), { highlight });
           el.innerHTML = "";
           el.appendChild(boardDiv);
         });
@@ -8509,9 +8497,11 @@
 
         lessonBoardCtx.onAttempt = function (uci, attempt) {
           if (lessonPuzzleSolved) return;
-          lessonRunner.attempt(uci, attempt, () => {
-            lessonPuzzleSolved = true;
-            refreshLessonCompleteButton();
+          lessonRunner.attempt(uci, attempt, {
+            onSolved: () => {
+              lessonPuzzleSolved = true;
+              refreshLessonCompleteButton();
+            },
           });
           refreshLessonCompleteButton();
         };
@@ -8583,54 +8573,54 @@
         exerciseRunner.start(ex);
 
         exerciseBoardCtx.onAttempt = function (uci, attempt) {
-          exerciseRunner.attempt(uci, attempt, () => {
-            ensureLearningState();
-            const stats = state.exerciseStats;
-            const idStr = String(id);
-            const alreadySolved = (stats.solved || []).includes(idStr);
+          exerciseRunner.attempt(uci, attempt, {
+            onSolved: () => {
+              ensureLearningState();
+              const stats = state.exerciseStats;
+              const idStr = String(id);
+              const alreadySolved = (stats.solved || []).includes(idStr);
 
-            if (!alreadySolved) {
-              // Solo cuenta como "primer intento" si no falló antes en esta misma sesión.
-              if (!exerciseAttemptCounted) {
-                stats.attempts = (stats.attempts || 0) + 1;
-                exerciseAttemptCounted = true;
+              if (!alreadySolved) {
+                // Solo cuenta como "primer intento" si no falló antes en esta misma sesión.
+                if (!exerciseAttemptCounted) {
+                  stats.attempts = (stats.attempts || 0) + 1;
+                  exerciseAttemptCounted = true;
+                }
+                if (!exerciseRunner.failedOnce) {
+                  stats.firstTry = (stats.firstTry || 0) + 1;
+                  stats.streak = (stats.streak || 0) + 1;
+                  stats.bestStreak = Math.max(stats.bestStreak || 0, stats.streak);
+                } else {
+                  stats.streak = 0;
+                }
+                stats.solved = stats.solved || [];
+                stats.solved.push(idStr);
+                save();
+                addXP(ex.xp, "Ejercicio resuelto", "Correcto");
               }
-              if (!exerciseRunner.failedOnce) {
-                stats.firstTry = (stats.firstTry || 0) + 1;
-                stats.streak = (stats.streak || 0) + 1;
-                stats.bestStreak = Math.max(stats.bestStreak || 0, stats.streak);
-              } else {
-                stats.streak = 0;
-              }
-              stats.solved = stats.solved || [];
-              stats.solved.push(idStr);
-              save();
-              addXP(ex.xp, "Ejercicio resuelto", "Correcto");
-            }
-            document.getElementById("exercise-modal-streak").textContent = "🔥 Racha: " + stats.streak;
-            document.getElementById("exercise-result-score").textContent = "1/1";
-            document.getElementById("exercise-result-text").textContent = alreadySolved
-              ? "Ya habías resuelto este ejercicio antes. ¡Repaso completado!"
-              : `¡Resuelto! Ganaste ${ex.xp} XP.`;
-            document.getElementById("exercise-result").style.display = "";
-            updateExerciseDashboard();
-          });
-
-          // Contabilizar el primer intento fallido (aunque todavía no se resuelva).
-          if (exerciseRunner.failedOnce && !exerciseRunner.resolved) {
-            ensureLearningState();
-            const stats = state.exerciseStats;
-            const idStr = String(id);
-            const alreadySolved = (stats.solved || []).includes(idStr);
-            if (!alreadySolved && !exerciseAttemptCounted) {
+              document.getElementById("exercise-modal-streak").textContent = "🔥 Racha: " + stats.streak;
+              document.getElementById("exercise-result-score").textContent = "1/1";
+              document.getElementById("exercise-result-text").textContent = alreadySolved
+                ? "Ya habías resuelto este ejercicio antes. ¡Repaso completado!"
+                : `¡Resuelto! Ganaste ${ex.xp} XP.`;
+              document.getElementById("exercise-result").style.display = "";
+              updateExerciseDashboard();
+            },
+            onWrong: (wasFirstFailure) => {
+              if (!wasFirstFailure) return; // ya se contabilizó este intento
+              ensureLearningState();
+              const stats = state.exerciseStats;
+              const idStr = String(id);
+              const alreadySolved = (stats.solved || []).includes(idStr);
+              if (alreadySolved || exerciseAttemptCounted) return;
               stats.attempts = (stats.attempts || 0) + 1;
               exerciseAttemptCounted = true;
               stats.streak = 0;
               save();
               document.getElementById("exercise-modal-streak").textContent = "🔥 Racha: 0";
               updateExerciseDashboard();
-            }
-          }
+            },
+          });
         };
 
         document.getElementById("exercise-modal").style.display = "flex";
