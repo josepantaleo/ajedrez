@@ -4644,8 +4644,26 @@
         const wEl = document.getElementById("clock-w");
         const bEl = document.getElementById("clock-b");
         if (!gameRow || !gameRow.clock || !wEl || !bEl) return;
-        const turn = game.turn();
+        // Importante: el turno se calcula a partir de gameRow.fen (el
+        // estado ya confirmado en Firestore), NO del tablero local
+        // `game`. Apenas jugás una pieza, `game.turn()` cambia al
+        // instante, pero gameRow (y su turnStartAt/clock) todavía
+        // corresponden a tu propio turno hasta que syncTournamentMove()
+        // termine el viaje de ida y vuelta. Si acá se usara game.turn(),
+        // en esa ventana el tiempo que vos pensaste se le restaría por
+        // error al reloj del rival, y con un control de tiempo corto
+        // eso alcanza para reclamarle una derrota por tiempo que nunca
+        // pasó.
+        const turn = new Chess(gameRow.fen).turn();
         const finished = gameRow.status === "finished";
+        // Mientras tu propia jugada todavía se está sincronizando con
+        // Firestore, no reclames timeouts: esperá a que gameRow refleje
+        // el resultado real de esa jugada.
+        if (tournamentMatchBusy) {
+          wEl.textContent = formatTime(Math.max(0, gameRow.clock.w));
+          bEl.textContent = formatTime(Math.max(0, gameRow.clock.b));
+          return;
+        }
         const elapsed = finished ? 0 : Math.max(0, Math.round((Date.now() - (gameRow.turnStartAt || Date.now())) / 1000));
         const remaining = {
           w: gameRow.clock.w - (turn === "w" && !finished ? elapsed : 0),
