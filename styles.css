@@ -994,6 +994,7 @@
         aspect-ratio: 1;
         overflow: hidden;
         border-radius: 8px;
+        position: relative;
       }
 
       .square {
@@ -1035,6 +1036,31 @@
       @keyframes lastMoveFadeIn {
         0% { box-shadow: inset 0 0 0 999px rgba(255, 220, 80, 0.55); }
         100% { box-shadow: inset 0 0 0 999px rgba(255, 220, 80, 0.18); }
+      }
+
+      .square.opp-move {
+        box-shadow: inset 0 0 0 999px rgba(80, 170, 255, 0.45);
+        animation: oppMoveFadeIn 0.4s ease;
+      }
+
+      @keyframes oppMoveFadeIn {
+        0% { box-shadow: inset 0 0 0 999px rgba(80, 170, 255, 0.75); }
+        100% { box-shadow: inset 0 0 0 999px rgba(80, 170, 255, 0.45); }
+      }
+
+      .opp-move-arrow-overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
+        animation: oppArrowFadeIn 0.4s ease;
+      }
+
+      @keyframes oppArrowFadeIn {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
       }
 
       .square.hint:after {
@@ -1792,6 +1818,28 @@
         width: min(100%, 520px);
       }
 
+      #alert-box-text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.55;
+        white-space: pre-line;
+      }
+
+      .alert-box.result-win {
+        border-color: #2ecc71;
+        box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.4), 0 20px 60px rgba(46, 204, 113, 0.2);
+      }
+
+      .alert-box.result-loss {
+        border-color: #e74c3c;
+        box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.4), 0 20px 60px rgba(231, 76, 60, 0.2);
+      }
+
+      .alert-box.result-draw {
+        border-color: #f1c40f;
+        box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.4), 0 20px 60px rgba(241, 196, 15, 0.2);
+      }
+
       .promo-box {
         display: flex;
         gap: 14px;
@@ -2123,7 +2171,6 @@
       .mini-diagram-board .piece.piece-white {
         color: #f5f1e6;
         -webkit-text-stroke: 1.5px #2b1d0e;
-        text-stroke: 1.5px #2b1d0e;
         filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
       }
 
@@ -2131,7 +2178,6 @@
       .mini-diagram-board .piece.piece-black {
         color: #1a1512;
         -webkit-text-stroke: 1.5px #f2c265;
-        text-stroke: 1.5px #f2c265;
         filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
       }
 

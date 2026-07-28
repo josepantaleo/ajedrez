@@ -124,7 +124,7 @@
         <section class="page" id="page-jugar">
           <div class="game-layout">
             <div class="left">
-              <div class="card">
+              <div class="card" id="modo-educativo-panel">
                 <div class="panel-title">🎓 Modo educativo</div>
 
                 <div class="toggle">
@@ -266,6 +266,7 @@
                   </label>
                 </div>
               </div>
+              <!-- /modo-educativo-panel -->
 
               <div class="card floating-moves-card" style="margin-top: 18px">
                 <div class="panel-title">
@@ -367,7 +368,7 @@
             </div>
 
             <div class="right">
-              <div class="card">
+              <div class="card" id="ayuda-educativa-panel">
                 <div class="panel-title">📚 Ayuda educativa</div>
                 <h3 id="edu-title">Pensá antes de mover</h3>
                 <p id="edu-text" style="color: var(--muted)">
@@ -1711,12 +1712,21 @@
                 cada jugador puede abrir esta misma página desde su propio
                 celular o compu y va a ver los mismos emparejamientos y
                 resultados en tiempo real. Para jugar hace falta iniciar
-                sesión con una cuenta de Gmail; quien administra el torneo
-                (docente/organizador) puede configurar todo desde el modo
-                administrador.
+                sesión con una cuenta de Gmail. Solo la cuenta
+                <strong>ipem146centenario@gmail.com</strong> puede
+                administrar el torneo (crear, generar rondas, configurar,
+                finalizar o reiniciar); el resto de las cuentas juega o
+                mira en modo espectador.
               </p>
 
-              <div id="tournament-connect-box">
+              <!-- Esta caja queda oculta a propósito: la configuración de
+                   Firebase de la escuela ya está fija en el código
+                   (DEFAULT_FIREBASE_CONFIG en app.js) y la conexión se hace
+                   sola al entrar a esta página, así que no hace falta
+                   mostrarle estos datos a los alumnos. Se deja el bloque en
+                   el HTML (oculto) por si en algún momento hiciera falta
+                   reconectar a otro proyecto de Firebase manualmente. -->
+              <div id="tournament-connect-box" style="display: none">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600"
                   >Configuración de Firebase (pegar el objeto "firebaseConfig" de tu proyecto)</label
                 >
@@ -1828,28 +1838,6 @@
                 con quién juega cada uno, sin tener que elegir color a mano.
               </p>
               <label style="display: block; margin: 14px 0 6px; font-weight: 600"
-                >Emails de administradores (separados por coma)</label
-              >
-              <input
-                type="text"
-                id="tournament-admins-input"
-                placeholder="docente@gmail.com, co-docente@gmail.com"
-                style="
-                  width: 100%;
-                  padding: 10px 12px;
-                  border-radius: 10px;
-                  border: 1px solid var(--surface2);
-                  background: var(--surface);
-                  color: var(--text);
-                "
-              />
-              <p class="muted" style="font-size: 13px; margin: 6px 0 0">
-                Estas cuentas van a poder configurar el torneo (generar
-                rondas, editar jugadores, finalizar, reiniciar). Se completa
-                sola con tu cuenta, pero podés agregar más separadas por
-                coma.
-              </p>
-              <label style="display: block; margin: 14px 0 6px; font-weight: 600"
                 >Cantidad de rondas (opcional)</label
               >
               <input
@@ -1871,6 +1859,101 @@
                 apenas se carga el resultado de la última partida de esa
                 ronda.
               </p>
+
+              <label for="tournament-time-mode" style="display: block; margin: 14px 0 6px; font-weight: 600"
+                >Tiempo por jugador</label
+              >
+              <select
+                id="tournament-time-mode"
+                style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  border: 1px solid var(--surface2);
+                  background: var(--surface);
+                  color: var(--text);
+                "
+              >
+                <option value="none">Sin reloj</option>
+                <option value="1">1 minuto</option>
+                <option value="3">3 minutos</option>
+                <option value="5" selected>5 minutos</option>
+                <option value="10">10 minutos</option>
+                <option value="15">15 minutos</option>
+                <option value="30">30 minutos</option>
+                <option value="custom">Personalizado</option>
+              </select>
+
+              <label
+                for="tournament-custom-minutes"
+                id="tournament-custom-time-label"
+                style="display: none; margin: 10px 0 6px; font-weight: 600"
+                >Minutos personalizados</label
+              >
+              <input
+                type="number"
+                id="tournament-custom-minutes"
+                min="1"
+                max="180"
+                value="5"
+                style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  border: 1px solid var(--surface2);
+                  background: var(--surface);
+                  color: var(--text);
+                "
+              />
+
+              <label for="tournament-increment" style="display: block; margin: 14px 0 6px; font-weight: 600"
+                >Incremento por jugada</label
+              >
+              <select
+                id="tournament-increment"
+                style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  border: 1px solid var(--surface2);
+                  background: var(--surface);
+                  color: var(--text);
+                "
+              >
+                <option value="0" selected>0 segundos</option>
+                <option value="2">2 segundos</option>
+                <option value="5">5 segundos</option>
+                <option value="10">10 segundos</option>
+                <option value="30">30 segundos</option>
+                <option value="custom">Personalizado</option>
+              </select>
+
+              <label
+                for="tournament-custom-increment"
+                id="tournament-custom-increment-label"
+                style="display: none; margin: 10px 0 6px; font-weight: 600"
+                >Incremento personalizado (segundos)</label
+              >
+              <input
+                type="number"
+                id="tournament-custom-increment"
+                min="0"
+                max="60"
+                value="0"
+                style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  border: 1px solid var(--surface2);
+                  background: var(--surface);
+                  color: var(--text);
+                "
+              />
+              <p class="muted" style="font-size: 13px; margin: 6px 0 0">
+                Este reloj se usa en todas las partidas del torneo. "Sin
+                reloj" deja las partidas sin límite de tiempo.
+              </p>
+
               <button class="btn primary" id="tournament-create-btn" style="margin-top: 14px">
                 Crear torneo y sortear ronda 1
               </button>
@@ -1931,12 +2014,90 @@
                     margin-bottom: 12px;
                   "
                 />
-                <label style="display: block; margin-bottom: 6px; font-weight: 600"
-                  >Emails de administradores (separados por coma)</label
+
+                <label for="tournament-settings-time-mode" style="display: block; margin-bottom: 6px; font-weight: 600"
+                  >Tiempo por jugador</label
+                >
+                <select
+                  id="tournament-settings-time-mode"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    margin-bottom: 12px;
+                  "
+                >
+                  <option value="none">Sin reloj</option>
+                  <option value="1">1 minuto</option>
+                  <option value="3">3 minutos</option>
+                  <option value="5">5 minutos</option>
+                  <option value="10">10 minutos</option>
+                  <option value="15">15 minutos</option>
+                  <option value="30">30 minutos</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+
+                <label
+                  for="tournament-settings-custom-minutes"
+                  id="tournament-settings-custom-time-label"
+                  style="display: none; margin-bottom: 6px; font-weight: 600"
+                  >Minutos personalizados</label
                 >
                 <input
-                  type="text"
-                  id="tournament-settings-admins-input"
+                  type="number"
+                  id="tournament-settings-custom-minutes"
+                  min="1"
+                  max="180"
+                  value="5"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    margin-bottom: 12px;
+                  "
+                />
+
+                <label for="tournament-settings-increment" style="display: block; margin-bottom: 6px; font-weight: 600"
+                  >Incremento por jugada</label
+                >
+                <select
+                  id="tournament-settings-increment"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    margin-bottom: 12px;
+                  "
+                >
+                  <option value="0">0 segundos</option>
+                  <option value="2">2 segundos</option>
+                  <option value="5">5 segundos</option>
+                  <option value="10">10 segundos</option>
+                  <option value="30">30 segundos</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+
+                <label
+                  for="tournament-settings-custom-increment"
+                  id="tournament-settings-custom-increment-label"
+                  style="display: none; margin-bottom: 6px; font-weight: 600"
+                  >Incremento personalizado (segundos)</label
+                >
+                <input
+                  type="number"
+                  id="tournament-settings-custom-increment"
+                  min="0"
+                  max="60"
+                  value="0"
                   style="
                     width: 100%;
                     padding: 10px 12px;
@@ -1948,8 +2109,13 @@
                   "
                 />
                 <p class="muted" style="font-size: 13px; margin-bottom: 12px">
-                  ⚠️ No te quedes afuera: asegurate de que tu propio email
-                  esté en esta lista antes de guardar.
+                  ⏱️ El nuevo tiempo se aplica a partir de la próxima ronda que
+                  se genere; las partidas ya en curso siguen con el reloj con
+                  el que empezaron.
+                </p>
+                <p class="muted" style="font-size: 13px; margin-bottom: 12px">
+                  🔒 El administrador del torneo es fijo:
+                  <strong>ipem146centenario@gmail.com</strong>.
                 </p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap">
                   <button class="btn primary" id="tournament-settings-save-btn">Guardar configuración</button>
