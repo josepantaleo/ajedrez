@@ -7,6 +7,7 @@
         cpToWin,
         classifyLoss,
         levelLabel,
+        formatTimeControl,
       } from "./utils.js";
 
       const PIECES = {
@@ -4174,14 +4175,41 @@
           }
         });
 
+        // Sonneborn-Berger: suma, por cada rival enfrentado, de los puntos
+        // de ese rival multiplicados por lo que el jugador le sacó en esa
+        // partida (1 si ganó, 0.5 si empató, 0 si perdió). El bye no suma
+        // (no hay rival real). Se usa como segundo desempate, después de
+        // Buchholz.
+        const sonneborn = {};
+        players.forEach((p) => (sonneborn[p.id] = 0));
+        (pairings || []).forEach((pr) => {
+          if (!pr.result || pr.blackId === "" || !byId[pr.whiteId] || !byId[pr.blackId]) return;
+          const whiteOpp = byId[pr.blackId].points;
+          const blackOpp = byId[pr.whiteId].points;
+          if (pr.result === "1-0") {
+            sonneborn[pr.whiteId] += whiteOpp;
+          } else if (pr.result === "0-1") {
+            sonneborn[pr.blackId] += blackOpp;
+          } else if (pr.result === "1/2-1/2") {
+            sonneborn[pr.whiteId] += whiteOpp * 0.5;
+            sonneborn[pr.blackId] += blackOpp * 0.5;
+          }
+        });
+
         return players
           .map((p) => {
             const buchholz = (p.played || []).reduce((sum, oppId) => sum + (byId[oppId] ? byId[oppId].points : 0), 0);
-            return { ...p, _buchholz: Math.round(buchholz * 100) / 100, _record: record[p.id] || { w: 0, d: 0, l: 0 } };
+            return {
+              ...p,
+              _buchholz: Math.round(buchholz * 100) / 100,
+              _sonnebornBerger: Math.round((sonneborn[p.id] || 0) * 100) / 100,
+              _record: record[p.id] || { w: 0, d: 0, l: 0 },
+            };
           })
           .sort((a, b) => {
             if (b.points !== a.points) return b.points - a.points;
             if (b._buchholz !== a._buchholz) return b._buchholz - a._buchholz;
+            if (b._sonnebornBerger !== a._sonnebornBerger) return b._sonnebornBerger - a._sonnebornBerger;
             return a.name.localeCompare(b.name);
           });
       }
@@ -4211,10 +4239,12 @@
         const isFinished = state.meta.status === "finished";
         const roundsNote = state.meta.totalRounds ? ` de ${state.meta.totalRounds}` : "";
 
+        const timeControlText = formatTimeControl(state.meta.timeControlMinutes, state.meta.timeControlIncrement);
+
         document.getElementById("tournament-title-display").textContent = "🏆 " + state.meta.name;
         document.getElementById("tournament-round-display").textContent = isFinished
-          ? `Torneo finalizado — ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores`
-          : `Ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores`;
+          ? `Torneo finalizado — ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores · ⏱️ ${timeControlText}`
+          : `Ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores · ⏱️ ${timeControlText}`;
 
         document.getElementById("tournament-admin-controls").style.display = isAdmin ? "flex" : "none";
         document.getElementById("tournament-next-round-btn").style.display = isFinished ? "none" : "";
@@ -4286,7 +4316,10 @@
               : "";
             row.innerHTML = `
               <div class="pairing-board">#${p.board}</div>
-              <div class="pairing-names">${p.whiteName}<span class="vs">vs</span>${p.blackName}
+              <div class="pairing-names">
+                <span class="pairing-color-tag" title="Juega con Blancas">♔ ${p.whiteName}</span>
+                <span class="vs">vs</span>
+                <span class="pairing-color-tag pairing-color-tag-black" title="Juega con Negras">♚ ${p.blackName}</span>
                 <div class="mini-diagram-caption" style="margin:2px 0 0;text-align:left">${gameStatusText}</div>
               </div>
               ${playBtnHtml}
@@ -4329,28 +4362,146 @@
 
         const standingsEl = document.getElementById("tournament-standings-list");
         const ranked2 = rankPlayers_(state.players, state.pairings);
+        const topPoints = ranked2.length ? ranked2[0].points : null;
+        const topBuchholz = ranked2.length ? ranked2[0]._buchholz : null;
+        const topSB = ranked2.length ? ranked2[0]._sonnebornBerger : null;
         let rows = ranked2
-          .map(
-            (p, i) => `
-            <tr>
-              <td>${i + 1}</td>
+          .map((p, i) => {
+            const isLeader =
+              ranked2.length > 0 && p.points === topPoints && p._buchholz === topBuchholz && p._sonnebornBerger === topSB;
+            return `
+            <tr class="${isLeader ? "leader-row" : ""}">
+              <td>${i + 1}${isLeader ? ' <span title="Líder del torneo">👑</span>' : ""}</td>
               <td>${p.name}</td>
               <td>${p.points}</td>
               <td>${p._buchholz}</td>
+              <td>${p._sonnebornBerger}</td>
               <td>${p._record.w}-${p._record.d}-${p._record.l}</td>
               <td>${p.played.length}</td>
-            </tr>`
-          )
+            </tr>`;
+          })
           .join("");
         standingsEl.innerHTML = `
           <table class="standings-table">
-            <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Buchholz</th><th>V-E-D</th><th>Partidas</th></tr></thead>
+            <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Buchholz</th><th>Sonneborn-Berger</th><th>V-E-D</th><th>Partidas</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           <p class="muted" style="font-size: 12px; margin-top: 8px">
-            Buchholz = suma de puntos de los rivales que enfrentó cada jugador (desempate). V-E-D = victorias-empates-derrotas (el bye cuenta como victoria).
+            👑 Líder actual del torneo. Buchholz = suma de puntos de los rivales que enfrentó cada jugador (1er desempate).
+            Sonneborn-Berger = suma de los puntos de cada rival ponderados por el resultado obtenido contra él (2do desempate).
+            V-E-D = victorias-empates-derrotas (el bye cuenta como victoria).
           </p>
         `;
+      }
+
+      // Arma y descarga un CSV (se abre directamente en Excel/Google Sheets)
+      // con la tabla de posiciones y el historial completo de emparejamientos
+      // y resultados del torneo.
+      function exportTournamentExcel(state) {
+        if (!state || !state.meta || state.meta.status === "setup") {
+          toast("❌ Todavía no hay un torneo activo para exportar");
+          return;
+        }
+        const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+        const lines = [];
+        lines.push([esc("Torneo"), esc(state.meta.name)].join(","));
+        lines.push([esc("Ronda actual"), esc(state.meta.round)].join(","));
+        lines.push([esc("Tiempo de juego"), esc(formatTimeControl(state.meta.timeControlMinutes, state.meta.timeControlIncrement))].join(","));
+        lines.push("");
+
+        lines.push([esc("Tabla de posiciones")].join(","));
+        lines.push([esc("#"), esc("Jugador"), esc("Puntos"), esc("Buchholz"), esc("Sonneborn-Berger"), esc("V"), esc("E"), esc("D"), esc("Partidas")].join(","));
+        rankPlayers_(state.players, state.pairings).forEach((p, i) => {
+          lines.push([esc(i + 1), esc(p.name), esc(p.points), esc(p._buchholz), esc(p._sonnebornBerger), esc(p._record.w), esc(p._record.d), esc(p._record.l), esc(p.played.length)].join(","));
+        });
+        lines.push("");
+
+        lines.push([esc("Emparejamientos y resultados")].join(","));
+        lines.push([esc("Ronda"), esc("Mesa"), esc("Blancas"), esc("Negras"), esc("Resultado")].join(","));
+        state.pairings
+          .slice()
+          .sort((a, b) => (a.round !== b.round ? a.round - b.round : a.board - b.board))
+          .forEach((p) => {
+            lines.push([esc(p.round), esc(p.board), esc(p.whiteName), esc(p.blackId === "" ? "—" : p.blackName), esc(p.blackId === "" ? "BYE (+1)" : resultLabel(p.result))].join(","));
+          });
+
+        const csv = "\uFEFF" + lines.join("\r\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = (state.meta.name || "torneo").replace(/[^\w\-]+/g, "_") + "_resultados.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // Abre el diálogo de impresión del navegador con una hoja lista para
+      // guardar como PDF (el usuario elige "Guardar como PDF" en el diálogo
+      // de impresión), con la tabla de posiciones y los emparejamientos.
+      function exportTournamentPDF(state) {
+        if (!state || !state.meta || state.meta.status === "setup") {
+          toast("❌ Todavía no hay un torneo activo para exportar");
+          return;
+        }
+        const esc = (v) => String(v == null ? "" : v).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+        const timeControlText = formatTimeControl(state.meta.timeControlMinutes, state.meta.timeControlIncrement);
+        const standingsRows = rankPlayers_(state.players, state.pairings)
+          .map(
+            (p, i) => `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${p.points}</td><td>${p._buchholz}</td><td>${p._sonnebornBerger}</td><td>${p._record.w}-${p._record.d}-${p._record.l}</td></tr>`
+          )
+          .join("");
+        const pairingsRows = state.pairings
+          .slice()
+          .sort((a, b) => (a.round !== b.round ? a.round - b.round : a.board - b.board))
+          .map(
+            (p) =>
+              `<tr><td>${p.round}</td><td>${p.board}</td><td>${esc(p.whiteName)}</td><td>${p.blackId === "" ? "—" : esc(p.blackName)}</td><td>${
+                p.blackId === "" ? "BYE (+1)" : esc(resultLabel(p.result))
+              }</td></tr>`
+          )
+          .join("");
+        const win = window.open("", "_blank");
+        if (!win) {
+          toast("❌ El navegador bloqueó la ventana de impresión. Habilitá los pop-ups e intentá de nuevo.");
+          return;
+        }
+        win.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>${esc(state.meta.name)} — Resultados</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+              h1 { margin-bottom: 2px; }
+              p.sub { color: #555; margin-top: 0; }
+              table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+              th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 13px; }
+              th { background: #eee; }
+              h2 { margin-top: 32px; }
+            </style>
+          </head>
+          <body>
+            <h1>🏆 ${esc(state.meta.name)}</h1>
+            <p class="sub">Ronda ${state.meta.round}${state.meta.totalRounds ? " de " + state.meta.totalRounds : ""} · ⏱️ ${timeControlText} · ${state.players.length} jugadores</p>
+            <h2>Tabla de posiciones</h2>
+            <table>
+              <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Buchholz</th><th>Sonneborn-Berger</th><th>V-E-D</th></tr></thead>
+              <tbody>${standingsRows}</tbody>
+            </table>
+            <h2>Emparejamientos y resultados</h2>
+            <table>
+              <thead><tr><th>Ronda</th><th>Mesa</th><th>Blancas</th><th>Negras</th><th>Resultado</th></tr></thead>
+              <tbody>${pairingsRows}</tbody>
+            </table>
+          </body>
+          </html>
+        `);
+        win.document.close();
+        win.focus();
+        setTimeout(() => win.print(), 300);
       }
 
       async function refreshTournament() {
@@ -4919,6 +5070,14 @@
       });
 
       document.getElementById("tournament-refresh-btn").addEventListener("click", refreshTournament);
+
+      document.getElementById("tournament-export-excel-btn").addEventListener("click", () => {
+        exportTournamentExcel(lastTournamentState);
+      });
+
+      document.getElementById("tournament-export-pdf-btn").addEventListener("click", () => {
+        exportTournamentPDF(lastTournamentState);
+      });
 
       // Al entrar a la página, precargar la configuración guardada y conectar
       // (el estado de sesión de Google lo resuelve onAuthStateChanged solo).
