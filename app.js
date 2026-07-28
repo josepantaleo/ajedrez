@@ -3856,13 +3856,14 @@
         });
 
         // Reloj de la partida: si el torneo tiene tiempo configurado, cada
-        // partida arranca con ese tiempo para las dos partes y empieza a
-        // correr desde que se generó la ronda (como el reloj de una ronda
-        // presencial). turnStartAt se usa para calcular, en cada jugada,
-        // cuánto tiempo real pasó desde la última vez que se guardó el reloj.
+        // partida arranca con ese tiempo para las dos partes, pero el
+        // reloj NO empieza a correr al generarse la ronda: se queda
+        // "pausado" (turnStartAt: null) hasta que los dos jugadores entren
+        // a la partida y presionen "Jugar" (ver fbMarkPlayerReady). Así no
+        // se les descuenta tiempo mientras todavía no llegaron a la
+        // pantalla. whiteReady/blackReady registran quién ya entró.
         const minutes = (timeControl && timeControl.minutes) || 0;
         const increment = (timeControl && timeControl.increment) || 0;
-        const now = Date.now();
         const newGames = newPairings
           .filter((p) => p.blackId !== "")
           .map((p) => ({
@@ -3872,8 +3873,10 @@
             lastMoveSan: "",
             status: "ongoing",
             clock: minutes > 0 ? { w: minutes * 60, b: minutes * 60 } : null,
-            turnStartAt: minutes > 0 ? now : null,
+            turnStartAt: null,
             increment: increment,
+            whiteReady: false,
+            blackReady: false,
           }));
 
         return { nextRound, newPairings, updatedPlayers, newGames };
@@ -4075,7 +4078,7 @@
           // desde su último turno, y le sumamos el incremento si corresponde
           // (resignación/tablas/abandono por tiempo no mueven pieza, así que
           // no tocan el reloj acá).
-          if (g.clock && fen !== g.fen) {
+          if (g.clock && g.turnStartAt && fen !== g.fen) {
             const moverColor = new Chess(g.fen).turn();
             const elapsed = Math.max(0, Math.round((Date.now() - (g.turnStartAt || Date.now())) / 1000));
             g.clock = { ...g.clock, [moverColor]: Math.max(0, g.clock[moverColor] - elapsed) };
@@ -4100,6 +4103,32 @@
           return fbSubmitResult(round, board, gameOverResult);
         }
         return getTournamentStateOnce();
+      }
+
+      // Marca que el jugador de "myColor" ya entró a la partida (presionó
+      // "Jugar"). El reloj de esa partida (si el torneo tiene tiempo
+      // configurado) recién arranca a correr —turnStartAt pasa de null a
+      // Date.now()— cuando quedan marcados como listos TANTO blancas como
+      // negras. Si alguno de los dos todavía no entró, el reloj sigue
+      // "pausado" mostrando el tiempo completo (ver updateTournamentClockDisplay).
+      async function fbMarkPlayerReady(round, board, myColor) {
+        if (!myColor) return; // espectador/admin mirando: no cuenta como jugador
+        round = Number(round);
+        board = Number(board);
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) return;
+          const data = snap.data();
+          const games = (data.games || []).map((g) => ({ ...g }));
+          const g = games.find((x) => x.round === round && x.board === board);
+          if (!g || g.status === "finished") return;
+          if (myColor === "w") g.whiteReady = true;
+          if (myColor === "b") g.blackReady = true;
+          if (g.clock && !g.turnStartAt && g.whiteReady && g.blackReady) {
+            g.turnStartAt = Date.now();
+          }
+          tx.update(fbRoomRef, { games });
+        });
       }
 
       async function fbResetAll() {
@@ -4404,6 +4433,18 @@
           }
           return;
         }
+        // Si hay reloj configurado y todavía no arrancó (falta que alguno
+        // de los dos jugadores entre a la partida y presione "Jugar"), se
+        // avisa en vez de mostrar el turno normal.
+        if (gameRow && gameRow.clock && !gameRow.turnStartAt) {
+          const rivalReady = myColor === "w" ? gameRow.blackReady : myColor === "b" ? gameRow.whiteReady : gameRow.whiteReady && gameRow.blackReady;
+          statusEl.textContent = !myColor
+            ? "⏳ Esperando a que ambos jugadores entren a la partida..."
+            : rivalReady
+            ? "✅ Tu rival ya está. ¡El reloj arranca ahora!"
+            : "⏳ Esperando a que tu rival presione Jugar...";
+          return;
+        }
         const turn = game.turn();
         const turnName = turn === "w" ? tournamentMatchCtx.whiteName : tournamentMatchCtx.blackName;
         statusEl.textContent = !myColor
@@ -4577,6 +4618,10 @@
           render();
           updateTournamentMatchBar(gameRow);
           requestAnimationFrame(sizeFullscreenBoard);
+
+          if (myColor && gameRow.status !== "finished") {
+            fbMarkPlayerReady(round, board, myColor).catch(() => {});
+          }
         } catch (err) {
           toast("❌ No se pudo abrir la partida: " + err.message);
         }
