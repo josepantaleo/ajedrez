@@ -30,6 +30,7 @@
           <button data-page="aprender">📚 Aprender</button>
           <button data-page="ejercicios">🧩 Ejercicios</button>
           <button data-page="torneo">🏆 Torneo</button>
+          <button data-page="pantalla-publica">📺 Pantalla pública</button>
           <button data-page="estadisticas">📊 Estadísticas</button>
           <button data-page="temas">🎨 Temas</button>
           <button data-page="configuracion">⚙️ Configuración</button>
@@ -325,8 +326,14 @@
                 </div>
 
                 <div class="clock">
-                  <div id="clock-w">05:00</div>
-                  <div id="clock-b">05:00</div>
+                  <div id="clock-w">
+                    <span class="clock-player-name" id="clock-w-name"></span>
+                    <span class="clock-time">05:00</span>
+                  </div>
+                  <div id="clock-b">
+                    <span class="clock-player-name" id="clock-b-name"></span>
+                    <span class="clock-time">05:00</span>
+                  </div>
                 </div>
 
                 <div class="status" id="status">Turno de las Blancas</div>
@@ -1708,7 +1715,7 @@
             <div class="card">
               <h2>🏆 Torneo</h2>
               <p class="muted">
-                Sistema suizo con base de datos compartida (Firebase / Firestore):
+                Sistema suizo con base de datos compartida en tiempo real. Esto significa que:
                 cada jugador puede abrir esta misma página desde su propio
                 celular o compu y va a ver los mismos emparejamientos y
                 resultados en tiempo real. Para jugar hace falta iniciar
@@ -1718,6 +1725,11 @@
                 finalizar o reiniciar); el resto de las cuentas juega o
                 mira en modo espectador.
               </p>
+             <a href="https://forms.gle/BN9KZcYM6WGhtSZm7" class="btn-inscripcion" target="_blank" rel="noopener">
+  📝 Inscripción
+</a>
+
+
 
               <!-- Esta caja queda oculta a propósito: la configuración de
                    Firebase de la escuela ya está fija en el código
@@ -1954,6 +1966,54 @@
                 reloj" deja las partidas sin límite de tiempo.
               </p>
 
+              <label for="tournament-round-mode" style="display: block; margin: 14px 0 6px; font-weight: 600"
+                >Avance de ronda</label
+              >
+              <select
+                id="tournament-round-mode"
+                style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  border: 1px solid var(--surface2);
+                  background: var(--surface);
+                  color: var(--text);
+                "
+              >
+                <option value="manual" selected>Manual (requiere aprobación del administrador)</option>
+                <option value="auto">Automático (cuenta regresiva de 30 segundos)</option>
+              </select>
+              <p class="muted" style="font-size: 13px; margin: 6px 0 0">
+                Cuando terminan todas las partidas de una ronda, el torneo
+                queda "Pendiente de aprobación". En modo manual hay que
+                tocar "Aprobar ronda"; en modo automático arranca una cuenta
+                regresiva de 30s que se puede cancelar antes de que termine.
+              </p>
+
+              <label for="tournament-wo-grace-input" style="display: block; margin: 14px 0 6px; font-weight: 600"
+                >Tiempo reglamentario de espera (minutos)</label
+              >
+              <input
+                type="number"
+                id="tournament-wo-grace-input"
+                min="0"
+                step="1"
+                placeholder="Dejalo vacío o en 0 para desactivar"
+                style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border-radius: 10px;
+                  border: 1px solid var(--surface2);
+                  background: var(--surface);
+                  color: var(--text);
+                "
+              />
+              <p class="muted" style="font-size: 13px; margin: 6px 0 0">
+                Si un jugador no entra a su partida dentro de este tiempo desde que arrancó la ronda (y el rival sí entró), se le
+                declara WO automáticamente. Dejalo vacío o en 0 para no usar esta regla: seguís pudiendo declarar WO a mano en
+                cualquier momento.
+              </p>
+
               <button class="btn primary" id="tournament-create-btn" style="margin-top: 14px">
                 Crear torneo y sortear ronda 1
               </button>
@@ -1971,18 +2031,24 @@
                   </div>
                   <div style="display: flex; gap: 8px; flex-wrap: wrap">
                     <button class="btn" id="tournament-refresh-btn">🔄 Actualizar</button>
-                    <button class="btn" id="tournament-export-excel-btn">📊 Exportar Excel</button>
-                    <button class="btn" id="tournament-export-pdf-btn">📄 Exportar PDF</button>
-                    <div id="tournament-admin-controls" style="display: none; gap: 8px; flex-wrap: wrap">
-                      <button class="btn" id="tournament-next-round-btn">🏁 Finalizar ronda y generar la siguiente</button>
-                      <button class="btn" id="tournament-finish-btn">🏆 Finalizar torneo</button>
-                      <button class="btn" id="tournament-reopen-btn" style="display: none">↩️ Reabrir torneo</button>
-                      <button class="btn" id="tournament-settings-btn">⚙️ Configuración</button>
-                      <button class="btn" id="tournament-reset-btn">🗑️ Reiniciar torneo</button>
-                    </div>
                   </div>
                 </div>
                 <p class="muted" id="tournament-round-display"></p>
+              </div>
+
+              <div class="card" id="tournament-admin-panel" style="display: none; border: 2px solid var(--surface2)">
+                <h3 style="margin: 0 0 10px">🛠️ Panel de administrador</h3>
+                <p class="muted" style="font-size: 12px; margin: 0 0 10px">
+                  Acciones exclusivas de la cuenta administradora del torneo (<strong>ipem146centenario@gmail.com</strong>).
+                </p>
+                <div id="tournament-admin-controls" style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <button class="btn" id="tournament-next-round-btn">➡️ Generar próxima ronda</button>
+                  <button class="btn" id="tournament-finish-btn">🏁 Finalizar torneo</button>
+                  <button class="btn" id="tournament-reopen-btn" style="display: none">↩️ Reabrir torneo</button>
+                  <button class="btn" id="tournament-settings-btn">⚙️ Configuración</button>
+                  <button class="btn" id="tournament-export-full-pdf-btn">📄 Imprimir resultados del torneo (PDF)</button>
+                  <button class="btn" id="tournament-reset-btn">🗑️ Reiniciar torneo</button>
+                </div>
               </div>
 
               <div class="card" id="tournament-settings-panel" style="display: none">
@@ -2115,6 +2181,50 @@
                   se genere; las partidas ya en curso siguen con el reloj con
                   el que empezaron.
                 </p>
+
+                <label for="tournament-settings-round-mode" style="display: block; margin-bottom: 6px; font-weight: 600"
+                  >Avance de ronda</label
+                >
+                <select
+                  id="tournament-settings-round-mode"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    margin-bottom: 12px;
+                  "
+                >
+                  <option value="manual">Manual (requiere aprobación del administrador)</option>
+                  <option value="auto">Automático (cuenta regresiva de 30 segundos)</option>
+                </select>
+
+                <label for="tournament-settings-wo-grace-input" style="display: block; margin-bottom: 6px; font-weight: 600"
+                  >Tiempo reglamentario de espera (minutos)</label
+                >
+                <input
+                  type="number"
+                  id="tournament-settings-wo-grace-input"
+                  min="0"
+                  step="1"
+                  placeholder="Dejalo vacío o en 0 para desactivar"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    margin-bottom: 6px;
+                  "
+                />
+                <p class="muted" style="font-size: 13px; margin-bottom: 12px">
+                  Si un jugador no entra a su partida dentro de este tiempo (y el rival sí entró), se le declara WO automáticamente.
+                  Se aplica a la ronda en curso apenas se guarda.
+                </p>
+
                 <p class="muted" style="font-size: 13px; margin-bottom: 12px">
                   🔒 El administrador del torneo es fijo:
                   <strong>ipem146centenario@gmail.com</strong>.
@@ -2134,6 +2244,67 @@
                 <p id="tournament-champion-text" style="font-size: 18px; font-weight: 700; margin: 0"></p>
               </div>
 
+              <div
+                class="card"
+                id="tournament-approval-panel"
+                style="display: none; text-align: center; border: 2px solid var(--accent)"
+              >
+                <h3 style="margin: 0 0 6px">⏳ Ronda pendiente de aprobación</h3>
+                <p id="tournament-approval-status" style="margin: 0 0 10px"></p>
+                <div id="tournament-approval-admin-controls" style="display: none">
+                  <p class="muted" style="font-size: 12px; margin: 0 0 6px; font-weight: 600">🛠️ Acciones del administrador</p>
+                  <button class="btn primary" id="tournament-approve-round-btn">
+                    ✅ Aprobar ronda y generar la siguiente
+                  </button>
+                  <div id="tournament-auto-approve-box" style="display: none; margin-top: 10px">
+                    <p id="tournament-auto-approve-countdown" style="font-weight: 700; margin: 0 0 8px"></p>
+                    <button class="btn" id="tournament-cancel-auto-approve-btn">
+                      ✖️ Cancelar aprobación automática
+                    </button>
+                  </div>
+                </div>
+
+                <div id="tournament-referee-round-controls" style="display: none; margin-top: 12px">
+                  <p class="muted" style="font-size: 12px; margin: 0 0 8px; font-weight: 600">
+                    🧑‍⚖️ Acciones del árbitro — podés cerrar la ronda por separado (bloquea los resultados para todos menos vos) y
+                    generar la ronda siguiente en otro momento.
+                  </p>
+                  <div id="tournament-manual-bye-box" style="display: none; margin: 10px 0; text-align: left">
+                    <label for="tournament-manual-bye-select" class="muted" style="font-size: 12px; display: block; margin-bottom: 4px">
+                      🎯 Asignar BYE manualmente (queda un jugador impar esta ronda):
+                    </label>
+                    <select
+                      id="tournament-manual-bye-select"
+                      style="
+                        width: 100%;
+                        padding: 8px 10px;
+                        border-radius: 8px;
+                        border: 1px solid var(--surface2);
+                        background: var(--surface);
+                        color: var(--text);
+                      "
+                    >
+                      <option value="">Automático (por defecto)</option>
+                    </select>
+                  </div>
+                  <button class="btn" id="tournament-close-round-btn">🔒 Cerrar ronda</button>
+                  <button class="btn primary" id="tournament-generate-round-btn">▶️ Generar ronda siguiente</button>
+                </div>
+              </div>
+
+              <div class="card" id="tournament-referee-panel" style="display: none; border: 2px solid var(--surface2)">
+                <h3 style="margin: 0 0 10px">🧑‍⚖️ Panel de árbitro</h3>
+                <p class="muted" style="font-size: 12px; margin: 0 0 10px">
+                  Acciones exclusivas de la cuenta árbitro del torneo. Los controles para cerrar/generar ronda con BYE manual
+                  aparecen más abajo cuando la ronda está lista para eso.
+                </p>
+                <div id="tournament-referee-tools" style="display: none; gap: 8px; flex-wrap: wrap">
+                  <button class="btn" id="tournament-recalc-positions-btn">🔄 Recalcular posiciones</button>
+                  <button class="btn" id="tournament-print-pairings-btn">🖨️ Imprimir emparejamientos</button>
+                  <button class="btn" id="tournament-export-standings-pdf-btn">📄 Exportar posiciones a PDF</button>
+                </div>
+              </div>
+
               <div class="card" id="tournament-pairings-card">
                 <h3>Emparejamientos — ronda actual</h3>
                 <div id="tournament-pairings-list"></div>
@@ -2143,6 +2314,86 @@
                 <h3>Tabla de posiciones</h3>
                 <div id="tournament-standings-list"></div>
               </div>
+
+              <div class="card" id="tournament-players-card" style="display: none">
+                <h3>👥 Jugadores (panel de árbitro)</h3>
+                <div id="tournament-players-list"></div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px">
+                  <input
+                    type="text"
+                    id="tournament-add-player-name"
+                    placeholder="Nombre"
+                    style="
+                      flex: 1;
+                      min-width: 140px;
+                      padding: 8px 10px;
+                      border-radius: 8px;
+                      border: 1px solid var(--surface2);
+                      background: var(--surface);
+                      color: var(--text);
+                    "
+                  />
+                  <input
+                    type="email"
+                    id="tournament-add-player-email"
+                    placeholder="Email (opcional)"
+                    style="
+                      flex: 1;
+                      min-width: 180px;
+                      padding: 8px 10px;
+                      border-radius: 8px;
+                      border: 1px solid var(--surface2);
+                      background: var(--surface);
+                      color: var(--text);
+                    "
+                  />
+                  <button class="btn primary" id="tournament-add-player-btn">➕ Agregar jugador</button>
+                </div>
+                <p class="muted" style="font-size: 12px; margin-top: 8px">
+                  Un jugador agregado ya iniciado el torneo entra con 0 puntos y queda disponible recién para la próxima ronda que se
+                  genere. "Eliminar" solo funciona si todavía no jugó ninguna partida; si ya jugó, usá "Retirar" (o "Descalificar", si
+                  corresponde) para no perder su historial. Retirar/Reincorporar/Descalificar son acciones exclusivas del árbitro del
+                  torneo.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-pantalla-publica">
+          <div id="public-screen" class="public-screen">
+            <button class="btn public-screen-fullscreen-btn" id="public-screen-fullscreen-btn">⛶ Pantalla completa</button>
+
+            <div id="public-screen-empty" class="public-screen-empty" style="display: none">
+              <p>No hay un torneo en curso todavía.</p>
+            </div>
+
+            <div id="public-screen-content" style="display: none">
+              <header class="public-screen-header">
+                <h1 id="public-screen-name">Torneo</h1>
+                <p id="public-screen-round" class="public-screen-round"></p>
+              </header>
+
+              <div class="public-screen-grid">
+                <section class="public-screen-card">
+                  <h2>📊 Clasificación</h2>
+                  <div id="public-screen-standings"></div>
+                </section>
+
+                <section class="public-screen-card">
+                  <h2>♟️ Mesas activas</h2>
+                  <div id="public-screen-active-tables"></div>
+                </section>
+
+                <section class="public-screen-card">
+                  <h2>✅ Resultados recientes</h2>
+                  <div id="public-screen-recent-results"></div>
+                </section>
+              </div>
+
+              <footer class="public-screen-footer">
+                <p id="public-screen-next-round"></p>
+              </footer>
             </div>
           </div>
         </section>
@@ -2731,6 +2982,7 @@
     </div>
 
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
     <!-- Firebase (Firestore) — base de datos compartida del torneo -->

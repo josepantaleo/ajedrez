@@ -40,12 +40,3 @@ export function levelLabel(level) {
   if (level <= 7) return "Intermedio";
   return "Avanzado";
 }
-
-// Formatea un tiempo de juego de torneo estilo "10+5" (minutos+incremento
-// en segundos). Si no hay reloj configurado, devuelve "Sin reloj".
-export function formatTimeControl(minutes, increment) {
-  const m = Number(minutes) || 0;
-  const inc = Number(increment) || 0;
-  if (m <= 0) return "Sin reloj";
-  return `${m}+${inc}`;
-}

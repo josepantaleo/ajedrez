@@ -7,7 +7,6 @@
         cpToWin,
         classifyLoss,
         levelLabel,
-        formatTimeControl,
       } from "./utils.js";
 
       const PIECES = {
@@ -787,6 +786,14 @@
           if (!gameStarted || game.game_over() || botThinking) return;
           if (botEnabled && game.turn() === botColor) return;
           if (tournamentMatchActive && game.turn() !== tournamentMyColor()) return;
+          if (tournamentMatchActive && tournamentClockWaitingForBothPlayers()) {
+            toast("⏳ Esperando a que el rival entre a la partida.");
+            return;
+          }
+          if (tournamentMatchActive && tournamentCurrentGameRow && tournamentCurrentGameRow.status === "suspended") {
+            toast("⏸️ El árbitro suspendió esta partida.");
+            return;
+          }
           const piece = game.get(sqName);
           if (!piece || piece.color !== game.turn()) return;
 
@@ -854,7 +861,57 @@
         }
       }
 
-      function onPieceDragUp(e) {
+      // Determina si un movimiento de humano es una coronación de peón,
+      // es decir si hay que preguntarle qué pieza quiere antes de aplicar el move.
+      function isPromotionMove(chessInstance, from, to) {
+        const piece = chessInstance.get(from);
+        if (!piece || piece.type !== "p") return false;
+        const rank = to[1];
+        return rank === "8" || rank === "1";
+      }
+
+      // Muestra el popup de coronación y devuelve una Promise que resuelve
+      // con la letra de la pieza elegida ("q", "r", "b" o "n").
+      function askPromotion(color) {
+        return new Promise((resolve) => {
+          const overlay = document.getElementById("promo");
+          const box = document.getElementById("promo-box");
+          if (!overlay || !box) {
+            resolve("q");
+            return;
+          }
+          const options = [
+            { code: "q", label: "Dama" },
+            { code: "r", label: "Torre" },
+            { code: "b", label: "Alfil" },
+            { code: "n", label: "Caballo" },
+          ];
+          box.innerHTML = "";
+          const title = document.createElement("div");
+          title.className = "promo-title";
+          title.textContent = "Elegí la pieza para coronar";
+          box.appendChild(title);
+          options.forEach((opt) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = PIECES[color + opt.code.toUpperCase()];
+            btn.setAttribute("aria-label", opt.label);
+            btn.title = opt.label;
+            btn.addEventListener(
+              "click",
+              () => {
+                overlay.classList.remove("show");
+                resolve(opt.code);
+              },
+              { once: true }
+            );
+            box.appendChild(btn);
+          });
+          overlay.classList.add("show");
+        });
+      }
+
+      async function onPieceDragUp(e) {
         window.removeEventListener("pointermove", onPieceDragMove);
         if (!dragCtx) return;
         const ctx = dragCtx;
@@ -872,8 +929,13 @@
         document.querySelectorAll(".square.drag-origin").forEach((sq) => sq.classList.remove("drag-origin"));
 
         if (to && validMoves.includes(to)) {
+          let promotion = "q";
+          if (isPromotionMove(game, ctx.from, to)) {
+            render(); // limpia la pieza que quedó "flotando" del drag mientras se elige
+            promotion = await askPromotion(game.turn());
+          }
           const fenBeforeMove = game.fen();
-          const move = game.move({ from: ctx.from, to, promotion: "q" });
+          const move = game.move({ from: ctx.from, to, promotion });
           if (move) {
             addIncrement();
             selected = null;
@@ -898,11 +960,19 @@
         render();
       }
 
-      function clickSquare(sqName) {
+      async function clickSquare(sqName) {
         if (Date.now() < justDraggedUntil) return;
         if (!gameStarted || game.game_over() || botThinking) return;
         if (botEnabled && game.turn() === botColor) return;
         if (tournamentMatchActive && game.turn() !== tournamentMyColor()) return;
+        if (tournamentMatchActive && tournamentClockWaitingForBothPlayers()) {
+          toast("⏳ Esperando a que el rival entre a la partida.");
+          return;
+        }
+        if (tournamentMatchActive && tournamentCurrentGameRow && tournamentCurrentGameRow.status === "suspended") {
+          toast("⏸️ El árbitro suspendió esta partida.");
+          return;
+        }
 
         if (selected === sqName) {
           selected = null;
@@ -912,8 +982,13 @@
         }
 
         if (selected) {
+          const from = selected;
+          let promotion = "q";
+          if (isPromotionMove(game, from, sqName)) {
+            promotion = await askPromotion(game.turn());
+          }
           const fenBeforeMove = game.fen();
-          const move = game.move({ from: selected, to: sqName, promotion: 'q' });
+          const move = game.move({ from, to: sqName, promotion });
           if (move) {
             addIncrement();
             selected = null;
@@ -1144,6 +1219,12 @@
       }
 
       function addIncrement() {
+        // En una partida de torneo el incremento ya lo aplica fbMakeMove
+        // sobre gameRow.clock (ver TORNEO más abajo); este reloj es el de
+        // las partidas normales de "Jugar" y no debe tocarse acá, o
+        // termina pisando (y desincronizando entre pantallas) el reloj
+        // del torneo, que comparte los mismos elementos #clock-w/#clock-b.
+        if (tournamentMatchActive) return;
         const increment = getIncrement();
         if (!increment || !clockEnabled || game.game_over()) return;
         const prevTurn = game.turn() === 'w' ? 'b' : 'w';
@@ -1159,7 +1240,7 @@
 
         if (start && initial > 0) {
           clockTimer = setInterval(() => {
-            if (game.game_over()) return;
+            if (tournamentMatchActive || game.game_over()) return;
             const turn = game.turn();
             clock[turn]--;
             if (clock[turn] <= 0) {
@@ -1179,10 +1260,18 @@
       }
 
       function updateClockDisplay() {
+        // Durante una partida de torneo el reloj que manda es el de
+        // Firestore (ver updateTournamentClockDisplay): si esta función
+        // sigue pintando encima de los mismos elementos #clock-w/#clock-b
+        // con el reloj local de "Jugar", cada pantalla termina mostrando
+        // un tiempo distinto según el estado local de cada navegador.
+        if (tournamentMatchActive) return;
         const w = document.getElementById("clock-w");
         const b = document.getElementById("clock-b");
-        w.textContent = formatTime(clock.w);
-        b.textContent = formatTime(clock.b);
+        const wTime = w.querySelector(".clock-time");
+        const bTime = b.querySelector(".clock-time");
+        (wTime || w).textContent = formatTime(clock.w);
+        (bTime || b).textContent = formatTime(clock.b);
         w.classList.toggle("active", game.turn() === "w" && !game.game_over());
         b.classList.toggle("active", game.turn() === "b" && !game.game_over());
       }
@@ -1335,6 +1424,7 @@
         });
         if (name === "jugar") render();
         if (name === "torneo" && typeof refreshTournament === "function") refreshTournament();
+        if (name === "pantalla-publica" && typeof renderPublicScreen === "function") renderPublicScreen(lastTournamentState);
       }
 
       document.querySelectorAll("[data-page]").forEach((button) => {
@@ -3157,7 +3247,7 @@
           setTimeout(() => sqEl.classList.remove(className), 500);
         }
 
-        function onSquareClick(sqName) {
+        async function onSquareClick(sqName) {
           if (ctx.solvedOrFailed) return;
           const piece = ctx.chess.get(sqName);
           if (ctx.selected === sqName) {
@@ -3167,7 +3257,14 @@
           }
           if (ctx.selected) {
             const from = ctx.selected;
-            const attempt = { from, to: sqName, promotion: "q" };
+            let promotion = "q";
+            if (isPromotionMove(ctx.chess, from, sqName)) {
+              const color = ctx.chess.turn();
+              ctx.selected = null;
+              draw();
+              promotion = await askPromotion(color);
+            }
+            const attempt = { from, to: sqName, promotion };
             const uci = from + sqName;
             ctx.selected = null;
             attemptMove(uci, attempt);
@@ -3541,6 +3638,7 @@
       let tournamentUnsub = null;
       let tournamentBusy = false;
       let lastTournamentState = null;
+      let tournamentEditingPlayerId = null; // id del jugador cuya fila está en modo edición en el panel de árbitro
       let currentUser = null; // { email, displayName } una vez logueado con Google
 
       // Única cuenta habilitada para administrar el torneo. Se ignora
@@ -3549,6 +3647,24 @@
       // configurar o reiniciar el torneo.
       const TOURNAMENT_ADMIN_EMAIL = "ipem146centenario@gmail.com";
       let authListenerAttached = false;
+
+      // Modo árbitro: una cuenta aparte del admin del torneo, exclusiva para
+      // las acciones "de reglamento" (retirar/reincorporar/descalificar
+      // jugadores, declarar W.O., cerrar rondas y corregir resultados ya
+      // cerrados). Es intencionalmente una cuenta distinta de
+      // TOURNAMENT_ADMIN_EMAIL: ni el admin del torneo ni ninguna otra
+      // cuenta puede hacer estas acciones, solo esta.
+      const TOURNAMENT_REFEREE_EMAIL = "josepantaleo@gmail.com";
+
+      function isCurrentUserReferee() {
+        return !!currentUser && currentUser.email === TOURNAMENT_REFEREE_EMAIL;
+      }
+
+      function assertReferee() {
+        if (!isCurrentUserReferee()) {
+          throw new Error("Esta acción es exclusiva del árbitro del torneo");
+        }
+      }
 
       function getFirebaseConfig() {
         const raw = localStorage.getItem(FB_CONFIG_KEY) || "";
@@ -3590,11 +3706,26 @@
       }
 
       function normalizeTournamentState(data) {
+        const defaults = {
+          name: "",
+          round: 0,
+          status: "setup",
+          adminEmails: [],
+          totalRounds: null,
+          roundStatus: "playing",
+          roundApprovalMode: "manual",
+          pendingApprovalAt: null,
+          autoApprovalCancelled: false,
+          // Minutos de tolerancia reglamentaria antes de que una
+          // incomparecencia se convierta en WO automático (0 = deshabilitado,
+          // hay que declararlo a mano como siempre). Ver fbAutoDeclareForfeits.
+          woGraceMinutes: 0,
+        };
         if (!data) {
-          return { meta: { name: "", round: 0, status: "setup", adminEmails: [], totalRounds: null }, players: [], pairings: [], games: [] };
+          return { meta: { ...defaults }, players: [], pairings: [], games: [] };
         }
         return {
-          meta: Object.assign({ name: "", round: 0, status: "setup", adminEmails: [], totalRounds: null }, data.meta || {}),
+          meta: Object.assign({ ...defaults }, data.meta || {}),
           players: data.players || [],
           pairings: data.pairings || [],
           games: data.games || [],
@@ -3665,7 +3796,8 @@
           return;
         }
         const admin = isCurrentUserAdmin(lastTournamentState);
-        const text = admin ? "🛠️ Modo Administrador" : "👤 Modo Jugador";
+        const referee = isCurrentUserReferee();
+        const text = referee ? "🧑‍⚖️ Modo Árbitro" : admin ? "🛠️ Modo Administrador" : "👤 Modo Jugador";
         badges.forEach((b) => {
           if (!b) return;
           b.textContent = text;
@@ -3686,6 +3818,7 @@
             const state = normalizeTournamentState(snap.exists ? snap.data() : null);
             lastTournamentState = state;
             renderTournamentState(state);
+            if (typeof renderPublicScreen === "function") renderPublicScreen(state);
             handleLiveMatchUpdate(state);
           },
           (err) => {
@@ -3717,15 +3850,17 @@
 
       function applyResultToPlayers_(white, black, result, sign) {
         if (!white || !black || !result) return;
-        if (result === "1-0") white.points += 1 * sign;
-        else if (result === "0-1") black.points += 1 * sign;
+        // "wo-black" = ganan blancas por incomparecencia de negras;
+        // "wo-white" = ganan negras por incomparecencia de blancas.
+        if (result === "1-0" || result === "wo-black") white.points += 1 * sign;
+        else if (result === "0-1" || result === "wo-white") black.points += 1 * sign;
         else if (result === "1/2-1/2") {
           white.points += 0.5 * sign;
           black.points += 0.5 * sign;
         }
       }
 
-      async function fbCreateTournament(name, playerEntries, totalRounds, adminEmails, timeControl) {
+      async function fbCreateTournament(name, playerEntries, totalRounds, adminEmails, timeControl, roundApprovalMode, woGraceMinutes) {
         if (!isBootstrapping(lastTournamentState)) assertAdmin();
         const seenEmails = new Set();
         for (const p of playerEntries) {
@@ -3749,6 +3884,11 @@
             played: [],
             byes: 0,
             colorBalance: 0, // >0 jugó más veces con blancas, <0 más veces con negras
+            // Estado del jugador dentro del torneo. Por ahora solo "active"
+            // se usa para emparejar (ver buildNextRoundPairings_); "withdrawn"
+            // (retirado) y "disqualified" (descalificado) quedan reservados
+            // para las acciones de árbitro que se agregan más adelante.
+            status: "active",
           }));
         const rounds = Number(totalRounds);
         const tc = timeControl || { minutes: 0, increment: 0 };
@@ -3757,10 +3897,15 @@
             name: name || "Torneo",
             round: 0,
             status: "active",
+            roundStatus: "playing",
+            roundApprovalMode: roundApprovalMode === "auto" ? "auto" : "manual",
+            pendingApprovalAt: null,
+            autoApprovalCancelled: false,
             totalRounds: rounds > 0 ? rounds : null,
             adminEmails: [TOURNAMENT_ADMIN_EMAIL],
             timeControlMinutes: tc.minutes > 0 ? tc.minutes : 0,
             timeControlIncrement: tc.increment > 0 ? tc.increment : 0,
+            woGraceMinutes: Number(woGraceMinutes) > 0 ? Number(woGraceMinutes) : 0,
           },
           players,
           pairings: [],
@@ -3769,31 +3914,226 @@
         return getTournamentStateOnce();
       }
 
-      // Empareja jugadores estilo suizo simplificado: ordena por puntaje
-      // (con desempate fijo por id), y empareja de a pares evitando repetir
-      // rivales cuando es posible. Si sobra un jugador, recibe bye (+1 punto).
-      // No toca la base de datos: solo calcula los datos de la ronda nueva a
-      // partir del estado ya cargado en memoria. La usan tanto
-      // fbGenerateRound (botón manual del administrador) como fbSubmitResult
-      // (generación automática apenas se completa la última partida
-      // pendiente de la ronda actual).
-      function buildNextRoundPairings_(players, currentRound, timeControl) {
+      // ===== Alta / edición / baja de jugadores (panel de árbitro) =====
+
+      function validatePlayerNameEmail_(name, email) {
+        name = (name || "").trim();
+        email = (email || "").trim().toLowerCase();
+        if (!name) throw new Error("El nombre no puede estar vacío");
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          throw new Error(`El email "${email}" no parece válido`);
+        }
+        return { name, email };
+      }
+
+      // Agrega un jugador nuevo al torneo ya creado. Arranca en 0 puntos y sin
+      // partidas jugadas, así que buildNextRoundPairings_ lo toma solo en la
+      // próxima ronda que se genere (no hace falta tocar la ronda actual).
+      async function fbAddPlayer(rawName, rawEmail) {
+        assertAdmin();
+        const { name, email } = validatePlayerNameEmail_(rawName, rawEmail);
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = data.players || [];
+          if (email && players.some((p) => (p.email || "").toLowerCase() === email)) {
+            throw new Error(`Ya hay un jugador con el email ${email}`);
+          }
+          let n = players.length + 1;
+          const usedIds = new Set(players.map((p) => p.id));
+          while (usedIds.has("p" + n)) n++;
+          const newPlayer = {
+            id: "p" + n,
+            name,
+            email,
+            points: 0,
+            played: [],
+            byes: 0,
+            colorBalance: 0,
+            status: "active",
+          };
+          tx.update(fbRoomRef, { players: players.concat([newPlayer]) });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Edita solo los datos personales (nombre/email) de un jugador. No toca
+      // puntos, partidas jugadas ("played"), byes ni colorBalance, para no
+      // afectar su historial de partidas. También actualiza el nombre/email
+      // "congelados" dentro de los emparejamientos ya publicados (para que
+      // las rondas ya jugadas se vean con el dato corregido).
+      async function fbEditPlayer(playerId, rawName, rawEmail) {
+        assertAdmin();
+        const { name, email } = validatePlayerNameEmail_(rawName, rawEmail);
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = data.players || [];
+          const idx = players.findIndex((p) => p.id === playerId);
+          if (idx === -1) throw new Error("No se encontró ese jugador");
+          if (email && players.some((p, i) => i !== idx && (p.email || "").toLowerCase() === email)) {
+            throw new Error(`Ya hay otro jugador con el email ${email}`);
+          }
+          const updatedPlayers = players.slice();
+          updatedPlayers[idx] = { ...updatedPlayers[idx], name, email };
+          const pairings = (data.pairings || []).map((pr) => {
+            const copy = { ...pr };
+            if (copy.whiteId === playerId) {
+              copy.whiteName = name;
+              copy.whiteEmail = email;
+            }
+            if (copy.blackId === playerId) {
+              copy.blackName = name;
+              copy.blackEmail = email;
+            }
+            return copy;
+          });
+          tx.update(fbRoomRef, { players: updatedPlayers, pairings });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Elimina por completo a un jugador del torneo. Solo se permite si
+      // todavía no jugó ninguna partida (ni siquiera un bye): si ya tiene
+      // historial, borrarlo del arreglo dejaría emparejamientos/partidas
+      // "huérfanos" apuntando a un id inexistente. Para sacar del torneo a
+      // alguien que ya jugó, corresponde "Retirar jugador" (no elimina el
+      // historial, solo evita que lo vuelvan a emparejar) en vez de esto.
+      async function fbDeletePlayer(playerId) {
+        assertAdmin();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = data.players || [];
+          const player = players.find((p) => p.id === playerId);
+          if (!player) throw new Error("No se encontró ese jugador");
+          const pairings = data.pairings || [];
+          const hasHistory = pairings.some((pr) => pr.whiteId === playerId || pr.blackId === playerId);
+          if (hasHistory) {
+            throw new Error(
+              "Este jugador ya tiene partidas emparejadas: para sacarlo sin perder el historial usá 'Retirar jugador' en vez de eliminarlo."
+            );
+          }
+          tx.update(fbRoomRef, { players: players.filter((p) => p.id !== playerId) });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // ===== Acciones exclusivas del árbitro sobre el estado de un jugador =====
+      // Estas tres funciones nunca borran historial (played/points/byes quedan
+      // intactos): solo cambian "status", que es lo que buildNextRoundPairings_
+      // usa para decidir a quién emparejar en la próxima ronda.
+
+      // Retira a un jugador: deja de ser emparejado en las próximas rondas,
+      // pero conserva todo su historial y sigue en la tabla de posiciones.
+      async function fbWithdrawPlayer(playerId) {
+        assertReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = data.players || [];
+          const idx = players.findIndex((p) => p.id === playerId);
+          if (idx === -1) throw new Error("No se encontró ese jugador");
+          if (players[idx].status === "disqualified") {
+            throw new Error("Este jugador está descalificado, no se puede retirar");
+          }
+          const updated = players.slice();
+          updated[idx] = { ...updated[idx], status: "withdrawn" };
+          tx.update(fbRoomRef, { players: updated });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Reincorpora a un jugador retirado (vuelve a "active" y se lo vuelve a
+      // emparejar desde la próxima ronda). Un jugador descalificado NO puede
+      // reincorporarse por esta vía: la descalificación es definitiva.
+      async function fbReactivatePlayer(playerId) {
+        assertReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = data.players || [];
+          const idx = players.findIndex((p) => p.id === playerId);
+          if (idx === -1) throw new Error("No se encontró ese jugador");
+          if (players[idx].status === "disqualified") {
+            throw new Error("Un jugador descalificado no puede reincorporarse");
+          }
+          const updated = players.slice();
+          updated[idx] = { ...updated[idx], status: "active" };
+          tx.update(fbRoomRef, { players: updated });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Descalifica a un jugador: igual que retirar (no vuelve a emparejarse,
+      // conserva historial), pero con etiqueta propia y sin vuelta atrás.
+      async function fbDisqualifyPlayer(playerId) {
+        assertReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = data.players || [];
+          const idx = players.findIndex((p) => p.id === playerId);
+          if (idx === -1) throw new Error("No se encontró ese jugador");
+          const updated = players.slice();
+          updated[idx] = { ...updated[idx], status: "disqualified" };
+          tx.update(fbRoomRef, { players: updated });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Empareja jugadores estilo suizo: ordena por puntaje y, en caso de
+      // empate, por desempate Buchholz (suma de puntos de los rivales ya
+      // jugados) reusando rankPlayers_ — y como último criterio, el nombre.
+      // Empareja de a pares evitando repetir rivales cuando es posible. Si
+      // sobra un jugador, recibe bye (+1 punto). No toca la base de datos:
+      // solo calcula los datos de la ronda nueva a partir del estado ya
+      // cargado en memoria. La usa fbApproveRound (aprobación manual o
+      // automática de la ronda) y fbGenerateRound (para sortear la ronda 1).
+      // "pairingsForTiebreak" es el historial completo de emparejamientos
+      // del torneo, usado solo para calcular el desempate Buchholz.
+      // "forcedByeId" (opcional): permite que el árbitro elija a mano qué
+      // jugador descansa esta ronda, en vez de que se elija automáticamente
+      // (por defecto: el de menor puntaje que todavía no tuvo bye). Solo
+      // tiene efecto si la cantidad de jugadores activos es impar; si es
+      // par, se ignora (no hace falta bye). Si el id no corresponde a un
+      // jugador activo, se cae de nuevo al criterio automático.
+      function buildNextRoundPairings_(players, currentRound, timeControl, pairingsForTiebreak, forcedByeId) {
         const nextRound = currentRound + 1;
 
-        let pool = players.slice().sort((a, b) => {
+        // Jugadores retirados o descalificados no vuelven a ser emparejados,
+        // pero se mantienen en el arreglo general (con su historial intacto)
+        // para que la tabla de posiciones los siga mostrando.
+        const activePlayers = players.filter((p) => (p.status || "active") === "active");
+
+        let pool = pairingsForTiebreak ? rankPlayers_(activePlayers, pairingsForTiebreak) : activePlayers.slice();
+        pool = pool.slice().sort((a, b) => {
           if (b.points !== a.points) return b.points - a.points;
+          if (pairingsForTiebreak && (b._buchholz || 0) !== (a._buchholz || 0)) return (b._buchholz || 0) - (a._buchholz || 0);
+          if (pairingsForTiebreak) return a.name.localeCompare(b.name);
           return a.id < b.id ? -1 : 1;
         });
 
         let byePlayer = null;
         if (pool.length % 2 === 1) {
-          for (let i = pool.length - 1; i >= 0; i--) {
-            if (pool[i].byes === 0) {
-              byePlayer = pool[i];
-              break;
-            }
+          if (forcedByeId) {
+            byePlayer = pool.find((p) => p.id === forcedByeId) || null;
           }
-          if (!byePlayer) byePlayer = pool[pool.length - 1];
+          if (!byePlayer) {
+            for (let i = pool.length - 1; i >= 0; i--) {
+              if (pool[i].byes === 0) {
+                byePlayer = pool[i];
+                break;
+              }
+            }
+            if (!byePlayer) byePlayer = pool[pool.length - 1];
+          }
           pool = pool.filter((p) => p.id !== byePlayer.id);
         }
 
@@ -3857,12 +4197,14 @@
         });
 
         // Reloj de la partida: si el torneo tiene tiempo configurado, cada
-        // partida arranca con ese tiempo para las dos partes, pero el
-        // reloj NO empieza a correr al generarse la ronda: se queda
-        // "pausado" (turnStartAt: null) hasta que los dos jugadores entren
-        // a la partida y presionen "Jugar" (ver fbMarkPlayerReady). Así no
-        // se les descuenta tiempo mientras todavía no llegaron a la
-        // pantalla. whiteReady/blackReady registran quién ya entró.
+        // partida arranca con ese tiempo para las dos partes (se reinicia en
+        // cada ronda: cada partida nueva tiene su propio objeto "clock"
+        // desde cero). El reloj NO arranca a correr solo — turnStartAt
+        // queda en null hasta que se juega la primera jugada (ver
+        // fbMakeMove), y mientras tanto "joined" registra si cada jugador ya
+        // entró a la partida: hasta que entraron los dos no se deja mover
+        // (ver tournamentClockWaitingForBothPlayers), así ninguno pierde
+        // tiempo de reloj por ausencia del rival.
         const minutes = (timeControl && timeControl.minutes) || 0;
         const increment = (timeControl && timeControl.increment) || 0;
         const newGames = newPairings
@@ -3876,8 +4218,11 @@
             clock: minutes > 0 ? { w: minutes * 60, b: minutes * 60 } : null,
             turnStartAt: null,
             increment: increment,
-            whiteReady: false,
-            blackReady: false,
+            joined: { w: false, b: false },
+            // Marca de cuándo arrancó la ronda para esta partida: es la
+            // referencia que usa fbAutoDeclareForfeits para saber cuánto
+            // tiempo de tolerancia (meta.woGraceMinutes) ya pasó.
+            startedAt: Date.now(),
           }));
 
         return { nextRound, newPairings, updatedPlayers, newGames };
@@ -3907,22 +4252,30 @@
           if (currentRound > 0 && pending.length > 0) {
             throw new Error("Todavía hay partidas de la ronda " + currentRound + " sin resultado cargado");
           }
+          if (currentRound > 0) {
+            throw new Error('A partir de la ronda 1, usá el botón "Aprobar ronda" para generar la próxima.');
+          }
 
           const timeControl = {
             minutes: (data.meta && data.meta.timeControlMinutes) || 0,
             increment: (data.meta && data.meta.timeControlIncrement) || 0,
           };
-          const { nextRound, newPairings, updatedPlayers, newGames } = buildNextRoundPairings_(players, currentRound, timeControl);
+          const { nextRound, newPairings, updatedPlayers, newGames } = buildNextRoundPairings_(players, currentRound, timeControl, pairingsAll);
 
           tx.set(fbRoomRef, {
             meta: {
               name: data.meta.name,
               round: nextRound,
               status: "active",
+              roundStatus: "playing",
+              roundApprovalMode: data.meta.roundApprovalMode === "auto" ? "auto" : "manual",
+              pendingApprovalAt: null,
+              autoApprovalCancelled: false,
               totalRounds: totalRounds || null,
               adminEmails: data.meta.adminEmails || [],
               timeControlMinutes: timeControl.minutes,
               timeControlIncrement: timeControl.increment,
+              woGraceMinutes: (data.meta && data.meta.woGraceMinutes) || 0,
             },
             players: updatedPlayers,
             pairings: pairingsAll.concat(newPairings),
@@ -3930,6 +4283,261 @@
           });
         });
         return getTournamentStateOnce();
+      }
+
+      // Aprueba la ronda que está "Pendiente de aprobación": recalcula la
+      // clasificación (con desempate Buchholz), genera los emparejamientos
+      // de la ronda siguiente respetando las reglas del sistema suizo (sin
+      // repetir rivales cuando se puede, equilibrando colores, asignando
+      // BYE si sobra alguien) y publica esa ronda nueva. Solo administrador.
+      // La usa tanto el botón "Aprobar ronda" (modo manual) como el
+      // temporizador de 30s del modo automático.
+      async function fbApproveRound() {
+        assertAdmin();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const meta = { ...data.meta };
+          if (meta.status !== "active" || meta.roundStatus !== "pending_approval") {
+            throw new Error("No hay ninguna ronda pendiente de aprobación en este momento");
+          }
+          const players = (data.players || []).map((p) => ({ ...p, played: (p.played || []).slice() }));
+          const pairingsAll = (data.pairings || []).map((p) => ({ ...p }));
+          const roundPairings = pairingsAll.filter((p) => p.round === meta.round);
+          const pending = roundPairings.filter((p) => !p.result);
+          if (pending.length > 0) {
+            throw new Error("Todavía hay partidas de esta ronda sin resultado cargado");
+          }
+
+          const timeControl = {
+            minutes: meta.timeControlMinutes || 0,
+            increment: meta.timeControlIncrement || 0,
+          };
+          const { nextRound, newPairings, updatedPlayers, newGames } = buildNextRoundPairings_(
+            players,
+            meta.round,
+            timeControl,
+            pairingsAll
+          );
+
+          meta.round = nextRound;
+          meta.roundStatus = "playing";
+          meta.pendingApprovalAt = null;
+          meta.autoApprovalCancelled = false;
+
+          tx.update(fbRoomRef, {
+            meta,
+            players: updatedPlayers,
+            pairings: pairingsAll.concat(newPairings),
+            games: (data.games || []).concat(newGames),
+          });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Cancela la cuenta regresiva del modo automático (la ronda queda
+      // "Pendiente de aprobación" igual, pero ya no se aprueba sola: hay que
+      // tocar "Aprobar ronda" a mano). Solo administrador.
+      async function fbCancelAutoApproval() {
+        assertAdmin();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          if (data.meta.roundStatus !== "pending_approval") return; // nada que cancelar
+          tx.update(fbRoomRef, { meta: { ...data.meta, autoApprovalCancelled: true } });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // ===== Flujo separado de árbitro: "Cerrar ronda" + "Generar ronda" =====
+      // fbApproveRound (arriba) sigue existiendo tal cual para el admin del
+      // torneo: en un solo paso cierra y genera la ronda siguiente. Estas dos
+      // funciones son el camino alternativo, exclusivo del árbitro, que
+      // separa ambos pasos: primero se cierra la ronda (bloqueando los
+      // resultados para cualquiera que no sea el árbitro) y recién después,
+      // en otro momento si hace falta, se genera la ronda siguiente.
+
+      // Cierra la ronda actual (debe estar "Pendiente de aprobación", es
+      // decir con todos los resultados ya cargados). A partir de acá, esos
+      // resultados quedan bloqueados: solo el árbitro puede corregirlos (ver
+      // el chequeo de "target.locked" en fbSubmitResult). No genera la ronda
+      // siguiente; eso lo hace fbGenerateRoundFromClosed por separado.
+      async function fbCloseRound() {
+        assertReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const meta = { ...data.meta };
+          if (meta.status !== "active" || meta.roundStatus !== "pending_approval") {
+            throw new Error("Solo se puede cerrar una ronda que ya tiene todos los resultados cargados");
+          }
+          const pairings = (data.pairings || []).map((p) => (p.round === meta.round ? { ...p, locked: true } : p));
+          meta.roundStatus = "closed";
+          tx.update(fbRoomRef, { meta, pairings });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Genera la ronda siguiente a partir de una ronda ya cerrada con
+      // fbCloseRound. Misma lógica de emparejamiento suizo que fbApproveRound,
+      // pero exige que la ronda esté "closed" en vez de "pending_approval".
+      // Exclusivo del árbitro. "forcedByeId" (opcional): el árbitro puede
+      // elegir a mano quién descansa esta ronda en vez de dejarlo automático
+      // (ver buildNextRoundPairings_ y el selector "Asignar BYE" del panel
+      // de árbitro).
+      async function fbGenerateRoundFromClosed(forcedByeId) {
+        assertReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const meta = { ...data.meta };
+          if (meta.status !== "active" || meta.roundStatus !== "closed") {
+            throw new Error('Primero hay que "Cerrar ronda" antes de generar la próxima');
+          }
+          const players = (data.players || []).map((p) => ({ ...p, played: (p.played || []).slice() }));
+          const pairingsAll = (data.pairings || []).map((p) => ({ ...p }));
+
+          if (forcedByeId) {
+            const activeCount = players.filter((p) => (p.status || "active") === "active").length;
+            if (activeCount % 2 === 0) {
+              throw new Error("No hace falta asignar BYE: la cantidad de jugadores activos es par");
+            }
+            const candidate = players.find((p) => p.id === forcedByeId && (p.status || "active") === "active");
+            if (!candidate) throw new Error("El jugador elegido para el BYE no está activo en el torneo");
+          }
+
+          const timeControl = {
+            minutes: meta.timeControlMinutes || 0,
+            increment: meta.timeControlIncrement || 0,
+          };
+          const { nextRound, newPairings, updatedPlayers, newGames } = buildNextRoundPairings_(
+            players,
+            meta.round,
+            timeControl,
+            pairingsAll,
+            forcedByeId || undefined
+          );
+
+          meta.round = nextRound;
+          meta.roundStatus = "playing";
+          meta.pendingApprovalAt = null;
+          meta.autoApprovalCancelled = false;
+
+          tx.update(fbRoomRef, {
+            meta,
+            players: updatedPlayers,
+            pairings: pairingsAll.concat(newPairings),
+            games: (data.games || []).concat(newGames),
+          });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Marca o desmarca una partida como "suspendida" (por ejemplo, un
+      // incidente en el tablero que el árbitro necesita revisar antes de
+      // que se siga jugando). Mientras está suspendida no se puede mover
+      // ninguna pieza (ver fbMakeMove y los bloqueos del lado del cliente).
+      // Exclusivo del árbitro.
+      async function fbSetGameSuspended(round, board, suspended) {
+        assertReferee();
+        round = Number(round);
+        board = Number(board);
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const games = (data.games || []).map((g) => ({ ...g }));
+          const g = games.find((x) => x.round === round && x.board === board);
+          if (!g) throw new Error("No se encontró esa partida");
+          if (g.status === "finished") throw new Error("Esa partida ya terminó, no se puede suspender");
+          g.status = suspended ? "suspended" : "ongoing";
+          // Al reanudar, reiniciamos el "reloj de arranque" del turno actual
+          // para no cobrarle a quien tiene el turno el tiempo que la partida
+          // estuvo parada (ver updateTournamentClockDisplay).
+          if (!suspended && g.clock && g.turnStartAt) g.turnStartAt = Date.now();
+          tx.update(fbRoomRef, { games });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Declara WO automático a los jugadores que no entraron a su partida
+      // dentro del "tiempo reglamentario de espera" (meta.woGraceMinutes,
+      // configurable en Ajustes). Se llama periódicamente desde el cliente
+      // del árbitro (ver startWOGraceTimerIfNeeded) mientras la ronda está
+      // en curso ("playing"). Solo actúa cuando, pasado ese tiempo desde que
+      // arrancó la partida (game.startedAt), entró exactamente uno de los
+      // dos jugadores: al otro se le carga la incomparecencia (mismo efecto
+      // que si el árbitro tocara el botón "WO" a mano). Si no entró
+      // ninguno de los dos, no se declara nada automáticamente (queda a
+      // criterio del árbitro, con los botones manuales de siempre): puede
+      // deberse a un problema ajeno a los jugadores y no conviene
+      // perjudicar a ambos sin que un humano lo revise. Devuelve la lista
+      // de partidas a las que se les declaró WO (para el aviso en pantalla).
+      async function fbAutoDeclareForfeits() {
+        assertReferee();
+        let declared = [];
+        await fbDb.runTransaction(async (tx) => {
+          declared = [];
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) return;
+          const data = snap.data();
+          const meta = data.meta || {};
+          const graceMinutes = Number(meta.woGraceMinutes) || 0;
+          if (!graceMinutes || meta.status !== "active" || meta.roundStatus !== "playing") return;
+          const graceMs = graceMinutes * 60000;
+          const now = Date.now();
+
+          const players = (data.players || []).map((p) => ({ ...p, played: (p.played || []).slice() }));
+          const byId = {};
+          players.forEach((p) => (byId[p.id] = p));
+          const pairings = (data.pairings || []).map((p) => ({ ...p }));
+          const games = (data.games || []).map((g) => ({ ...g }));
+
+          games.forEach((g) => {
+            if (g.round !== meta.round || g.status !== "ongoing" || !g.startedAt) return;
+            if (now - g.startedAt < graceMs) return;
+            const joined = g.joined || { w: false, b: false };
+            if (joined.w === joined.b) return; // ninguno entró, o entraron los dos: no es un caso automático
+            const pr = pairings.find((p) => p.round === g.round && p.board === g.board);
+            if (!pr || pr.result) return;
+            const white = byId[pr.whiteId];
+            const black = byId[pr.blackId];
+            if (!white || !black) return;
+
+            const result = joined.w ? "wo-black" : "wo-white"; // gana quien entró
+            applyResultToPlayers_(white, black, result, 1);
+            pr.result = result;
+            if (white.played.indexOf(black.id) === -1) white.played.push(black.id);
+            if (black.played.indexOf(white.id) === -1) black.played.push(white.id);
+            g.status = "finished";
+            g.resultReason = "wo-auto";
+            declared.push({ board: pr.board, winner: joined.w ? white.name : black.name, absent: joined.w ? black.name : white.name });
+          });
+
+          if (declared.length === 0) return;
+
+          const meta2 = { ...meta };
+          const roundPairings = pairings.filter((p) => p.round === meta2.round);
+          const allDone = roundPairings.every((p) => p.result);
+          if (allDone) {
+            const totalRounds = meta2.totalRounds;
+            if (totalRounds && meta2.round >= totalRounds) {
+              meta2.status = "finished";
+              meta2.roundStatus = "playing";
+            } else {
+              meta2.roundStatus = "pending_approval";
+              meta2.pendingApprovalAt = Date.now();
+              meta2.autoApprovalCancelled = false;
+            }
+          }
+
+          tx.update(fbRoomRef, { players, pairings, games, meta: meta2 });
+        });
+        return declared;
       }
 
       async function fbSubmitResult(round, board, result) {
@@ -3948,14 +4556,20 @@
           if (!target) throw new Error("No se encontró esa partida");
           if (target.blackId === "") throw new Error("Esa fila es un BYE, no se puede cambiar");
 
-          // Solo el administrador o alguno de los dos jugadores de esta
-          // partida puede cargar/cambiar su resultado (evita que cualquier
-          // usuario cargue resultados de partidas ajenas).
+          // Solo el administrador, el árbitro, o alguno de los dos jugadores
+          // de esta partida puede cargar/cambiar su resultado (evita que
+          // cualquier usuario cargue resultados de partidas ajenas).
           const myEmail = currentUser ? currentUser.email : "";
           const isParticipant =
             myEmail && ((target.whiteEmail || "").toLowerCase() === myEmail || (target.blackEmail || "").toLowerCase() === myEmail);
-          if (!isCurrentUserAdmin(lastTournamentState) && !isParticipant) {
+          if (!isCurrentUserAdmin(lastTournamentState) && !isCurrentUserReferee() && !isParticipant) {
             throw new Error("No tenés permiso para cargar el resultado de esta partida");
+          }
+          // Una ronda ya cerrada por el árbitro (ver fbCloseRound) queda
+          // bloqueada para todos menos para el árbitro, incluso si el
+          // resultado lo había cargado un jugador o el admin.
+          if (target.locked && !isCurrentUserReferee()) {
+            throw new Error("Esta ronda ya fue cerrada por el árbitro; solo el árbitro puede corregir resultados de una ronda cerrada");
           }
 
           // Si ya había un resultado cargado antes, primero deshacemos sus puntos.
@@ -3970,42 +4584,44 @@
             byId[target.blackId].played.push(target.whiteId);
           }
 
+          // Un resultado "wo-white"/"wo-black" (W.O., declarado por el
+          // árbitro) también cierra la partida en vivo del tablero grande,
+          // igual que un resultado normal cargado desde una jugada real.
+          const games = (data.games || []).map((g) => ({ ...g }));
+          if (result === "wo-white" || result === "wo-black") {
+            const g = games.find((x) => x.round === round && x.board === board);
+            if (g) {
+              g.status = "finished";
+              g.resultReason = "wo";
+            }
+          }
+
           // Si con este resultado ya quedaron cargadas todas las partidas de
-          // la ronda actual, el torneo avanza solo: si ya se jugaron todas
-          // las rondas configuradas se cierra (como antes), y si no, se
-          // empareja y genera automáticamente la ronda siguiente en el
-          // momento — sin esperar a que un administrador toque el botón
-          // "Siguiente ronda". Esto pasa acá adentro (y no llamando a
-          // fbGenerateRound aparte) porque fbGenerateRound exige ser
-          // administrador, y quien complete la última partida puede ser
-          // cualquiera de los dos jugadores.
+          // la ronda actual: si ya se jugaron todas las rondas configuradas
+          // el torneo se cierra (como antes), y si no, la ronda pasa a
+          // "Pendiente de aprobación" — ya NO se generan los emparejamientos
+          // de la ronda siguiente automáticamente acá. Eso ahora lo hace
+          // fbApproveRound, a mano (modo manual) o solo, después de la
+          // cuenta regresiva (modo automático); ver fbApproveRound más abajo.
           const meta = { ...data.meta };
           const totalRounds = meta.totalRounds;
-          let finalPlayers = players;
-          let finalPairings = pairings;
-          let finalGames = data.games || [];
 
-          if (meta.status === "active") {
+          if (meta.status === "active" && meta.roundStatus !== "pending_approval" && meta.roundStatus !== "closed") {
             const roundPairings = pairings.filter((p) => p.round === meta.round);
             const allDone = roundPairings.every((p) => p.result);
             if (allDone) {
               if (totalRounds && meta.round >= totalRounds) {
                 meta.status = "finished";
+                meta.roundStatus = "playing";
               } else {
-                const timeControl = {
-                  minutes: meta.timeControlMinutes || 0,
-                  increment: meta.timeControlIncrement || 0,
-                };
-                const generated = buildNextRoundPairings_(players, meta.round, timeControl);
-                meta.round = generated.nextRound;
-                finalPlayers = generated.updatedPlayers;
-                finalPairings = pairings.concat(generated.newPairings);
-                finalGames = finalGames.concat(generated.newGames);
+                meta.roundStatus = "pending_approval";
+                meta.pendingApprovalAt = Date.now();
+                meta.autoApprovalCancelled = false;
               }
             }
           }
 
-          tx.update(fbRoomRef, { players: finalPlayers, pairings: finalPairings, games: finalGames, meta });
+          tx.update(fbRoomRef, { players, pairings, games, meta });
         });
         return getTournamentStateOnce();
       }
@@ -4038,7 +4654,7 @@
       // Cambia nombre y/o cantidad de rondas. Solo administradores. La lista
       // de administradores ya no es configurable: queda fija en
       // TOURNAMENT_ADMIN_EMAIL sin importar lo que se pase acá.
-      async function fbUpdateSettings(name, totalRounds, adminEmails, timeControl) {
+      async function fbUpdateSettings(name, totalRounds, adminEmails, timeControl, roundApprovalMode, woGraceMinutes) {
         assertAdmin();
         await fbDb.runTransaction(async (tx) => {
           const snap = await tx.get(fbRoomRef);
@@ -4056,6 +4672,9 @@
               adminEmails: [TOURNAMENT_ADMIN_EMAIL],
               timeControlMinutes: tc.minutes > 0 ? tc.minutes : 0,
               timeControlIncrement: tc.increment > 0 ? tc.increment : 0,
+              roundApprovalMode: roundApprovalMode === "auto" ? "auto" : "manual",
+              woGraceMinutes:
+                woGraceMinutes === undefined ? data.meta.woGraceMinutes || 0 : Number(woGraceMinutes) > 0 ? Number(woGraceMinutes) : 0,
             },
           });
         });
@@ -4073,15 +4692,31 @@
           const g = games.find((x) => x.round === round && x.board === board);
           if (!g) throw new Error("No se encontró esa partida");
           if (g.status === "finished") throw new Error("Esa partida ya terminó");
+          if (g.status === "suspended") throw new Error("Esta partida está suspendida por el árbitro");
+
+          // En una partida con reloj no se deja mover hasta que entraron los
+          // dos jugadores (ver "joined"/fbMarkJoined): si uno mueve antes de
+          // que el otro esté presente, el reloj del rival empezaría a
+          // correr mientras no está mirando la pantalla. Esto es un
+          // resguardo extra del lado del servidor; el botón de mover ya
+          // está bloqueado del lado del cliente en ese caso.
+          if (g.clock && fen !== g.fen) {
+            const joined = g.joined || { w: false, b: false };
+            if (!joined.w || !joined.b) {
+              throw new Error("Todavía no entraron los dos jugadores a la partida");
+            }
+          }
 
           // Si la partida tiene reloj y esto es una jugada real (cambió el
           // FEN), le descontamos a quien acaba de mover el tiempo que pasó
           // desde su último turno, y le sumamos el incremento si corresponde
           // (resignación/tablas/abandono por tiempo no mueven pieza, así que
-          // no tocan el reloj acá).
-          if (g.clock && g.turnStartAt && fen !== g.fen) {
+          // no tocan el reloj acá). Si es la primera jugada de la partida
+          // (turnStartAt todavía en null), no se descuenta nada: el reloj
+          // recién empieza a correr a partir de esta jugada.
+          if (g.clock && fen !== g.fen) {
             const moverColor = new Chess(g.fen).turn();
-            const elapsed = Math.max(0, Math.round((Date.now() - (g.turnStartAt || Date.now())) / 1000));
+            const elapsed = g.turnStartAt ? Math.max(0, Math.round((Date.now() - g.turnStartAt) / 1000)) : 0;
             g.clock = { ...g.clock, [moverColor]: Math.max(0, g.clock[moverColor] - elapsed) };
             if (!gameOverResult && g.increment) {
               g.clock = { ...g.clock, [moverColor]: g.clock[moverColor] + g.increment };
@@ -4106,14 +4741,16 @@
         return getTournamentStateOnce();
       }
 
-      // Marca que el jugador de "myColor" ya entró a la partida (presionó
-      // "Jugar"). El reloj de esa partida (si el torneo tiene tiempo
-      // configurado) recién arranca a correr —turnStartAt pasa de null a
-      // Date.now()— cuando quedan marcados como listos TANTO blancas como
-      // negras. Si alguno de los dos todavía no entró, el reloj sigue
-      // "pausado" mostrando el tiempo completo (ver updateTournamentClockDisplay).
-      async function fbMarkPlayerReady(round, board, myColor) {
-        if (!myColor) return; // espectador/admin mirando: no cuenta como jugador
+      // Marca que un jugador (color "w" o "b") entró a mirar/jugar su
+      // partida de torneo. En partidas con reloj, además sirve para no
+      // dejar mover a nadie hasta que los dos entraron al menos una vez
+      // (así ninguno pierde tiempo de reloj por no haber llegado todavía).
+      // Se registra también en partidas sin reloj porque ahora
+      // fbAutoDeclareForfeits usa esta misma marca de presencia para el WO
+      // automático por tiempo de espera reglamentario, tenga o no tenga
+      // reloj el torneo. Cualquiera de los dos jugadores puede marcar su
+      // propia presencia, no hace falta ser administrador.
+      async function fbMarkJoined(round, board, color) {
         round = Number(round);
         board = Number(board);
         await fbDb.runTransaction(async (tx) => {
@@ -4122,12 +4759,10 @@
           const data = snap.data();
           const games = (data.games || []).map((g) => ({ ...g }));
           const g = games.find((x) => x.round === round && x.board === board);
-          if (!g || g.status === "finished") return;
-          if (myColor === "w") g.whiteReady = true;
-          if (myColor === "b") g.blackReady = true;
-          if (g.clock && !g.turnStartAt && g.whiteReady && g.blackReady) {
-            g.turnStartAt = Date.now();
-          }
+          if (!g) return;
+          const joined = g.joined || { w: false, b: false };
+          if (joined[color]) return; // ya estaba marcado: no hace falta escribir de nuevo
+          g.joined = { ...joined, [color]: true };
           tx.update(fbRoomRef, { games });
         });
       }
@@ -4138,10 +4773,18 @@
         return getTournamentStateOnce();
       }
 
+      function playerStatusLabel_(status) {
+        if (status === "withdrawn") return "🚪 Retirado";
+        if (status === "disqualified") return "⛔ Descalificado";
+        return "✅ Activo";
+      }
+
       function resultLabel(result) {
         if (result === "1-0") return "1 - 0";
         if (result === "0-1") return "0 - 1";
         if (result === "1/2-1/2") return "½ - ½";
+        if (result === "wo-black") return "WO Blancas (1-0)";
+        if (result === "wo-white") return "WO Negras (0-1)";
         return "";
       }
 
@@ -4163,10 +4806,10 @@
             return;
           }
           if (!record[pr.blackId]) return;
-          if (pr.result === "1-0") {
+          if (pr.result === "1-0" || pr.result === "wo-black") {
             record[pr.whiteId].w += 1;
             record[pr.blackId].l += 1;
-          } else if (pr.result === "0-1") {
+          } else if (pr.result === "0-1" || pr.result === "wo-white") {
             record[pr.whiteId].l += 1;
             record[pr.blackId].w += 1;
           } else if (pr.result === "1/2-1/2") {
@@ -4175,43 +4818,590 @@
           }
         });
 
-        // Sonneborn-Berger: suma, por cada rival enfrentado, de los puntos
-        // de ese rival multiplicados por lo que el jugador le sacó en esa
-        // partida (1 si ganó, 0.5 si empató, 0 si perdió). El bye no suma
-        // (no hay rival real). Se usa como segundo desempate, después de
-        // Buchholz.
-        const sonneborn = {};
-        players.forEach((p) => (sonneborn[p.id] = 0));
-        (pairings || []).forEach((pr) => {
-          if (!pr.result || pr.blackId === "" || !byId[pr.whiteId] || !byId[pr.blackId]) return;
-          const whiteOpp = byId[pr.blackId].points;
-          const blackOpp = byId[pr.whiteId].points;
-          if (pr.result === "1-0") {
-            sonneborn[pr.whiteId] += whiteOpp;
-          } else if (pr.result === "0-1") {
-            sonneborn[pr.blackId] += blackOpp;
-          } else if (pr.result === "1/2-1/2") {
-            sonneborn[pr.whiteId] += whiteOpp * 0.5;
-            sonneborn[pr.blackId] += blackOpp * 0.5;
-          }
-        });
-
         return players
           .map((p) => {
             const buchholz = (p.played || []).reduce((sum, oppId) => sum + (byId[oppId] ? byId[oppId].points : 0), 0);
-            return {
-              ...p,
-              _buchholz: Math.round(buchholz * 100) / 100,
-              _sonnebornBerger: Math.round((sonneborn[p.id] || 0) * 100) / 100,
-              _record: record[p.id] || { w: 0, d: 0, l: 0 },
-            };
+            return { ...p, _buchholz: Math.round(buchholz * 100) / 100, _record: record[p.id] || { w: 0, d: 0, l: 0 } };
           })
           .sort((a, b) => {
             if (b.points !== a.points) return b.points - a.points;
             if (b._buchholz !== a._buchholz) return b._buchholz - a._buchholz;
-            if (b._sonnebornBerger !== a._sonnebornBerger) return b._sonnebornBerger - a._sonnebornBerger;
             return a.name.localeCompare(b.name);
           });
+      }
+
+      // "Recalcular posiciones": el cálculo de puntos/Buchholz que se ve en
+      // pantalla (rankPlayers_) ya se recalcula solo en cada render, a
+      // partir de los pairings. Pero el campo "points" que se guarda en
+      // cada jugador (el que de verdad se usa para armar los próximos
+      // emparejamientos, ver buildNextRoundPairings_) se actualiza a mano,
+      // partida por partida, en cada transacción. Si algún dato queda
+      // desincronizado (por ejemplo, el árbitro corrige el resultado de una
+      // ronda ya cerrada después de que se generaron rondas posteriores),
+      // esta acción reconstruye desde cero "points", "byes", "played" y
+      // "colorBalance" de todos los jugadores usando el historial de
+      // pairings como única fuente de verdad. Exclusiva del árbitro.
+      async function fbRecalculatePositions() {
+        assertReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          const players = (data.players || []).map((p) => ({
+            ...p,
+            points: 0,
+            byes: 0,
+            played: [],
+            colorBalance: 0,
+          }));
+          const byId = {};
+          players.forEach((p) => (byId[p.id] = p));
+
+          (data.pairings || [])
+            .slice()
+            .sort((a, b) => a.round - b.round || a.board - b.board)
+            .forEach((pr) => {
+              const white = byId[pr.whiteId];
+              if (!white) return;
+              if (pr.blackId === "") {
+                // BYE: cuenta como partida jugada y ganada, +1 punto.
+                if (pr.result) {
+                  white.byes += 1;
+                  white.points += 1;
+                }
+                return;
+              }
+              const black = byId[pr.blackId];
+              if (!black) return;
+              if (white.played.indexOf(black.id) === -1) white.played.push(black.id);
+              if (black.played.indexOf(white.id) === -1) black.played.push(white.id);
+              white.colorBalance += 1;
+              black.colorBalance -= 1;
+              applyResultToPlayers_(white, black, pr.result, 1);
+            });
+
+          tx.update(fbRoomRef, { players });
+        });
+        return getTournamentStateOnce();
+      }
+
+      // Abre una ventana nueva con los emparejamientos de la ronda actual en
+      // formato apto para imprimir (tablero, blancas, negras y una columna
+      // en blanco para anotar el resultado a mano). No depende de Firebase:
+      // arma el HTML a partir del estado ya cargado en memoria.
+      function printCurrentRoundPairings(state) {
+        const roundPairings = state.pairings
+          .filter((p) => p.round === state.meta.round)
+          .slice()
+          .sort((a, b) => a.board - b.board);
+        const rowsHtml = roundPairings
+          .map(
+            (p) => `
+              <tr>
+                <td>${p.board}</td>
+                <td>${p.whiteName}</td>
+                <td>${p.blackId === "" ? "— (BYE)" : p.blackName}</td>
+                <td>${p.blackId === "" ? "1 - 0" : ""}</td>
+              </tr>`
+          )
+          .join("");
+        const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Emparejamientos — ${state.meta.name} — Ronda ${state.meta.round}</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 18px; font-weight: normal; color: #444; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #999; padding: 8px 10px; text-align: left; font-size: 14px; }
+  th { background: #eee; }
+  td:first-child, th:first-child { width: 60px; text-align: center; }
+  td:last-child, th:last-child { width: 110px; text-align: center; }
+</style>
+</head><body>
+  <h1>${state.meta.name}</h1>
+  <h2>Emparejamientos — Ronda ${state.meta.round}</h2>
+  <table>
+    <thead><tr><th>Mesa</th><th>Blancas</th><th>Negras</th><th>Resultado</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+</body></html>`;
+        const win = window.open("", "_blank");
+        if (!win) {
+          toast("❌ El navegador bloqueó la ventana de impresión. Habilitá pop-ups para este sitio.");
+          return;
+        }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        win.onload = () => win.print();
+        // Por si onload no dispara (algunos navegadores con document.write):
+        setTimeout(() => {
+          try {
+            win.print();
+          } catch (err) {
+            /* noop */
+          }
+        }, 300);
+      }
+
+      // Exporta la tabla de posiciones actual a un PDF usando jsPDF (cargado
+      // desde CDN en index.html, window.jspdf). No depende de Firebase.
+      // Chequea si queda lugar en la página actual del PDF antes de dibujar
+      // la próxima línea; si no, agrega una página nueva y devuelve el "y"
+      // reiniciado. Se usa en todas las tablas del PDF para no cortar filas
+      // a la mitad entre una página y la siguiente.
+      function pdfEnsureSpace_(doc, y, marginTop) {
+        if (y > 280) {
+          doc.addPage();
+          return marginTop;
+        }
+        return y;
+      }
+
+      // Dibuja la tabla de posiciones (ranking, puntos, Buchholz, V-E-D,
+      // partidas jugadas y estado) a partir de "y" y devuelve el "y" donde
+      // quedó libre para seguir escribiendo. La reusan exportStandingsPDF
+      // (solo posiciones) y exportFullTournamentPDF (reporte completo).
+      function pdfDrawStandingsTable_(doc, marginX, y, ranked, includeStatus) {
+        const cols = [
+          { label: "#", w: 10 },
+          { label: "Jugador", w: includeStatus ? 58 : 70 },
+          { label: "Puntos", w: 20 },
+          { label: "Buchholz", w: 22 },
+          { label: "V-E-D", w: 24 },
+          { label: "Partidas", w: 20 },
+        ];
+        if (includeStatus) cols.push({ label: "Estado", w: 30 });
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, "bold");
+        let x = marginX;
+        cols.forEach((c) => {
+          doc.text(c.label, x, y);
+          x += c.w;
+        });
+        doc.setFont(undefined, "normal");
+        y += 4;
+        doc.line(marginX, y, x, y);
+        y += 6;
+
+        ranked.forEach((p, i) => {
+          y = pdfEnsureSpace_(doc, y, 18);
+          const values = [
+            String(i + 1),
+            p.name,
+            String(p.points),
+            String(p._buchholz),
+            `${p._record.w}-${p._record.d}-${p._record.l}`,
+            String(p.played.length),
+          ];
+          if (includeStatus) values.push(playerStatusLabel_(p.status).replace(/^[^\s]+\s/, ""));
+          x = marginX;
+          values.forEach((v, idx) => {
+            doc.text(String(v), x, y);
+            x += cols[idx].w;
+          });
+          y += 7;
+        });
+        return y;
+      }
+
+      // Arma, en texto plano, la explicación de cómo se llegó al 1°, 2° y 3°
+      // puesto a partir de la tabla ya ordenada (ranked = salida de
+      // rankPlayers_). Para cada uno de los tres primeros compara contra el
+      // jugador inmediatamente siguiente en la tabla para justificar por qué
+      // quedó por encima: diferencia de puntos, o -si empataron en puntos-
+      // diferencia de Buchholz (suma de los puntos de los rivales que
+      // enfrentó cada uno), o -si también empataron en Buchholz- el criterio
+      // final de orden alfabético que usa rankPlayers_ como último desempate.
+      function explainTopThree_(ranked) {
+        const medals = ["1° puesto", "2° puesto", "3° puesto"];
+        const lines = [];
+        const top = ranked.slice(0, 3);
+        top.forEach((p, i) => {
+          const next = ranked[i + 1];
+          let reason;
+          if (!next) {
+            reason = "Único jugador en esta posición.";
+          } else if (p.points !== next.points) {
+            reason = `Se ubica por encima de ${next.name} por haber sumado más puntos en el torneo (${p.points} vs ${next.points}).`;
+          } else if (p._buchholz !== next._buchholz) {
+            reason =
+              `Empató en puntos con ${next.name} (${p.points} c/u), pero lo superó por desempate Buchholz ` +
+              `(${p._buchholz} vs ${next._buchholz}). El Buchholz suma los puntos totales que obtuvieron los ` +
+              `rivales a los que se enfrentó cada jugador: enfrentar rivales que a su vez sumaron más puntos ` +
+              `favorece este desempate.`;
+          } else {
+            reason =
+              `Empató en puntos y en Buchholz con ${next.name} (${p.points} pts, Buchholz ${p._buchholz}). ` +
+              `Al no haber diferencia en ningún desempate calculado, el orden entre ambos se definió de forma ` +
+              `nominal (orden alfabético), por lo que en la práctica comparten esta posición.`;
+          }
+          lines.push({
+            title: `${medals[i]}: ${p.name} — ${p.points} puntos, Buchholz ${p._buchholz} (${p._record.w}V ${p._record.d}E ${p._record.l}D)`,
+            body: reason,
+          });
+        });
+        return lines;
+      }
+
+      // Dibuja en el PDF, a partir de "y", la explicación del podio generada
+      // por explainTopThree_, envolviendo el texto al ancho de la página.
+      // Devuelve el "y" libre siguiente.
+      function pdfDrawTopThreeExplanation_(doc, marginX, y, ranked) {
+        if (!ranked.length) return y;
+        y = pdfEnsureSpace_(doc, y, 18);
+        doc.setFontSize(13);
+        doc.text("Cómo se determinó el podio (1°, 2° y 3° puesto)", marginX, y);
+        y += 8;
+        const entries = explainTopThree_(ranked);
+        doc.setFontSize(10);
+        entries.forEach((entry) => {
+          y = pdfEnsureSpace_(doc, y, 18);
+          doc.setFont(undefined, "bold");
+          const titleLines = doc.splitTextToSize(entry.title, 180);
+          titleLines.forEach((tl) => {
+            y = pdfEnsureSpace_(doc, y, 18);
+            doc.text(tl, marginX, y);
+            y += 5;
+          });
+          doc.setFont(undefined, "normal");
+          const bodyLines = doc.splitTextToSize(entry.body, 180);
+          bodyLines.forEach((bl) => {
+            y = pdfEnsureSpace_(doc, y, 18);
+            doc.text(bl, marginX, y);
+            y += 5;
+          });
+          y += 3;
+        });
+        return y;
+      }
+
+      // Dibuja la tabla de emparejamientos/resultados de una ronda a partir
+      // de "y" y devuelve el "y" libre siguiente.
+      function pdfDrawPairingsTable_(doc, marginX, y, roundPairings) {
+        const cols = [
+          { label: "Mesa", w: 16 },
+          { label: "Blancas", w: 60 },
+          { label: "Negras", w: 60 },
+          { label: "Resultado", w: 30 },
+        ];
+        doc.setFontSize(10);
+        doc.setFont(undefined, "bold");
+        let x = marginX;
+        cols.forEach((c) => {
+          doc.text(c.label, x, y);
+          x += c.w;
+        });
+        doc.setFont(undefined, "normal");
+        y += 4;
+        doc.line(marginX, y, x, y);
+        y += 6;
+
+        roundPairings
+          .slice()
+          .sort((a, b) => a.board - b.board)
+          .forEach((p) => {
+            y = pdfEnsureSpace_(doc, y, 18);
+            const values = [
+              String(p.board),
+              p.whiteName,
+              p.blackId === "" ? "— (BYE)" : p.blackName,
+              p.result ? resultLabel(p.result) : "—",
+            ];
+            x = marginX;
+            values.forEach((v, idx) => {
+              doc.text(v, x, y);
+              x += cols[idx].w;
+            });
+            y += 7;
+          });
+        return y;
+      }
+
+      function exportStandingsPDF(state) {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+          toast("❌ No se pudo cargar la librería de PDF. Revisá tu conexión e intentá de nuevo.");
+          return;
+        }
+        const ranked = rankPlayers_(state.players, state.pairings);
+        const doc = new window.jspdf.jsPDF();
+        const marginX = 14;
+        let y = 18;
+        doc.setFontSize(16);
+        doc.text(state.meta.name || "Torneo", marginX, y);
+        y += 7;
+        doc.setFontSize(11);
+        doc.text(`Tabla de posiciones — Ronda ${state.meta.round}`, marginX, y);
+        y += 10;
+
+        pdfDrawStandingsTable_(doc, marginX, y, ranked, false);
+
+        const safeName = (state.meta.name || "torneo").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+        doc.save(`posiciones_${safeName}_ronda${state.meta.round}.pdf`);
+      }
+
+      // "Imprimir resultados del torneo en PDF (toda la información)": a
+      // diferencia de exportStandingsPDF (solo la tabla de posiciones), este
+      // reporte del administrador arma un PDF completo con: datos generales
+      // del torneo, tabla de posiciones final/actual con estado de cada
+      // jugador, los emparejamientos y resultados de TODAS las rondas
+      // jugadas hasta ahora, y el listado completo de jugadores con su
+      // email y estado. Pensado como acta/registro imprimible del torneo.
+      function exportFullTournamentPDF(state) {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+          toast("❌ No se pudo cargar la librería de PDF. Revisá tu conexión e intentá de nuevo.");
+          return;
+        }
+        const doc = new window.jspdf.jsPDF();
+        const marginX = 14;
+        let y = 18;
+
+        // --- Portada / datos generales ---
+        doc.setFontSize(18);
+        doc.text(state.meta.name || "Torneo", marginX, y);
+        y += 9;
+        doc.setFontSize(11);
+        const generatedAt = new Date().toLocaleString("es-AR");
+        const statusText = state.meta.status === "finished" ? "Finalizado" : "En curso";
+        const roundsNote = state.meta.totalRounds ? ` de ${state.meta.totalRounds}` : "";
+        const timeControlText =
+          state.meta.timeControlMinutes > 0
+            ? `${state.meta.timeControlMinutes} min` + (state.meta.timeControlIncrement > 0 ? ` + ${state.meta.timeControlIncrement}s` : "")
+            : "Sin reloj";
+        [
+          `Estado: ${statusText}`,
+          `Ronda actual: ${state.meta.round}${roundsNote}`,
+          `Jugadores: ${state.players.length}`,
+          `Control de tiempo: ${timeControlText}`,
+          `Reporte generado: ${generatedAt}`,
+        ].forEach((line) => {
+          doc.text(line, marginX, y);
+          y += 6;
+        });
+        y += 4;
+
+        if (state.meta.status === "finished") {
+          const ranked0 = rankPlayers_(state.players, state.pairings);
+          const topScore = ranked0.length ? ranked0[0].points : 0;
+          const topTB = ranked0.length ? ranked0[0]._buchholz : 0;
+          const champions = ranked0.filter((p) => p.points === topScore && p._buchholz === topTB);
+          doc.setFont(undefined, "bold");
+          doc.text(
+            "Campeón: " + (champions.length > 1 ? champions.map((p) => p.name).join(", ") + " (empate)" : champions[0] ? champions[0].name : "—"),
+            marginX,
+            y
+          );
+          doc.setFont(undefined, "normal");
+          y += 10;
+        }
+
+        // --- Tabla de posiciones ---
+        y = pdfEnsureSpace_(doc, y, 18);
+        doc.setFontSize(13);
+        doc.text("Tabla de posiciones", marginX, y);
+        y += 8;
+        const ranked = rankPlayers_(state.players, state.pairings);
+        y = pdfDrawStandingsTable_(doc, marginX, y, ranked, true);
+        y += 6;
+
+        // --- Explicación de cómo se obtuvo el 1°, 2° y 3° puesto ---
+        y = pdfEnsureSpace_(doc, y + 4, 18);
+        y = pdfDrawTopThreeExplanation_(doc, marginX, y, ranked);
+        y += 4;
+
+        // --- Emparejamientos y resultados, ronda por ronda ---
+        const maxRound = state.pairings.reduce((m, p) => Math.max(m, p.round), 0);
+        for (let r = 1; r <= maxRound; r++) {
+          const roundPairings = state.pairings.filter((p) => p.round === r);
+          if (roundPairings.length === 0) continue;
+          y = pdfEnsureSpace_(doc, y + 4, 18);
+          doc.setFontSize(13);
+          doc.text(`Ronda ${r}`, marginX, y);
+          y += 8;
+          y = pdfDrawPairingsTable_(doc, marginX, y, roundPairings);
+          y += 6;
+        }
+
+        // --- Listado de jugadores ---
+        y = pdfEnsureSpace_(doc, y + 4, 18);
+        doc.setFontSize(13);
+        doc.text("Jugadores inscriptos", marginX, y);
+        y += 8;
+        doc.setFontSize(10);
+        doc.setFont(undefined, "bold");
+        ["Jugador", "Email", "Estado"].forEach((label, i) => {
+          doc.text(label, marginX + [0, 80, 150][i], y);
+        });
+        doc.setFont(undefined, "normal");
+        y += 4;
+        doc.line(marginX, y, marginX + 180, y);
+        y += 6;
+        state.players.forEach((p) => {
+          y = pdfEnsureSpace_(doc, y, 18);
+          doc.text(p.name, marginX, y);
+          doc.text(p.email || "—", marginX + 80, y);
+          doc.text(playerStatusLabel_(p.status).replace(/^[^\s]+\s/, ""), marginX + 150, y);
+          y += 7;
+        });
+
+        const safeName = (state.meta.name || "torneo").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+        doc.save(`torneo_completo_${safeName}_ronda${state.meta.round}.pdf`);
+      }
+
+      let tournamentAutoApproveTimer = null;
+
+      function stopAutoApproveTimer() {
+        clearInterval(tournamentAutoApproveTimer);
+        tournamentAutoApproveTimer = null;
+      }
+
+      // Chequeo periódico de incomparecencias (ver fbAutoDeclareForfeits):
+      // solo corre en el cliente del árbitro, y solo mientras la ronda está
+      // "playing" y el torneo tiene configurado un tiempo de espera > 0. Se
+      // arranca/para desde renderTournamentState en cada actualización de
+      // estado, igual que el temporizador de aprobación automática.
+      let tournamentWOGraceTimer = null;
+
+      function stopWOGraceTimer() {
+        clearInterval(tournamentWOGraceTimer);
+        tournamentWOGraceTimer = null;
+      }
+
+      function startWOGraceTimerIfNeeded(state) {
+        const graceMinutes = Number(state.meta.woGraceMinutes) || 0;
+        const shouldRun =
+          isCurrentUserReferee() && graceMinutes > 0 && state.meta.status === "active" && state.meta.roundStatus === "playing";
+        if (!shouldRun) {
+          stopWOGraceTimer();
+          return;
+        }
+        if (tournamentWOGraceTimer) return; // ya está corriendo
+        const tick = async () => {
+          try {
+            const declared = await fbAutoDeclareForfeits();
+            if (declared && declared.length > 0) {
+              declared.forEach((d) => {
+                toast(`⏱️ WO automático — mesa #${d.board}: gana ${d.winner} (${d.absent} no se presentó a tiempo)`);
+              });
+            }
+          } catch (err) {
+            // Silencioso: puede fallar si otra pestaña ya resolvió lo mismo,
+            // o si el estado cambió (ronda cerrada, torneo terminado, etc.).
+          }
+        };
+        tick();
+        tournamentWOGraceTimer = setInterval(tick, 15000);
+      }
+
+      // Pinta la tarjeta "Ronda pendiente de aprobación": a los jugadores
+      // les muestra solo un aviso, y al administrador le muestra el botón
+      // "Aprobar ronda" y, si el torneo está en modo automático, la cuenta
+      // regresiva de 30s (con botón para cancelarla).
+      function renderApprovalPanel(state, isAdmin, isPendingApproval) {
+        const panel = document.getElementById("tournament-approval-panel");
+        const statusEl = document.getElementById("tournament-approval-status");
+        const adminControls = document.getElementById("tournament-approval-admin-controls");
+        const autoBox = document.getElementById("tournament-auto-approve-box");
+        const isReferee = isCurrentUserReferee();
+        const isClosed = state.meta.roundStatus === "closed";
+
+        if (!isPendingApproval) {
+          panel.style.display = "none";
+          stopAutoApproveTimer();
+          const refPanel = document.getElementById("tournament-referee-round-controls");
+          if (refPanel) refPanel.style.display = "none";
+          return;
+        }
+
+        panel.style.display = "";
+        adminControls.style.display = isAdmin && !isClosed ? "" : "none";
+        statusEl.textContent = isClosed
+          ? "El árbitro ya cerró esta ronda: los resultados quedaron bloqueados y solo él puede corregirlos. Falta generar la ronda siguiente."
+          : isAdmin
+          ? "Ya están cargados todos los resultados de esta ronda. Revisá la tabla de posiciones y los resultados abajo; podés corregir cualquier resultado antes de aprobar."
+          : "Ya terminaron todas las partidas de esta ronda. Falta que el administrador la revise y apruebe para que se genere la ronda siguiente.";
+
+        // Controles exclusivos del árbitro: "Cerrar ronda" (bloquea
+        // resultados para todos menos él) y, una vez cerrada, "Generar ronda
+        // siguiente". Son un camino alternativo al botón de arriba (que
+        // sigue siendo el flujo de un solo paso para el admin del torneo).
+        const refPanel = document.getElementById("tournament-referee-round-controls");
+        if (refPanel) {
+          refPanel.style.display = isReferee ? "" : "none";
+          const closeBtn = document.getElementById("tournament-close-round-btn");
+          const genBtn = document.getElementById("tournament-generate-round-btn");
+          if (closeBtn) closeBtn.style.display = isClosed ? "none" : "";
+          if (genBtn) genBtn.style.display = isClosed ? "" : "none";
+
+          // Selector de BYE manual: solo tiene sentido cuando la ronda ya
+          // está cerrada (a un paso de "Generar ronda siguiente") y la
+          // cantidad de jugadores activos es impar, así que va a haber un
+          // BYE de todos modos. Si el árbitro deja "Automático", se
+          // mantiene el criterio de siempre (menor puntaje, sin bye previo).
+          const byeBox = document.getElementById("tournament-manual-bye-box");
+          const byeSelect = document.getElementById("tournament-manual-bye-select");
+          if (byeBox && byeSelect) {
+            const activePlayers = state.players.filter((p) => (p.status || "active") === "active");
+            const needsBye = isClosed && isReferee && activePlayers.length % 2 === 1;
+            byeBox.style.display = needsBye ? "" : "none";
+            if (needsBye) {
+              const ranked = rankPlayers_(activePlayers, state.pairings);
+              const previousValue = byeSelect.value;
+              byeSelect.innerHTML =
+                `<option value="">Automático (por defecto)</option>` +
+                ranked
+                  .map((p) => `<option value="${p.id}">${p.name} — ${p.points} pts${p.byes ? " · ya tuvo BYE" : ""}</option>`)
+                  .join("");
+              if (ranked.some((p) => p.id === previousValue)) byeSelect.value = previousValue;
+            }
+          }
+        }
+
+        const isAuto = state.meta.roundApprovalMode === "auto" && !state.meta.autoApprovalCancelled;
+        if (!isAdmin || !isAuto || isClosed) {
+          autoBox.style.display = "none";
+          stopAutoApproveTimer();
+          return;
+        }
+
+        autoBox.style.display = "";
+        if (tournamentAutoApproveTimer) return; // ya está corriendo, no hace falta arrancar otro
+
+        const countdownEl = document.getElementById("tournament-auto-approve-countdown");
+        const tick = async () => {
+          const st = lastTournamentState;
+          if (!st) return;
+          const m = st.meta;
+          const stillAuto =
+            m.status === "active" && m.roundStatus === "pending_approval" && m.roundApprovalMode === "auto" && !m.autoApprovalCancelled;
+          if (!stillAuto) {
+            stopAutoApproveTimer();
+            renderTournamentState(st); // refresca la tarjeta (por ej. si ya se aprobó o se canceló desde otra pestaña)
+            return;
+          }
+          const deadline = (m.pendingApprovalAt || Date.now()) + 30000;
+          const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+          countdownEl.textContent = `⏱️ Se va a aprobar sola en ${remaining}s...`;
+          if (remaining <= 0) {
+            stopAutoApproveTimer();
+            try {
+              await fbApproveRound();
+              toast("✅ Ronda aprobada automáticamente: se generó la ronda siguiente.");
+            } catch (err) {
+              // Si ya se aprobó desde otra pestaña/dispositivo (por ejemplo,
+              // el administrador tiene el torneo abierto en dos lugares),
+              // el segundo intento falla en silencio: no es un error real.
+              if (!/pendiente de aprobación/.test(err.message)) {
+                toast("❌ No se pudo aprobar la ronda automáticamente: " + err.message);
+              }
+            }
+          }
+        };
+        tick();
+        tournamentAutoApproveTimer = setInterval(tick, 500);
       }
 
       function renderTournamentState(state) {
@@ -4223,34 +5413,43 @@
         if (!currentUser) {
           setupBox.style.display = "none";
           activeBox.style.display = "none";
+          stopWOGraceTimer();
           return;
         }
 
         if (!state || (state.meta.status !== "active" && state.meta.status !== "finished")) {
           setupBox.style.display = isCurrentUserAdmin(state) ? "" : "none";
           activeBox.style.display = "none";
+          stopWOGraceTimer();
           return;
         }
 
         setupBox.style.display = "none";
         activeBox.style.display = "";
+        startWOGraceTimerIfNeeded(state);
 
         const isAdmin = isCurrentUserAdmin(state);
         const isFinished = state.meta.status === "finished";
+        const isPendingApproval =
+          !isFinished && (state.meta.roundStatus === "pending_approval" || state.meta.roundStatus === "closed");
         const roundsNote = state.meta.totalRounds ? ` de ${state.meta.totalRounds}` : "";
-
-        const timeControlText = formatTimeControl(state.meta.timeControlMinutes, state.meta.timeControlIncrement);
 
         document.getElementById("tournament-title-display").textContent = "🏆 " + state.meta.name;
         document.getElementById("tournament-round-display").textContent = isFinished
-          ? `Torneo finalizado — ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores · ⏱️ ${timeControlText}`
-          : `Ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores · ⏱️ ${timeControlText}`;
+          ? `Torneo finalizado — ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores`
+          : isPendingApproval
+          ? `Ronda ${state.meta.round}${roundsNote} — ${
+              state.meta.roundStatus === "closed" ? "🔒 Cerrada, falta generar la siguiente" : "⏳ Pendiente de aprobación"
+            } — ${state.players.length} jugadores`
+          : `Ronda ${state.meta.round}${roundsNote} — ${state.players.length} jugadores`;
 
-        document.getElementById("tournament-admin-controls").style.display = isAdmin ? "flex" : "none";
-        document.getElementById("tournament-next-round-btn").style.display = isFinished ? "none" : "";
+        document.getElementById("tournament-admin-panel").style.display = isAdmin ? "" : "none";
+        document.getElementById("tournament-next-round-btn").style.display = !isFinished && state.meta.round === 0 ? "" : "none";
         document.getElementById("tournament-finish-btn").style.display = isFinished ? "none" : "";
         document.getElementById("tournament-reopen-btn").style.display = isFinished ? "" : "none";
         if (!isAdmin) document.getElementById("tournament-settings-panel").style.display = "none";
+
+        renderApprovalPanel(state, isAdmin, isPendingApproval);
 
         const bannerEl = document.getElementById("tournament-champion-banner");
         if (isFinished) {
@@ -4268,6 +5467,7 @@
         }
 
         const myEmail = currentUser.email;
+        const isReferee = isCurrentUserReferee();
         const currentRoundPairings = state.pairings.filter((p) => p.round === state.meta.round);
         const listEl = document.getElementById("tournament-pairings-list");
         listEl.innerHTML = "";
@@ -4275,24 +5475,82 @@
           .sort((a, b) => a.board - b.board)
           .forEach((p) => {
             const row = document.createElement("div");
-            row.className = "pairing-row";
+            row.className = "pairing-card";
             if (p.blackId === "") {
               row.innerHTML = `
-                <div class="pairing-board">#${p.board}</div>
-                <div class="pairing-names">${p.whiteName}</div>
-                <div class="pairing-bye">Descansa esta ronda (bye, +1 punto)</div>
+                <div class="pairing-card-header">
+                  <div class="pairing-card-board">Mesa ${p.board}</div>
+                  <span class="pairing-status pairing-status-bye">⭐ Punto automático</span>
+                </div>
+                <div class="pairing-card-names">
+                  <span class="pairing-side pairing-side-white">⚪ ${p.whiteName}</span>
+                  <span class="vs">—</span>
+                  <span class="pairing-side-empty">Libre</span>
+                </div>
+                <div class="pairing-card-detail">Descansa esta ronda (bye, +1 punto)</div>
               `;
               listEl.appendChild(row);
               return;
             }
             const game = (state.games || []).find((g) => g.round === p.round && g.board === p.board);
-            const gameStatusText = !game
-              ? ""
-              : game.status === "finished"
-              ? "Partida terminada"
-              : game.lastMoveSan
-              ? "En juego · última jugada: " + game.lastMoveSan
-              : "Sin empezar";
+            const bothJoined = !game || !game.clock || ((game.joined || {}).w && (game.joined || {}).b);
+            const graceMinutes = Number(state.meta.woGraceMinutes) || 0;
+            const joinedInfo = (game && game.joined) || { w: false, b: false };
+            const onlyOneJoined = game && game.status === "ongoing" && joinedInfo.w !== joinedInfo.b;
+            const woEtaText =
+              graceMinutes > 0 && onlyOneJoined && game.startedAt
+                ? (() => {
+                    const remainingMs = game.startedAt + graceMinutes * 60000 - Date.now();
+                    const absentName = joinedInfo.w ? p.blackName : p.whiteName;
+                    return remainingMs > 0
+                      ? `⏱️ Esperando a ${absentName} — WO automático en ${Math.ceil(remainingMs / 60000)} min`
+                      : `⏱️ Tiempo de espera reglamentario cumplido para ${absentName}`;
+                  })()
+                : "";
+            // Detalle extra debajo del badge de estado: solo lo que no está
+            // ya dicho por el badge (última jugada, cuenta regresiva de WO).
+            // Evita repetir "Finalizada" / "Esperando jugadores" dos veces.
+            const gameStatusText =
+              game && game.status !== "finished" && game.status !== "suspended" && woEtaText
+                ? woEtaText
+                : game && game.status !== "finished" && game.status !== "suspended" && game.lastMoveSan
+                ? "Última jugada: " + game.lastMoveSan
+                : "";
+            // Estado de la mesa: una etiqueta corta y clara, para poder
+            // barrer la lista de un vistazo sin leer cada fila entera.
+            // Cuando hay resultado cargado pero la ronda todavía está
+            // "pending_approval" (y no está cerrada), lo marcamos como
+            // pendiente de confirmar en vez de finalizado directamente.
+            let statusCls, statusText;
+            if (p.result) {
+              if (state.meta.roundStatus === "pending_approval" && !p.locked) {
+                statusCls = "pending";
+                statusText = "🟣 Resultado pendiente de confirmar";
+              } else if (p.result === "wo-black" || p.result === "wo-white") {
+                statusCls = "wo";
+                statusText = "⚫ Incomparecencia";
+              } else if (p.result === "1/2-1/2") {
+                statusCls = "draw";
+                statusText = "🔵 Tablas acordadas";
+              } else {
+                statusCls = "finished";
+                statusText = "⚪ Finalizada";
+              }
+              if (p.locked) statusText += " 🔒";
+            } else if (game && game.status === "suspended") {
+              statusCls = "suspended";
+              statusText = "⏸️ Suspendida";
+            } else if (game && game.clock && !bothJoined) {
+              statusCls = "waiting";
+              statusText = "🟡 Esperando jugadores";
+            } else {
+              statusCls = "playing";
+              statusText = "🟢 En juego";
+            }
+            const clockHtml =
+              game && game.clock
+                ? `<div class="pairing-card-clock">⏱️ ${formatTime(game.clock.w)} — ${formatTime(game.clock.b)}</div>`
+                : "";
             const isMyGame =
               (p.whiteEmail && p.whiteEmail.toLowerCase() === myEmail) || (p.blackEmail && p.blackEmail.toLowerCase() === myEmail);
             const canPlay = isAdmin || isMyGame;
@@ -4301,7 +5559,17 @@
               ["1/2-1/2", "½-½"],
               ["0-1", "0-1"],
             ];
-            const btnsHtml = isAdmin
+            // Declarar W.O. (incomparecencia) es una acción exclusiva del
+            // árbitro: solo a él se le muestran estos dos botones extra.
+            if (isReferee) {
+              opts.push(["wo-black", "WO Blancas"]);
+              opts.push(["wo-white", "WO Negras"]);
+            }
+            // Una ronda ya cerrada (ver fbCloseRound) queda bloqueada para
+            // todos menos el árbitro: el admin y los jugadores ya solo ven
+            // el resultado (con un candado) en vez de poder tocarlo.
+            const canEditResult = (isAdmin || isReferee) && !(p.locked && !isReferee);
+            const btnsHtml = canEditResult
               ? opts
                   .map(
                     ([val, label]) =>
@@ -4309,21 +5577,38 @@
                   )
                   .join("")
               : p.result
-              ? `<span class="muted">${resultLabel(p.result)}</span>`
+              ? `<span class="muted">${resultLabel(p.result)}${p.locked ? " 🔒" : ""}</span>`
               : "";
-            const playBtnHtml = canPlay
-              ? `<button class="btn" data-play-round="${p.round}" data-play-board="${p.board}" data-white="${p.whiteName}" data-black="${p.blackName}" data-white-email="${p.whiteEmail || ""}" data-black-email="${p.blackEmail || ""}">▶️ Jugar</button>`
-              : "";
+            // Cualquiera puede entrar a mirar una partida del torneo, esté o
+            // no registrado (no hace falta ser jugador ni admin): si no le
+            // toca jugar esa partida, entra como espectador (ver
+            // enterTournamentMatch / tournamentMyColor).
+            const playBtnHtml = `<button class="btn" data-play-round="${p.round}" data-play-board="${p.board}" data-white="${p.whiteName}" data-black="${p.blackName}" data-white-email="${p.whiteEmail || ""}" data-black-email="${p.blackEmail || ""}">${canPlay ? "▶️ Jugar" : "👁️ Ver"}</button>`;
+            // Suspender/reanudar una partida es exclusivo del árbitro, y solo
+            // tiene sentido mientras la partida sigue en curso.
+            const suspendBtnHtml =
+              isReferee && game && game.status !== "finished"
+                ? `<button class="btn" data-suspend-round="${p.round}" data-suspend-board="${p.board}" data-suspend-action="${
+                    game.status === "suspended" ? "resume" : "suspend"
+                  }">${game.status === "suspended" ? "▶️ Reanudar" : "⏸️ Suspender"}</button>`
+                : "";
             row.innerHTML = `
-              <div class="pairing-board">#${p.board}</div>
-              <div class="pairing-names">
-                <span class="pairing-color-tag" title="Juega con Blancas">♔ ${p.whiteName}</span>
-                <span class="vs">vs</span>
-                <span class="pairing-color-tag pairing-color-tag-black" title="Juega con Negras">♚ ${p.blackName}</span>
-                <div class="mini-diagram-caption" style="margin:2px 0 0;text-align:left">${gameStatusText}</div>
+              <div class="pairing-card-header">
+                <div class="pairing-card-board">Mesa ${p.board}</div>
+                <span class="pairing-status pairing-status-${statusCls}">${statusText}</span>
               </div>
-              ${playBtnHtml}
-              <div class="pairing-result-btns">${btnsHtml}</div>
+              <div class="pairing-card-names">
+                <span class="pairing-side pairing-side-white">⚪ ${p.whiteName}</span>
+                <span class="vs">vs</span>
+                <span class="pairing-side pairing-side-black">${p.blackName} ⚫</span>
+              </div>
+              ${clockHtml}
+              ${gameStatusText ? `<div class="pairing-card-detail">${gameStatusText}</div>` : ""}
+              <div class="pairing-card-actions">
+                ${playBtnHtml}
+                ${suspendBtnHtml}
+                <div class="pairing-result-btns">${btnsHtml}</div>
+              </div>
             `;
             listEl.appendChild(row);
           });
@@ -4346,11 +5631,18 @@
             if (tournamentBusy) return;
             tournamentBusy = true;
             try {
-              assertAdmin();
-              const prevRound = state.meta.round;
-              const newState = await fbSubmitResult(btn.dataset.round, btn.dataset.board, btn.dataset.result);
-              if (newState.meta.round > prevRound) {
-                toast("🆕 Se generó automáticamente la ronda " + newState.meta.round);
+              if (!isAdmin && !isCurrentUserReferee()) throw new Error("No tenés permiso para cargar resultados");
+              const result = btn.dataset.result;
+              if ((result === "wo-black" || result === "wo-white") && !confirm("¿Confirmás declarar esta partida como W.O. (incomparecencia)?")) {
+                tournamentBusy = false;
+                return;
+              }
+              const wasPending = state.meta.roundStatus === "pending_approval";
+              const newState = await fbSubmitResult(btn.dataset.round, btn.dataset.board, result);
+              if (!wasPending && newState.meta.roundStatus === "pending_approval") {
+                toast("✅ Ya están todos los resultados de la ronda. Revisá y aprobá la siguiente ronda.");
+              } else if (!wasPending && newState.meta.status === "finished") {
+                toast("🏁 Se jugaron todas las rondas: el torneo terminó.");
               }
             } catch (err) {
               toast("❌ No se pudo cargar el resultado: " + err.message);
@@ -4360,148 +5652,358 @@
           });
         });
 
+        listEl.querySelectorAll("button[data-suspend-round]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            if (tournamentBusy) return;
+            tournamentBusy = true;
+            try {
+              const suspend = btn.dataset.suspendAction === "suspend";
+              await fbSetGameSuspended(btn.dataset.suspendRound, btn.dataset.suspendBoard, suspend);
+              toast(suspend ? "⏸️ Partida suspendida" : "▶️ Partida reanudada");
+            } catch (err) {
+              toast("❌ " + err.message);
+            } finally {
+              tournamentBusy = false;
+            }
+          });
+        });
+
         const standingsEl = document.getElementById("tournament-standings-list");
         const ranked2 = rankPlayers_(state.players, state.pairings);
-        const topPoints = ranked2.length ? ranked2[0].points : null;
-        const topBuchholz = ranked2.length ? ranked2[0]._buchholz : null;
-        const topSB = ranked2.length ? ranked2[0]._sonnebornBerger : null;
         let rows = ranked2
-          .map((p, i) => {
-            const isLeader =
-              ranked2.length > 0 && p.points === topPoints && p._buchholz === topBuchholz && p._sonnebornBerger === topSB;
-            return `
-            <tr class="${isLeader ? "leader-row" : ""}">
-              <td>${i + 1}${isLeader ? ' <span title="Líder del torneo">👑</span>' : ""}</td>
+          .map(
+            (p, i) => `
+            <tr>
+              <td>${i + 1}</td>
               <td>${p.name}</td>
               <td>${p.points}</td>
               <td>${p._buchholz}</td>
-              <td>${p._sonnebornBerger}</td>
               <td>${p._record.w}-${p._record.d}-${p._record.l}</td>
               <td>${p.played.length}</td>
-            </tr>`;
-          })
+              <td>${playerStatusLabel_(p.status)}</td>
+            </tr>`
+          )
           .join("");
         standingsEl.innerHTML = `
           <table class="standings-table">
-            <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Buchholz</th><th>Sonneborn-Berger</th><th>V-E-D</th><th>Partidas</th></tr></thead>
+            <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Buchholz</th><th>V-E-D</th><th>Partidas</th><th>Estado</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           <p class="muted" style="font-size: 12px; margin-top: 8px">
-            👑 Líder actual del torneo. Buchholz = suma de puntos de los rivales que enfrentó cada jugador (1er desempate).
-            Sonneborn-Berger = suma de los puntos de cada rival ponderados por el resultado obtenido contra él (2do desempate).
-            V-E-D = victorias-empates-derrotas (el bye cuenta como victoria).
+            Buchholz = suma de puntos de los rivales que enfrentó cada jugador (desempate). V-E-D = victorias-empates-derrotas (el bye cuenta como victoria).
           </p>
         `;
+
+        // Herramientas exclusivas del árbitro sobre emparejamientos y
+        // posiciones: recalcular, imprimir e exportar a PDF (ver
+        // fbRecalculatePositions, printCurrentRoundPairings y
+        // exportStandingsPDF más arriba).
+        const refereePanelEl = document.getElementById("tournament-referee-panel");
+        if (refereePanelEl) refereePanelEl.style.display = isReferee ? "" : "none";
+        const refereeToolsEl = document.getElementById("tournament-referee-tools");
+        if (refereeToolsEl) refereeToolsEl.style.display = isReferee ? "flex" : "none";
+
+        renderPlayersPanel(state, isAdmin);
       }
 
-      // Arma y descarga un CSV (se abre directamente en Excel/Google Sheets)
-      // con la tabla de posiciones y el historial completo de emparejamientos
-      // y resultados del torneo.
-      function exportTournamentExcel(state) {
-        if (!state || !state.meta || state.meta.status === "setup") {
-          toast("❌ Todavía no hay un torneo activo para exportar");
-          return;
-        }
-        const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
-        const lines = [];
-        lines.push([esc("Torneo"), esc(state.meta.name)].join(","));
-        lines.push([esc("Ronda actual"), esc(state.meta.round)].join(","));
-        lines.push([esc("Tiempo de juego"), esc(formatTimeControl(state.meta.timeControlMinutes, state.meta.timeControlIncrement))].join(","));
-        lines.push("");
-
-        lines.push([esc("Tabla de posiciones")].join(","));
-        lines.push([esc("#"), esc("Jugador"), esc("Puntos"), esc("Buchholz"), esc("Sonneborn-Berger"), esc("V"), esc("E"), esc("D"), esc("Partidas")].join(","));
-        rankPlayers_(state.players, state.pairings).forEach((p, i) => {
-          lines.push([esc(i + 1), esc(p.name), esc(p.points), esc(p._buchholz), esc(p._sonnebornBerger), esc(p._record.w), esc(p._record.d), esc(p._record.l), esc(p.played.length)].join(","));
+      // =========================
+      // PANTALLA PÚBLICA DEL TORNEO
+      // Vista de solo lectura pensada para proyectarse en un TV/proyector
+      // en el salón: nombre del torneo, ronda actual, clasificación en
+      // vivo, mesas activas, resultados recientes y próxima ronda. No
+      // requiere iniciar sesión (usa el mismo estado en tiempo real que ya
+      // llega por subscribeTournament) y no muestra ningún control de
+      // administración.
+      // =========================
+      function escapePublicScreenHtml_(text) {
+        return String(text == null ? "" : text).replace(/[&<>"']/g, (ch) => {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
         });
-        lines.push("");
-
-        lines.push([esc("Emparejamientos y resultados")].join(","));
-        lines.push([esc("Ronda"), esc("Mesa"), esc("Blancas"), esc("Negras"), esc("Resultado")].join(","));
-        state.pairings
-          .slice()
-          .sort((a, b) => (a.round !== b.round ? a.round - b.round : a.board - b.board))
-          .forEach((p) => {
-            lines.push([esc(p.round), esc(p.board), esc(p.whiteName), esc(p.blackId === "" ? "—" : p.blackName), esc(p.blackId === "" ? "BYE (+1)" : resultLabel(p.result))].join(","));
-          });
-
-        const csv = "\uFEFF" + lines.join("\r\n");
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = (state.meta.name || "torneo").replace(/[^\w\-]+/g, "_") + "_resultados.csv";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
       }
 
-      // Abre el diálogo de impresión del navegador con una hoja lista para
-      // guardar como PDF (el usuario elige "Guardar como PDF" en el diálogo
-      // de impresión), con la tabla de posiciones y los emparejamientos.
-      function exportTournamentPDF(state) {
-        if (!state || !state.meta || state.meta.status === "setup") {
-          toast("❌ Todavía no hay un torneo activo para exportar");
+      function resultLabelForPairing_(pairing) {
+        if (!pairing.result) return "";
+        if (pairing.blackId === "") return "BYE";
+        switch (pairing.result) {
+          case "1-0":
+            return "1 - 0";
+          case "0-1":
+            return "0 - 1";
+          case "1/2-1/2":
+            return "½ - ½";
+          case "wo-black":
+            return "1 - 0 (WO)";
+          case "wo-white":
+            return "0 - 1 (WO)";
+          default:
+            return pairing.result;
+        }
+      }
+
+      function renderPublicScreen(state) {
+        const emptyEl = document.getElementById("public-screen-empty");
+        const contentEl = document.getElementById("public-screen-content");
+        if (!emptyEl || !contentEl) return;
+
+        const hasTournament = !!(state && (state.meta.status === "active" || state.meta.status === "finished"));
+        emptyEl.style.display = hasTournament ? "none" : "";
+        contentEl.style.display = hasTournament ? "" : "none";
+        if (!hasTournament) return;
+
+        const isFinished = state.meta.status === "finished";
+        const roundsNote = state.meta.totalRounds ? ` de ${state.meta.totalRounds}` : "";
+
+        document.getElementById("public-screen-name").textContent = state.meta.name || "Torneo";
+        document.getElementById("public-screen-round").textContent = isFinished
+          ? `🏁 Torneo finalizado — Ronda ${state.meta.round}${roundsNote}`
+          : `Ronda ${state.meta.round}${roundsNote}`;
+
+        // Clasificación en vivo (misma lógica de puntos/Buchholz que el
+        // resto de la app: ver rankPlayers_).
+        const ranked = rankPlayers_(state.players, state.pairings);
+        const standingsEl = document.getElementById("public-screen-standings");
+        if (!ranked.length) {
+          standingsEl.innerHTML = '<p class="public-screen-empty-note">Todavía no hay jugadores.</p>';
+        } else {
+          const rows = ranked
+            .map((p, i) => {
+              const rec = p._record || { w: 0, d: 0, l: 0 };
+              return `
+                <tr>
+                  <td class="public-screen-rank">${i + 1}</td>
+                  <td>${escapePublicScreenHtml_(p.name)}</td>
+                  <td>${p.points}</td>
+                  <td>${p._buchholz}</td>
+                  <td>${rec.w}/${rec.d}/${rec.l}</td>
+                </tr>`;
+            })
+            .join("");
+          standingsEl.innerHTML = `
+            <table class="public-screen-table">
+              <thead>
+                <tr><th>#</th><th>Jugador</th><th>Pts</th><th>BH</th><th>V/E/D</th></tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>`;
+        }
+
+        // Mesas activas: emparejamientos de la ronda actual que todavía no
+        // tienen resultado cargado (no incluye byes, que quedan resueltos
+        // apenas se genera la ronda).
+        const currentRoundPairings = state.pairings.filter((p) => p.round === state.meta.round);
+        const activePairings = currentRoundPairings.filter((p) => p.blackId !== "" && !p.result).sort((a, b) => a.board - b.board);
+        const activeEl = document.getElementById("public-screen-active-tables");
+        if (!activePairings.length) {
+          activeEl.innerHTML = '<p class="public-screen-empty-note">No hay mesas en juego en este momento.</p>';
+        } else {
+          activeEl.innerHTML = activePairings
+            .map(
+              (p) => `
+                <div class="public-screen-active-row">
+                  <span class="public-screen-board-badge">Mesa ${p.board}</span>
+                  <span class="public-screen-vs">${escapePublicScreenHtml_(p.whiteName)} vs ${escapePublicScreenHtml_(p.blackName)}</span>
+                </div>`
+            )
+            .join("");
+        }
+
+        // Resultados recientes: partidas con resultado cargado, empezando
+        // por la ronda actual y, si faltan para completar la lista, las de
+        // la ronda anterior.
+        const recentEl = document.getElementById("public-screen-recent-results");
+        const finishedCurrent = currentRoundPairings.filter((p) => p.result).sort((a, b) => a.board - b.board);
+        let recentResults = finishedCurrent.slice();
+        if (recentResults.length < 8 && state.meta.round > 1) {
+          const prevRoundFinished = state.pairings
+            .filter((p) => p.round === state.meta.round - 1 && p.result)
+            .sort((a, b) => a.board - b.board);
+          recentResults = recentResults.concat(prevRoundFinished);
+        }
+        recentResults = recentResults.slice(0, 12);
+        if (!recentResults.length) {
+          recentEl.innerHTML = '<p class="public-screen-empty-note">Todavía no hay resultados cargados.</p>';
+        } else {
+          recentEl.innerHTML = recentResults
+            .map((p) => {
+              const opponent = p.blackId === "" ? "— (BYE)" : escapePublicScreenHtml_(p.blackName);
+              return `
+                <div class="public-screen-result-row">
+                  <span class="public-screen-board-badge">R${p.round}·M${p.board}</span>
+                  <span class="public-screen-vs">${escapePublicScreenHtml_(p.whiteName)} vs ${opponent}</span>
+                  <span class="public-screen-result-badge">${resultLabelForPairing_(p)}</span>
+                </div>`;
+            })
+            .join("");
+        }
+
+        // Próxima ronda / estado general del torneo.
+        const nextRoundEl = document.getElementById("public-screen-next-round");
+        if (isFinished) {
+          const topScore = ranked.length ? ranked[0].points : 0;
+          const topTB = ranked.length ? ranked[0]._buchholz : 0;
+          const champions = ranked.filter((p) => p.points === topScore && p._buchholz === topTB);
+          nextRoundEl.textContent =
+            champions.length > 1
+              ? "🏆 Empate en el primer puesto: " + champions.map((p) => p.name).join(", ")
+              : "🏆 Campeón: " + (champions[0] ? champions[0].name : "—");
+        } else if (state.meta.roundStatus === "pending_approval") {
+          nextRoundEl.textContent = `Ronda ${state.meta.round} terminada — esperando aprobación para pasar a la ronda ${state.meta.round + 1}`;
+        } else if (state.meta.roundStatus === "closed") {
+          nextRoundEl.textContent = `Ronda ${state.meta.round} cerrada — generando la ronda ${state.meta.round + 1}`;
+        } else if (state.meta.totalRounds && state.meta.round >= state.meta.totalRounds) {
+          nextRoundEl.textContent = "Última ronda en curso";
+        } else {
+          nextRoundEl.textContent = `Próxima ronda: ${state.meta.round + 1}${roundsNote}`;
+        }
+      }
+
+      const publicScreenFullscreenBtn = document.getElementById("public-screen-fullscreen-btn");
+      if (publicScreenFullscreenBtn) {
+        publicScreenFullscreenBtn.addEventListener("click", () => {
+          const el = document.getElementById("public-screen");
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          } else if (el && el.requestFullscreen) {
+            el.requestFullscreen();
+          }
+        });
+      }
+
+      // Panel de administración de jugadores: alta, edición (nombre/email) y
+      // baja, solo visible para el administrador. Los botones de estado
+      // (retirar/reincorporar/descalificar) son exclusivos del árbitro, así
+      // que el panel también se muestra si es él, aunque no sea el admin.
+      function renderPlayersPanel(state, isAdmin) {
+        const card = document.getElementById("tournament-players-card");
+        if (!card) return;
+        const isReferee = isCurrentUserReferee();
+        if (!isAdmin && !isReferee) {
+          card.style.display = "none";
           return;
         }
-        const esc = (v) => String(v == null ? "" : v).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-        const timeControlText = formatTimeControl(state.meta.timeControlMinutes, state.meta.timeControlIncrement);
-        const standingsRows = rankPlayers_(state.players, state.pairings)
-          .map(
-            (p, i) => `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${p.points}</td><td>${p._buchholz}</td><td>${p._sonnebornBerger}</td><td>${p._record.w}-${p._record.d}-${p._record.l}</td></tr>`
-          )
-          .join("");
-        const pairingsRows = state.pairings
-          .slice()
-          .sort((a, b) => (a.round !== b.round ? a.round - b.round : a.board - b.board))
-          .map(
-            (p) =>
-              `<tr><td>${p.round}</td><td>${p.board}</td><td>${esc(p.whiteName)}</td><td>${p.blackId === "" ? "—" : esc(p.blackName)}</td><td>${
-                p.blackId === "" ? "BYE (+1)" : esc(resultLabel(p.result))
-              }</td></tr>`
-          )
-          .join("");
-        const win = window.open("", "_blank");
-        if (!win) {
-          toast("❌ El navegador bloqueó la ventana de impresión. Habilitá los pop-ups e intentá de nuevo.");
-          return;
+        card.style.display = "";
+        const listEl = document.getElementById("tournament-players-list");
+
+        if (tournamentEditingPlayerId && !state.players.some((p) => p.id === tournamentEditingPlayerId)) {
+          tournamentEditingPlayerId = null;
         }
-        win.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8" />
-            <title>${esc(state.meta.name)} — Resultados</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-              h1 { margin-bottom: 2px; }
-              p.sub { color: #555; margin-top: 0; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
-              th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 13px; }
-              th { background: #eee; }
-              h2 { margin-top: 32px; }
-            </style>
-          </head>
-          <body>
-            <h1>🏆 ${esc(state.meta.name)}</h1>
-            <p class="sub">Ronda ${state.meta.round}${state.meta.totalRounds ? " de " + state.meta.totalRounds : ""} · ⏱️ ${timeControlText} · ${state.players.length} jugadores</p>
-            <h2>Tabla de posiciones</h2>
-            <table>
-              <thead><tr><th>#</th><th>Jugador</th><th>Puntos</th><th>Buchholz</th><th>Sonneborn-Berger</th><th>V-E-D</th></tr></thead>
-              <tbody>${standingsRows}</tbody>
-            </table>
-            <h2>Emparejamientos y resultados</h2>
-            <table>
-              <thead><tr><th>Ronda</th><th>Mesa</th><th>Blancas</th><th>Negras</th><th>Resultado</th></tr></thead>
-              <tbody>${pairingsRows}</tbody>
-            </table>
-          </body>
-          </html>
-        `);
-        win.document.close();
-        win.focus();
-        setTimeout(() => win.print(), 300);
+
+        listEl.innerHTML = state.players
+          .map((p) => {
+            if (p.id === tournamentEditingPlayerId) {
+              return `
+                <div class="pairing-row" data-player-row="${p.id}">
+                  <input type="text" class="player-edit-name" value="${p.name.replace(/"/g, "&quot;")}" style="flex:1; min-width:120px; padding:6px 8px; border-radius:8px; border:1px solid var(--surface2); background:var(--surface); color:var(--text)" />
+                  <input type="email" class="player-edit-email" value="${(p.email || "").replace(/"/g, "&quot;")}" placeholder="Email" style="flex:1; min-width:160px; padding:6px 8px; border-radius:8px; border:1px solid var(--surface2); background:var(--surface); color:var(--text)" />
+                  <button class="btn primary" data-save-player="${p.id}">Guardar</button>
+                  <button class="btn" data-cancel-edit-player="1">Cancelar</button>
+                </div>`;
+            }
+            const status = p.status || "active";
+            // Acciones de árbitro sobre el estado del jugador: retirar (solo
+            // si está activo), reincorporar (solo si está retirado, nunca si
+            // está descalificado) y descalificar (solo si no lo está ya).
+            const refereeBtns = isReferee
+              ? `
+                ${status === "active" ? `<button class="btn" data-withdraw-player="${p.id}">🚪 Retirar</button>` : ""}
+                ${status === "withdrawn" ? `<button class="btn" data-reactivate-player="${p.id}">↩️ Reincorporar</button>` : ""}
+                ${status !== "disqualified" ? `<button class="btn danger" data-disqualify-player="${p.id}">⛔ Descalificar</button>` : ""}
+              `
+              : "";
+            const adminBtns = isAdmin
+              ? `
+                <button class="btn" data-edit-player="${p.id}">✏️ Editar</button>
+                <button class="btn danger" data-delete-player="${p.id}">🗑️ Eliminar</button>
+              `
+              : "";
+            return `
+              <div class="pairing-row" data-player-row="${p.id}">
+                <div class="pairing-names">${p.name}${p.email ? ` <span class="muted" style="font-size:12px">(${p.email})</span>` : ""}
+                  <div class="mini-diagram-caption" style="margin:2px 0 0;text-align:left">${playerStatusLabel_(p.status)} · ${p.points} pts</div>
+                </div>
+                ${refereeBtns}
+                ${adminBtns}
+              </div>`;
+          })
+          .join("");
+
+        listEl.querySelectorAll("button[data-edit-player]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            tournamentEditingPlayerId = btn.dataset.editPlayer;
+            renderPlayersPanel(lastTournamentState, true);
+          });
+        });
+        listEl.querySelectorAll("button[data-cancel-edit-player]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            tournamentEditingPlayerId = null;
+            renderPlayersPanel(lastTournamentState, true);
+          });
+        });
+        listEl.querySelectorAll("button[data-save-player]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const playerId = btn.dataset.savePlayer;
+            const row = listEl.querySelector(`[data-player-row="${playerId}"]`);
+            const name = row.querySelector(".player-edit-name").value;
+            const email = row.querySelector(".player-edit-email").value;
+            try {
+              await fbEditPlayer(playerId, name, email);
+              tournamentEditingPlayerId = null;
+              toast("✓ Jugador actualizado");
+            } catch (err) {
+              toast("❌ " + err.message);
+            }
+          });
+        });
+        listEl.querySelectorAll("button[data-delete-player]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const playerId = btn.dataset.deletePlayer;
+            const player = state.players.find((p) => p.id === playerId);
+            if (!confirm(`¿Eliminar a ${player ? player.name : "este jugador"}? Se recalculará el torneo.`)) return;
+            try {
+              await fbDeletePlayer(playerId);
+              toast("✓ Jugador eliminado");
+            } catch (err) {
+              toast("❌ " + err.message);
+            }
+          });
+        });
+        listEl.querySelectorAll("button[data-withdraw-player]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const playerId = btn.dataset.withdrawPlayer;
+            const player = state.players.find((p) => p.id === playerId);
+            if (!confirm(`¿Retirar a ${player ? player.name : "este jugador"} del torneo? Conserva su historial, pero no se lo volverá a emparejar.`)) return;
+            try {
+              await fbWithdrawPlayer(playerId);
+              toast("🚪 Jugador retirado");
+            } catch (err) {
+              toast("❌ " + err.message);
+            }
+          });
+        });
+        listEl.querySelectorAll("button[data-reactivate-player]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const playerId = btn.dataset.reactivatePlayer;
+            try {
+              await fbReactivatePlayer(playerId);
+              toast("↩️ Jugador reincorporado");
+            } catch (err) {
+              toast("❌ " + err.message);
+            }
+          });
+        });
+        listEl.querySelectorAll("button[data-disqualify-player]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const playerId = btn.dataset.disqualifyPlayer;
+            const player = state.players.find((p) => p.id === playerId);
+            if (!confirm(`¿Descalificar a ${player ? player.name : "este jugador"}? Esta acción no tiene vuelta atrás.`)) return;
+            try {
+              await fbDisqualifyPlayer(playerId);
+              toast("⛔ Jugador descalificado");
+            } catch (err) {
+              toast("❌ " + err.message);
+            }
+          });
+        });
       }
 
       async function refreshTournament() {
@@ -4566,6 +6068,16 @@
         return "";
       }
 
+      // En una partida de torneo con reloj, no se deja mover hasta que
+      // entraron los dos jugadores (así ninguno pierde tiempo de reloj por
+      // no haber llegado todavía). Sin reloj esto no aplica.
+      function tournamentClockWaitingForBothPlayers() {
+        const gameRow = tournamentCurrentGameRow;
+        if (!gameRow || !gameRow.clock) return false;
+        const joined = gameRow.joined || { w: false, b: false };
+        return !(joined.w && joined.b);
+      }
+
       function updateTournamentMatchBar(gameRow) {
         if (!tournamentMatchActive || !tournamentMatchCtx) return;
         const statusEl = document.getElementById("tournament-match-status");
@@ -4584,25 +6096,24 @@
           }
           return;
         }
-        // Si hay reloj configurado y todavía no arrancó (falta que alguno
-        // de los dos jugadores entre a la partida y presione "Jugar"), se
-        // avisa en vez de mostrar el turno normal.
-        if (gameRow && gameRow.clock && !gameRow.turnStartAt) {
-          const rivalReady = myColor === "w" ? gameRow.blackReady : myColor === "b" ? gameRow.whiteReady : gameRow.whiteReady && gameRow.blackReady;
-          statusEl.textContent = !myColor
-            ? "⏳ Esperando a que ambos jugadores entren a la partida..."
-            : rivalReady
-            ? "✅ Tu rival ya está. ¡El reloj arranca ahora!"
-            : "⏳ Esperando a que tu rival presione Jugar...";
+        if (gameRow && gameRow.status === "suspended") {
+          statusEl.textContent = "⏸️ El árbitro suspendió esta partida. Esperá novedades antes de seguir jugando.";
+          document.getElementById("tournament-match-controls").style.display = "none";
           return;
         }
         const turn = game.turn();
         const turnName = turn === "w" ? tournamentMatchCtx.whiteName : tournamentMatchCtx.blackName;
-        statusEl.textContent = !myColor
-          ? `Turno de ${turnName}.`
-          : myColor === turn
-          ? `¡Tu turno! Jugás con ${myColor === "w" ? "blancas" : "negras"}.`
-          : `Turno de ${turnName}. Esperando la jugada...`;
+        if (tournamentClockWaitingForBothPlayers()) {
+          const joined = (gameRow && gameRow.joined) || { w: false, b: false };
+          const missing = !joined.w ? tournamentMatchCtx.whiteName : tournamentMatchCtx.blackName;
+          statusEl.textContent = `⏳ Esperando a que entre ${missing}. El reloj arranca recién con la primera jugada.`;
+        } else {
+          statusEl.textContent = !myColor
+            ? `Turno de ${turnName}.`
+            : myColor === turn
+            ? `¡Tu turno! Jugás con ${myColor === "w" ? "blancas" : "negras"}.`
+            : `Turno de ${turnName}. Esperando la jugada...`;
+        }
       }
 
       // Se llama automáticamente cada vez que llega una actualización en
@@ -4644,39 +6155,25 @@
         const wEl = document.getElementById("clock-w");
         const bEl = document.getElementById("clock-b");
         if (!gameRow || !gameRow.clock || !wEl || !bEl) return;
-        // Importante: el turno se calcula a partir de gameRow.fen (el
-        // estado ya confirmado en Firestore), NO del tablero local
-        // `game`. Apenas jugás una pieza, `game.turn()` cambia al
-        // instante, pero gameRow (y su turnStartAt/clock) todavía
-        // corresponden a tu propio turno hasta que syncTournamentMove()
-        // termine el viaje de ida y vuelta. Si acá se usara game.turn(),
-        // en esa ventana el tiempo que vos pensaste se le restaría por
-        // error al reloj del rival, y con un control de tiempo corto
-        // eso alcanza para reclamarle una derrota por tiempo que nunca
-        // pasó.
-        const turn = new Chess(gameRow.fen).turn();
+        const turn = game.turn();
         const finished = gameRow.status === "finished";
-        // Mientras tu propia jugada todavía se está sincronizando con
-        // Firestore, no reclames timeouts: esperá a que gameRow refleje
-        // el resultado real de esa jugada.
-        if (tournamentMatchBusy) {
-          wEl.textContent = formatTime(Math.max(0, gameRow.clock.w));
-          bEl.textContent = formatTime(Math.max(0, gameRow.clock.b));
-          return;
-        }
-        const elapsed = finished ? 0 : Math.max(0, Math.round((Date.now() - (gameRow.turnStartAt || Date.now())) / 1000));
+        const suspended = gameRow.status === "suspended";
+        const elapsed =
+          finished || suspended ? 0 : Math.max(0, Math.round((Date.now() - (gameRow.turnStartAt || Date.now())) / 1000));
         const remaining = {
-          w: gameRow.clock.w - (turn === "w" && !finished ? elapsed : 0),
-          b: gameRow.clock.b - (turn === "b" && !finished ? elapsed : 0),
+          w: gameRow.clock.w - (turn === "w" && !finished && !suspended ? elapsed : 0),
+          b: gameRow.clock.b - (turn === "b" && !finished && !suspended ? elapsed : 0),
         };
         const wSecs = Math.max(0, remaining.w);
         const bSecs = Math.max(0, remaining.b);
-        wEl.textContent = formatTime(wSecs);
-        bEl.textContent = formatTime(bSecs);
-        wEl.classList.toggle("active", turn === "w" && !finished);
-        bEl.classList.toggle("active", turn === "b" && !finished);
+        const wTime = wEl.querySelector(".clock-time");
+        const bTime = bEl.querySelector(".clock-time");
+        (wTime || wEl).textContent = formatTime(wSecs);
+        (bTime || bEl).textContent = formatTime(bSecs);
+        wEl.classList.toggle("active", turn === "w" && !finished && !suspended);
+        bEl.classList.toggle("active", turn === "b" && !finished && !suspended);
 
-        if (!finished && ((turn === "w" && remaining.w <= 0) || (turn === "b" && remaining.b <= 0))) {
+        if (!finished && !suspended && ((turn === "w" && remaining.w <= 0) || (turn === "b" && remaining.b <= 0))) {
           claimTournamentTimeout(turn);
         }
       }
@@ -4728,6 +6225,11 @@
           tournamentMatchCtx = { round, board, whiteName, blackName, whiteEmail: whiteEmail || "", blackEmail: blackEmail || "" };
           tournamentMatchActive = true;
           clearOpponentMoveHighlight();
+          // Por si quedó corriendo el reloj local de una partida normal sin
+          // terminar: paramos ese timer para que no siga descontando tiempo
+          // ni pisando el reloj del torneo (ver updateClockDisplay/addIncrement).
+          clearInterval(clockTimer);
+          clockTimer = null;
 
           botEnabled = false;
           gameStarted = true;
@@ -4741,6 +6243,13 @@
           document.getElementById("tournament-match-bar").style.display = "";
           document.getElementById("tournament-match-title").textContent =
             `🏆 Torneo · Ronda ${round}, tablero #${board}: ${whiteName} vs ${blackName}`;
+          // Nombres de los jugadores sobre cada lado del reloj, para que se
+          // vea claramente quién juega con blancas y quién con negras
+          // directamente en el tablero (no solo en el título de arriba).
+          const clockWNameEl = document.getElementById("clock-w-name");
+          const clockBNameEl = document.getElementById("clock-b-name");
+          if (clockWNameEl) clockWNameEl.textContent = whiteName || "";
+          if (clockBNameEl) clockBNameEl.textContent = blackName || "";
           // Se ocultan los botones que no aplican a una partida de torneo
           // (iniciar partida nueva, deshacer, rendirse "normal" y copiar
           // partida, ya que el torneo tiene sus propios botones de
@@ -4782,15 +6291,18 @@
           } else {
             spectatorNote.style.display = "none";
             controlsEl.style.display = "flex";
+            if (gameRow.clock) {
+              // Avisa que este jugador ya está presente; hasta que los dos
+              // no entraron a la partida no se puede mover (ver
+              // tournamentClockWaitingForBothPlayers), así ninguno pierde
+              // tiempo de reloj por no haber llegado todavía.
+              fbMarkJoined(round, board, myColor).catch(() => {});
+            }
           }
 
           render();
           updateTournamentMatchBar(gameRow);
           requestAnimationFrame(sizeFullscreenBoard);
-
-          if (myColor && gameRow.status !== "finished") {
-            fbMarkPlayerReady(round, board, myColor).catch(() => {});
-          }
         } catch (err) {
           toast("❌ No se pudo abrir la partida: " + err.message);
         }
@@ -4812,6 +6324,13 @@
         });
         const clockEl = document.querySelector("#page-jugar .clock");
         if (clockEl) clockEl.style.display = "";
+        // Se borran los nombres de jugador que quedaron pegados al reloj
+        // durante la partida de torneo, para que no aparezcan en partidas
+        // normales contra la IA o pasar y jugar.
+        const clockWNameEl = document.getElementById("clock-w-name");
+        const clockBNameEl = document.getElementById("clock-b-name");
+        if (clockWNameEl) clockWNameEl.textContent = "";
+        if (clockBNameEl) clockBNameEl.textContent = "";
 
         ["modo-educativo-panel", "ayuda-educativa-panel", "tutor-card"].forEach((id) => {
           const el = document.getElementById(id);
@@ -4859,8 +6378,8 @@
             tournamentResultShown = true;
             showTournamentResult(gameOverResult);
           }
-          if (gameOverResult && state.meta.round > tournamentMatchCtx.round) {
-            toast("🆕 Se generó automáticamente la ronda " + state.meta.round);
+          if (gameOverResult && state.meta.roundStatus === "pending_approval") {
+            toast("✅ Ya están todos los resultados de esta ronda, falta que el administrador la apruebe.");
           }
           updateTournamentMatchBar(gameRow);
         } catch (err) {
@@ -4894,8 +6413,8 @@
           }
           updateTournamentMatchBar(gameRow);
           toast(
-            state.meta.round > tournamentMatchCtx.round
-              ? "🏳️ Te rendiste. Resultado cargado. 🆕 Se generó la ronda " + state.meta.round
+            state.meta.roundStatus === "pending_approval"
+              ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador apruebe la ronda."
               : "🏳️ Te rendiste. Resultado cargado."
           );
         } catch (err) {
@@ -4926,8 +6445,8 @@
           }
           updateTournamentMatchBar(gameRow);
           toast(
-            state.meta.round > tournamentMatchCtx.round
-              ? "🤝 Tablas cargadas. 🆕 Se generó la ronda " + state.meta.round
+            state.meta.roundStatus === "pending_approval"
+              ? "🤝 Tablas cargadas. Falta que el administrador apruebe la ronda."
               : "🤝 Tablas cargadas."
           );
         } catch (err) {
@@ -4997,8 +6516,10 @@
           minutes: getRawMinutesFromSelect("tournament-time-mode", "tournament-custom-minutes"),
           increment: getIncrementFromSelect("tournament-increment", "tournament-custom-increment"),
         };
+        const roundApprovalMode = document.getElementById("tournament-round-mode").value === "auto" ? "auto" : "manual";
+        const woGraceMinutes = document.getElementById("tournament-wo-grace-input").value.trim();
         try {
-          await fbCreateTournament(name, playerEntries, totalRounds, undefined, timeControl);
+          await fbCreateTournament(name, playerEntries, totalRounds, undefined, timeControl, roundApprovalMode, woGraceMinutes);
           await fbGenerateRound();
         } catch (err) {
           toast("❌ No se pudo crear el torneo: " + err.message);
@@ -5049,6 +6570,8 @@
           state.meta.timeControlIncrement || 0,
           ["0", "2", "5", "10", "30"]
         );
+        document.getElementById("tournament-settings-round-mode").value = state.meta.roundApprovalMode === "auto" ? "auto" : "manual";
+        document.getElementById("tournament-settings-wo-grace-input").value = state.meta.woGraceMinutes || "";
         document.getElementById("tournament-settings-panel").style.display = "";
       });
 
@@ -5070,9 +6593,90 @@
             minutes: getRawMinutesFromSelect("tournament-settings-time-mode", "tournament-settings-custom-minutes"),
             increment: getIncrementFromSelect("tournament-settings-increment", "tournament-settings-custom-increment"),
           };
-          await fbUpdateSettings(name, totalRounds, [TOURNAMENT_ADMIN_EMAIL], timeControl);
+          const roundApprovalMode = document.getElementById("tournament-settings-round-mode").value === "auto" ? "auto" : "manual";
+          const woGraceRaw = document.getElementById("tournament-settings-wo-grace-input").value.trim();
+          if (woGraceRaw && (!/^\d+$/.test(woGraceRaw) || Number(woGraceRaw) < 0)) {
+            toast("❌ El tiempo de espera tiene que ser un número entero de minutos (o dejalo vacío)");
+            return;
+          }
+          await fbUpdateSettings(name, totalRounds, [TOURNAMENT_ADMIN_EMAIL], timeControl, roundApprovalMode, woGraceRaw);
           document.getElementById("tournament-settings-panel").style.display = "none";
           toast("✓ Configuración guardada");
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("tournament-approve-round-btn").addEventListener("click", async () => {
+        try {
+          assertAdmin();
+          await fbApproveRound();
+          toast("✅ Ronda aprobada: se generó y publicó la ronda siguiente.");
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("tournament-cancel-auto-approve-btn").addEventListener("click", async () => {
+        try {
+          assertAdmin();
+          await fbCancelAutoApproval();
+          toast("✖️ Aprobación automática cancelada. Aprobá la ronda a mano cuando quieras.");
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("tournament-close-round-btn").addEventListener("click", async () => {
+        try {
+          await fbCloseRound();
+          toast("🔒 Ronda cerrada: los resultados quedaron bloqueados salvo para vos.");
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("tournament-generate-round-btn").addEventListener("click", async () => {
+        try {
+          const byeBox = document.getElementById("tournament-manual-bye-box");
+          const byeSelect = document.getElementById("tournament-manual-bye-select");
+          const forcedByeId = byeBox && byeSelect && byeBox.style.display !== "none" ? byeSelect.value : "";
+          await fbGenerateRoundFromClosed(forcedByeId || undefined);
+          toast(
+            forcedByeId
+              ? "▶️ Se generó la ronda siguiente con el BYE elegido a mano."
+              : "▶️ Se generó y publicó la ronda siguiente."
+          );
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("tournament-recalc-positions-btn").addEventListener("click", async () => {
+        if (!confirm("¿Recalcular las posiciones desde el historial de partidas? Esto corrige cualquier desincronización.")) return;
+        try {
+          await fbRecalculatePositions();
+          toast("🔄 Posiciones recalculadas desde el historial de partidas.");
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("tournament-print-pairings-btn").addEventListener("click", () => {
+        if (!lastTournamentState) return;
+        printCurrentRoundPairings(lastTournamentState);
+      });
+
+      document.getElementById("tournament-export-standings-pdf-btn").addEventListener("click", () => {
+        if (!lastTournamentState) return;
+        exportStandingsPDF(lastTournamentState);
+      });
+
+      document.getElementById("tournament-export-full-pdf-btn").addEventListener("click", () => {
+        try {
+          assertAdmin();
+          if (!lastTournamentState) return;
+          exportFullTournamentPDF(lastTournamentState);
         } catch (err) {
           toast("❌ " + err.message);
         }
@@ -5087,15 +6691,20 @@
         }
       });
 
+      document.getElementById("tournament-add-player-btn").addEventListener("click", async () => {
+        const nameInput = document.getElementById("tournament-add-player-name");
+        const emailInput = document.getElementById("tournament-add-player-email");
+        try {
+          await fbAddPlayer(nameInput.value, emailInput.value);
+          nameInput.value = "";
+          emailInput.value = "";
+          toast("✓ Jugador agregado");
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
       document.getElementById("tournament-refresh-btn").addEventListener("click", refreshTournament);
-
-      document.getElementById("tournament-export-excel-btn").addEventListener("click", () => {
-        exportTournamentExcel(lastTournamentState);
-      });
-
-      document.getElementById("tournament-export-pdf-btn").addEventListener("click", () => {
-        exportTournamentPDF(lastTournamentState);
-      });
 
       // Al entrar a la página, precargar la configuración guardada y conectar
       // (el estado de sesión de Google lo resuelve onAuthStateChanged solo).
