@@ -333,6 +333,17 @@
                       💬 Chat <span id="tournament-match-chat-unread" class="chat-unread-badge" style="display: none">0</span>
                     </button>
                     <div id="tournament-match-chat-panel" class="chat-panel" style="display: none">
+                      <div class="chat-panel-header">
+                        <span class="chat-panel-title">Chat de la mesa</span>
+                        <button
+                          class="chat-clear-btn"
+                          id="tournament-match-chat-clear-btn"
+                          type="button"
+                          title="Vaciar el chat de esta mesa"
+                        >
+                          🗑️ Vaciar
+                        </button>
+                      </div>
                       <div id="tournament-match-chat-messages" class="chat-messages"></div>
                       <p class="muted" id="tournament-match-chat-note" style="margin: 6px 0 0; font-size: 0.85em"></p>
                       <div class="chat-input-row">
@@ -343,7 +354,8 @@
                           placeholder="Escribile a tu rival…"
                           autocomplete="off"
                         />
-                        <button class="btn primary" id="tournament-match-chat-send-btn" type="button">Enviar</button>
+                        <span class="chat-input-counter" id="tournament-match-chat-counter"></span>
+                        <button class="btn primary" id="tournament-match-chat-send-btn" type="button" disabled>Enviar</button>
                       </div>
                     </div>
                   </div>

@@ -656,6 +656,25 @@
       let matchChatMessages = [];
       let matchChatPanelOpen = false;
       let matchChatUnreadCount = 0;
+
+      // Llamada de audio 1 a 1 entre los dos jugadores de la mesa (WebRTC).
+      // Se señaliza a través de Firestore (torneos/{room}/games/{round}_{board}/call/session),
+      // igual que el chat usa su propia subcolección: cada mesa tiene su
+      // propia sesión de llamada, así que no se pisa con otras mesas.
+      // No hay servidor TURN configurado (solo STUN público de Google), por
+      // lo que en redes muy restrictivas la conexión directa puede fallar;
+      // para el caso normal (dos alumnos en internet doméstico o en la
+      // misma red escolar) alcanza.
+      const RTC_ICE_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+      let callPc = null; // RTCPeerConnection activa (llamando, sonando o en curso)
+      let callLocalStream = null;
+      let callDocUnsub = null;
+      let callCandidatesUnsub = [];
+      let callState = "idle"; // idle | outgoing | incoming | active
+      let callIsMuted = false;
+      let callRound = null;
+      let callBoard = null;
+      let callPendingOffer = null; // oferta SDP del rival mientras suena una llamada entrante, hasta que se acepta o rechaza
       let tournamentTimeoutClaimBusy = false; // evita reclamar la bandera caída más de una vez a la vez
 
       function animateMoveTransition(board, anim, movedPieceEl, capturedSquareEl) {
@@ -4123,6 +4142,7 @@
         if (panelEl) panelEl.style.display = "none";
         const inputEl = document.getElementById("tournament-match-chat-input");
         if (inputEl) inputEl.value = "";
+        resetMatchChatComposer_();
       }
 
       function renderMatchChat() {
@@ -4131,6 +4151,7 @@
         const noteEl = document.getElementById("tournament-match-chat-note");
         const unreadEl = document.getElementById("tournament-match-chat-unread");
         const inputRow = document.querySelector("#tournament-match-chat-panel .chat-input-row");
+        const clearBtn = document.getElementById("tournament-match-chat-clear-btn");
         if (!wrapEl || !listEl) return;
 
         const myColor = tournamentMyColor();
@@ -4138,6 +4159,9 @@
         wrapEl.style.display = tournamentMatchActive ? "" : "none";
         if (inputRow) inputRow.style.display = canChat ? "" : "none";
         if (noteEl) noteEl.textContent = canChat ? "" : "Como espectador podés leer el chat, pero no escribir.";
+        if (clearBtn) {
+          clearBtn.style.display = canChat && matchChatMessages.length ? "" : "none";
+        }
 
         if (unreadEl) {
           if (matchChatUnreadCount > 0) {
@@ -4157,9 +4181,14 @@
               const mine = myEmail && (m.senderEmail || "").toLowerCase() === myEmail;
               const name = escapeHtml_(m.senderName || "Jugador");
               const text = escapeHtml_(m.text || "");
+              const time = m.at
+                ? new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "";
               return (
                 `<div class="chat-message${mine ? " mine" : ""}">` +
-                `<span class="chat-message-meta">${name}</span>${text}` +
+                `<span class="chat-message-meta">${name}${
+                  time ? ` <span class="chat-message-time">· ${time}</span>` : ""
+                }</span>${text}` +
                 `</div>`
               );
             })
@@ -4191,6 +4220,7 @@
         const myColor = tournamentMyColor();
         if (!myColor) return; // los espectadores pueden leer, no escribir
         inputEl.value = "";
+        resetMatchChatComposer_();
         try {
           await matchChatCollectionRef_(tournamentMatchCtx.round, tournamentMatchCtx.board).add({
             text: text.slice(0, 300),
@@ -4204,6 +4234,311 @@
           toast("❌ No se pudo enviar el mensaje: " + err.message);
         }
       }
+
+      // Deja el contador de caracteres y el botón "Enviar" en su estado
+      // inicial (vacío / deshabilitado). Se usa después de enviar un
+      // mensaje y al cerrar/cambiar de chat.
+      function resetMatchChatComposer_() {
+        const counterEl = document.getElementById("tournament-match-chat-counter");
+        if (counterEl) counterEl.textContent = "";
+        const sendBtn = document.getElementById("tournament-match-chat-send-btn");
+        if (sendBtn) sendBtn.disabled = true;
+      }
+
+      // Vacía el chat de la mesa actualmente abierta: borra todos los
+      // mensajes de la subcolección en Firestore (no solo la vista local),
+      // para que no reaparezcan al recargar o para el otro jugador.
+      // Cualquiera de los dos jugadores puede hacerlo; los espectadores no
+      // tienen el botón visible (ver canChat en renderMatchChat).
+      async function clearMatchChat() {
+        if (!tournamentMatchCtx) return;
+        if (!matchChatMessages.length) return;
+        if (!confirm("¿Vaciar el chat de esta mesa? Se borran los mensajes para los dos jugadores y no se puede deshacer.")) {
+          return;
+        }
+        const round = tournamentMatchCtx.round;
+        const board = tournamentMatchCtx.board;
+        try {
+          const snap = await matchChatCollectionRef_(round, board).get();
+          if (snap.empty) return;
+          const batch = fbDb.batch();
+          snap.docs.forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+          // No hace falta actualizar matchChatMessages a mano: el onSnapshot
+          // de subscribeMatchChat detecta el borrado y vuelve a renderizar.
+          toast("🗑️ Chat vaciado");
+        } catch (err) {
+          toast("❌ No se pudo vaciar el chat: " + err.message);
+        }
+      }
+
+      // =========================
+      // LLAMADA DE AUDIO (torneo online, WebRTC + Firestore como señalización)
+      // =========================
+      function callDocRef_(round, board) {
+        return gamesCollectionRef.doc(gameDocId_(round, board)).collection("call").doc("session");
+      }
+
+      function callCandidatesRef_(round, board, who) {
+        // who: "offerCandidates" (los que genera quien llama) o
+        // "answerCandidates" (los que genera quien atiende).
+        return callDocRef_(round, board).collection(who);
+      }
+
+      function renderCallUI() {
+        const wrapEl = document.getElementById("tournament-match-call");
+        const idleEl = document.getElementById("tournament-match-call-idle");
+        const incomingEl = document.getElementById("tournament-match-call-incoming");
+        const outgoingEl = document.getElementById("tournament-match-call-outgoing");
+        const activeEl = document.getElementById("tournament-match-call-active");
+        const noteEl = document.getElementById("tournament-match-call-note");
+        const muteBtn = document.getElementById("tournament-match-call-mute-btn");
+        if (!wrapEl) return;
+
+        const myColor = tournamentMyColor();
+        wrapEl.style.display = tournamentMatchActive && myColor ? "" : "none";
+        if (!myColor) return;
+
+        idleEl.style.display = callState === "idle" ? "" : "none";
+        incomingEl.style.display = callState === "incoming" ? "flex" : "none";
+        outgoingEl.style.display = callState === "outgoing" ? "flex" : "none";
+        activeEl.style.display = callState === "active" ? "flex" : "none";
+
+        if (muteBtn) {
+          muteBtn.textContent = callIsMuted ? "🔈 Reactivar micrófono" : "🔇 Silenciar";
+          muteBtn.classList.toggle("muted", callIsMuted);
+        }
+        if (noteEl) {
+          noteEl.textContent =
+            callState === "idle"
+              ? "Llamada de audio opcional entre vos y tu rival, no queda grabada."
+              : "";
+        }
+      }
+
+      // Limpia todo el estado local de WebRTC (peer connection, micrófono,
+      // listeners de candidatos) sin tocar el documento de Firestore. Se usa
+      // tanto al cortar una llamada propia como al detectar que el rival ya
+      // cortó/canceló/rechazó del otro lado.
+      function teardownCallLocal_() {
+        if (callPc) {
+          callPc.onicecandidate = null;
+          callPc.ontrack = null;
+          callPc.close();
+          callPc = null;
+        }
+        if (callLocalStream) {
+          callLocalStream.getTracks().forEach((t) => t.stop());
+          callLocalStream = null;
+        }
+        callCandidatesUnsub.forEach((unsub) => unsub());
+        callCandidatesUnsub = [];
+        const audioEl = document.getElementById("tournament-match-call-remote-audio");
+        if (audioEl) audioEl.srcObject = null;
+        callIsMuted = false;
+        callState = "idle";
+        callPendingOffer = null;
+        renderCallUI();
+      }
+
+      function listenRemoteCandidates_(round, board, who) {
+        const unsub = callCandidatesRef_(round, board, who).onSnapshot((qsnap) => {
+          qsnap.docChanges().forEach((change) => {
+            if (change.type === "added" && callPc) {
+              callPc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(() => {});
+            }
+          });
+        });
+        callCandidatesUnsub.push(unsub);
+      }
+
+      function newCallPeerConnection_() {
+        const pc = new RTCPeerConnection(RTC_ICE_SERVERS);
+        pc.ontrack = (event) => {
+          const audioEl = document.getElementById("tournament-match-call-remote-audio");
+          if (audioEl) audioEl.srcObject = event.streams[0];
+        };
+        return pc;
+      }
+
+      // Quien inicia la llamada.
+      async function startAudioCall() {
+        if (!tournamentMatchCtx || callState !== "idle") return;
+        const round = tournamentMatchCtx.round;
+        const board = tournamentMatchCtx.board;
+        try {
+          callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch (err) {
+          toast("❌ No se pudo acceder al micrófono: " + err.message);
+          return;
+        }
+        callState = "outgoing";
+        renderCallUI();
+
+        callPc = newCallPeerConnection_();
+        callLocalStream.getTracks().forEach((track) => callPc.addTrack(track, callLocalStream));
+
+        const offerCandidates = callCandidatesRef_(round, board, "offerCandidates");
+        callPc.onicecandidate = (event) => {
+          if (event.candidate) offerCandidates.add(event.candidate.toJSON());
+        };
+
+        try {
+          const offerDescription = await callPc.createOffer();
+          await callPc.setLocalDescription(offerDescription);
+
+          await callDocRef_(round, board).set({
+            offer: { type: offerDescription.type, sdp: offerDescription.sdp },
+            answer: null,
+            status: "calling",
+            callerEmail: currentUser ? currentUser.email : "",
+            at: Date.now(),
+          });
+        } catch (err) {
+          toast("❌ No se pudo iniciar la llamada: " + err.message);
+          teardownCallLocal_();
+          return;
+        }
+
+        listenRemoteCandidates_(round, board, "answerCandidates");
+      }
+
+      // Quien atiende una llamada entrante.
+      async function acceptIncomingCall_(offer) {
+        if (!tournamentMatchCtx) return;
+        const round = tournamentMatchCtx.round;
+        const board = tournamentMatchCtx.board;
+        try {
+          callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch (err) {
+          toast("❌ No se pudo acceder al micrófono: " + err.message);
+          return;
+        }
+
+        callPc = newCallPeerConnection_();
+        callLocalStream.getTracks().forEach((track) => callPc.addTrack(track, callLocalStream));
+
+        const answerCandidates = callCandidatesRef_(round, board, "answerCandidates");
+        callPc.onicecandidate = (event) => {
+          if (event.candidate) answerCandidates.add(event.candidate.toJSON());
+        };
+
+        try {
+          await callPc.setRemoteDescription(new RTCSessionDescription(offer));
+          const answerDescription = await callPc.createAnswer();
+          await callPc.setLocalDescription(answerDescription);
+
+          await callDocRef_(round, board).update({
+            answer: { type: answerDescription.type, sdp: answerDescription.sdp },
+            status: "active",
+          });
+        } catch (err) {
+          toast("❌ No se pudo atender la llamada: " + err.message);
+          teardownCallLocal_();
+          return;
+        }
+
+        listenRemoteCandidates_(round, board, "offerCandidates");
+        callState = "active";
+        renderCallUI();
+      }
+
+      async function declineIncomingCall_() {
+        if (!tournamentMatchCtx) return;
+        try {
+          await callDocRef_(tournamentMatchCtx.round, tournamentMatchCtx.board).update({ status: "declined" });
+        } catch (err) {
+          // Silencioso: si falla igual limpiamos el estado local.
+        }
+        teardownCallLocal_();
+      }
+
+      // Corta la llamada actual (la haya iniciado quien la corta o no) y
+      // limpia el documento de señalización para que quede libre para la
+      // próxima llamada de esta mesa.
+      async function hangUpCall() {
+        if (!tournamentMatchCtx) {
+          teardownCallLocal_();
+          return;
+        }
+        const round = tournamentMatchCtx.round;
+        const board = tournamentMatchCtx.board;
+        teardownCallLocal_();
+        try {
+          await callDocRef_(round, board).set({ status: "ended", at: Date.now() }, { merge: true });
+          // Se limpian los candidatos ICE acumulados para no dejar basura
+          // creciendo en Firestore de partida en partida.
+          const [offerSnap, answerSnap] = await Promise.all([
+            callCandidatesRef_(round, board, "offerCandidates").get(),
+            callCandidatesRef_(round, board, "answerCandidates").get(),
+          ]);
+          const batch = fbDb.batch();
+          offerSnap.docs.forEach((d) => batch.delete(d.ref));
+          answerSnap.docs.forEach((d) => batch.delete(d.ref));
+          batch.set(callDocRef_(round, board), { status: "idle", offer: null, answer: null }, { merge: true });
+          await batch.commit();
+        } catch (err) {
+          // Silencioso: la llamada ya se cortó localmente; si esto falla,
+          // en el peor caso queda un documento "ended" sin limpiar, que no
+          // molesta para la próxima llamada (se sobreescribe igual).
+        }
+      }
+
+      function toggleCallMute() {
+        if (!callLocalStream) return;
+        callIsMuted = !callIsMuted;
+        callLocalStream.getAudioTracks().forEach((t) => (t.enabled = !callIsMuted));
+        renderCallUI();
+      }
+
+      // Se suscribe al documento de señalización de la mesa (round, board)
+      // para detectar llamadas entrantes y para reaccionar si el rival
+      // cuelga/cancela/rechaza del otro lado.
+      function subscribeCallSignaling(round, board) {
+        unsubscribeCallSignaling();
+        callRound = round;
+        callBoard = board;
+        callDocUnsub = callDocRef_(round, board).onSnapshot(
+          (docSnap) => {
+            const data = docSnap.exists ? docSnap.data() : null;
+            if (!data || data.status === "idle" || data.status === "ended" || data.status === "declined") {
+              // Nadie llamando: si nosotros teníamos algo activo/sonando
+              // (por ejemplo, el rival colgó del otro lado), lo limpiamos.
+              if (callState !== "idle") teardownCallLocal_();
+              return;
+            }
+            const myColor = tournamentMyColor();
+            const myEmail = currentUser ? currentUser.email : "";
+            const iAmCaller = data.callerEmail && data.callerEmail.toLowerCase() === myEmail;
+
+            if (data.status === "calling" && !iAmCaller && callState === "idle" && myColor) {
+              callState = "incoming";
+              callPendingOffer = data.offer;
+              renderCallUI();
+            } else if (data.status === "active" && iAmCaller && data.answer && callPc && !callPc.currentRemoteDescription) {
+              callPc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
+              callState = "active";
+              renderCallUI();
+            }
+          },
+          () => {
+            // Silencioso, igual que el chat: si esto falla (reglas de
+            // Firestore desactualizadas), el resto de la partida sigue
+            // funcionando y simplemente no hay llamadas disponibles.
+          }
+        );
+      }
+
+      function unsubscribeCallSignaling() {
+        if (callDocUnsub) {
+          callDocUnsub();
+          callDocUnsub = null;
+        }
+        teardownCallLocal_();
+        callRound = null;
+        callBoard = null;
+      }
+
       // Últimas partidas de la ronda actual (alimentado por
       // subscribeRoundGames), usado en vez de un inexistente "state.games".
       let lastRoundGames = [];
@@ -7553,6 +7888,8 @@
           }
 
           subscribeMatchChat(round, board);
+          subscribeCallSignaling(round, board);
+          renderCallUI();
 
           render();
           updateTournamentMatchBar(gameRow);
@@ -7571,6 +7908,7 @@
         tournamentClockTimer = null;
         tournamentCurrentGameRow = null;
         unsubscribeMatchChat();
+        unsubscribeCallSignaling();
 
         document.getElementById("tournament-match-bar").style.display = "none";
         ["new-game", "undo", "resign", "copy-game"].forEach((id) => {
@@ -7710,15 +8048,37 @@
         }
       });
 
+      document.getElementById("tournament-match-call-btn").addEventListener("click", startAudioCall);
+      document.getElementById("tournament-match-call-accept-btn").addEventListener("click", () => {
+        if (callPendingOffer) acceptIncomingCall_(callPendingOffer);
+      });
+      document.getElementById("tournament-match-call-decline-btn").addEventListener("click", declineIncomingCall_);
+      document.getElementById("tournament-match-call-cancel-btn").addEventListener("click", hangUpCall);
+      document.getElementById("tournament-match-call-hangup-btn").addEventListener("click", hangUpCall);
+      document.getElementById("tournament-match-call-mute-btn").addEventListener("click", toggleCallMute);
+
       document.getElementById("tournament-match-chat-toggle-btn").addEventListener("click", toggleMatchChatPanel);
 
       document.getElementById("tournament-match-chat-send-btn").addEventListener("click", sendMatchChatMessage);
+
+      document.getElementById("tournament-match-chat-clear-btn").addEventListener("click", clearMatchChat);
 
       document.getElementById("tournament-match-chat-input").addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
           sendMatchChatMessage();
         }
+      });
+
+      // Contador de caracteres y habilitación del botón "Enviar" en vivo,
+      // para que quede claro cuándo hay algo para mandar y cuánto espacio
+      // queda antes del límite de 300 caracteres.
+      document.getElementById("tournament-match-chat-input").addEventListener("input", (e) => {
+        const len = e.target.value.length;
+        const counterEl = document.getElementById("tournament-match-chat-counter");
+        if (counterEl) counterEl.textContent = len > 0 ? `${len}/300` : "";
+        const sendBtn = document.getElementById("tournament-match-chat-send-btn");
+        if (sendBtn) sendBtn.disabled = !e.target.value.trim();
       });
 
       document.getElementById("tournament-connect-btn").addEventListener("click", async () => {
