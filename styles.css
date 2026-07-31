@@ -3590,3 +3590,26 @@
 .chat-input-row .btn {
   flex-shrink: 0;
 }
+
+/* =========================
+   LLAMADA DE AUDIO (torneo online)
+   ========================= */
+#tournament-match-call-incoming,
+#tournament-match-call-outgoing,
+#tournament-match-call-active {
+  border: 1px solid var(--surface2);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 8px 10px;
+}
+
+#tournament-match-call-status {
+  font-size: 0.9rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+#tournament-match-call-mute-btn.muted {
+  background: var(--danger);
+  color: #fff;
+}

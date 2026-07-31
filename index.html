@@ -347,6 +347,37 @@
                       </div>
                     </div>
                   </div>
+
+                  <div id="tournament-match-call" style="display: none; margin-top: 14px">
+                    <div id="tournament-match-call-idle">
+                      <button class="btn" id="tournament-match-call-btn" type="button">🎙️ Llamar por audio</button>
+                    </div>
+                    <div
+                      id="tournament-match-call-incoming"
+                      style="display: none; align-items: center; gap: 10px; flex-wrap: wrap"
+                    >
+                      <span>📞 Tu rival te está llamando por audio…</span>
+                      <button class="btn primary" id="tournament-match-call-accept-btn" type="button">Aceptar</button>
+                      <button class="btn danger" id="tournament-match-call-decline-btn" type="button">Rechazar</button>
+                    </div>
+                    <div
+                      id="tournament-match-call-outgoing"
+                      style="display: none; align-items: center; gap: 10px; flex-wrap: wrap"
+                    >
+                      <span>📞 Llamando a tu rival…</span>
+                      <button class="btn danger" id="tournament-match-call-cancel-btn" type="button">Cancelar</button>
+                    </div>
+                    <div
+                      id="tournament-match-call-active"
+                      style="display: none; align-items: center; gap: 10px; flex-wrap: wrap"
+                    >
+                      <span id="tournament-match-call-status">🔴 En llamada de audio</span>
+                      <button class="btn" id="tournament-match-call-mute-btn" type="button">🔇 Silenciar</button>
+                      <button class="btn danger" id="tournament-match-call-hangup-btn" type="button">📴 Cortar</button>
+                    </div>
+                    <p class="muted" id="tournament-match-call-note" style="margin: 6px 0 0; font-size: 0.85em"></p>
+                    <audio id="tournament-match-call-remote-audio" autoplay></audio>
+                  </div>
                 </div>
 
                 <div class="clock">
