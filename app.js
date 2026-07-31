@@ -125,6 +125,10 @@
         const nameEl = document.getElementById("mini-name");
         if (!nameEl) return;
         let holder = document.getElementById("mini-avatar");
+        if (state.avatarShowMini === false) {
+          if (holder) holder.innerHTML = "";
+          return;
+        }
         if (!holder) {
           holder = document.createElement("span");
           holder.id = "mini-avatar";
@@ -145,6 +149,10 @@
         [wEl, bEl].forEach((el) => {
           if (!el) return;
           let av = el.querySelector(".avatar-bubble");
+          if (state.avatarShowBoard === false) {
+            if (av) av.remove();
+            return;
+          }
           if (!av) {
             el.insertAdjacentHTML("afterbegin", avatarBubbleHTML_(state.avatar || "knight"));
           }
@@ -205,6 +213,8 @@
         history: [],
         savedGames: [],
         avatar: "knight",
+        avatarShowMini: true,
+        avatarShowBoard: true,
       };
 
       let state = loadState();
@@ -1865,6 +1875,30 @@
       if (pvpFlipToggle) {
         pvpFlipToggle.addEventListener("change", () => {
           if (gameStarted) render();
+        });
+      }
+
+      // Mostrar/ocultar el avatar del jugador junto al nombre y/o en el
+      // tablero, de forma independiente (panel de Configuración).
+      const avatarMiniToggle = document.getElementById("avatar-toggle-mini");
+      if (avatarMiniToggle) {
+        avatarMiniToggle.checked = state.avatarShowMini !== false;
+        avatarMiniToggle.addEventListener("change", () => {
+          state.avatarShowMini = avatarMiniToggle.checked;
+          save();
+          renderMiniAvatar();
+          toast(state.avatarShowMini ? "✓ Avatar visible junto a tu nombre" : "✓ Avatar oculto junto a tu nombre");
+        });
+      }
+
+      const avatarBoardToggle = document.getElementById("avatar-toggle-board");
+      if (avatarBoardToggle) {
+        avatarBoardToggle.checked = state.avatarShowBoard !== false;
+        avatarBoardToggle.addEventListener("change", () => {
+          state.avatarShowBoard = avatarBoardToggle.checked;
+          save();
+          renderBoardAvatars_();
+          toast(state.avatarShowBoard ? "✓ Avatar visible en el tablero" : "✓ Avatar oculto en el tablero");
         });
       }
 
