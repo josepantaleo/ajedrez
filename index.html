@@ -327,6 +327,26 @@
                     <button class="btn" id="tournament-match-draw-btn">🤝 Ofrecer/aceptar tablas</button>
                     <button class="btn danger" id="tournament-match-resign-btn">🏳️ Abandonar</button>
                   </div>
+
+                  <div id="tournament-match-chat" style="display: none; margin-top: 14px">
+                    <button class="btn" id="tournament-match-chat-toggle-btn" type="button">
+                      💬 Chat <span id="tournament-match-chat-unread" class="chat-unread-badge" style="display: none">0</span>
+                    </button>
+                    <div id="tournament-match-chat-panel" class="chat-panel" style="display: none">
+                      <div id="tournament-match-chat-messages" class="chat-messages"></div>
+                      <p class="muted" id="tournament-match-chat-note" style="margin: 6px 0 0; font-size: 0.85em"></p>
+                      <div class="chat-input-row">
+                        <input
+                          type="text"
+                          id="tournament-match-chat-input"
+                          maxlength="300"
+                          placeholder="Escribile a tu rival…"
+                          autocomplete="off"
+                        />
+                        <button class="btn primary" id="tournament-match-chat-send-btn" type="button">Enviar</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="clock">
@@ -2929,36 +2949,6 @@
               <button class="btn primary" id="save-profile">
                 💾 Guardar perfil
               </button>
-            </div>
-          </div>
-
-          <div class="card" style="margin-top: 20px">
-            <div class="panel-title">🐴 Avatar</div>
-            <div class="settings" style="max-width: 500px">
-              <div class="toggle">
-                <div>
-                  Junto a mi nombre<small
-                    >Mostrar mi mascota al lado del nombre, en la barra
-                    superior.</small
-                  >
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="avatar-toggle-mini" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
-
-              <div class="toggle">
-                <div>
-                  En el tablero<small
-                    >Mostrar mi mascota junto a mi reloj mientras juego.</small
-                  >
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="avatar-toggle-board" checked />
-                  <span class="slider"></span>
-                </label>
-              </div>
             </div>
           </div>
 

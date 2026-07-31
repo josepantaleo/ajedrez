@@ -30,24 +30,12 @@
       // animación CSS distinta + un color propio. No dependen de imágenes
       // externas, así que funcionan offline y no pesan nada.
       const AVATAR_MASCOTS = {
-        knight:    { emoji: "♞", label: "Caballo saltarín",  anim: "avatar-bounce", color1: "#7c3aed", color2: "#a78bfa" },
-        pawn:      { emoji: "♟", label: "Peón valiente",     anim: "avatar-wiggle", color1: "#2563eb", color2: "#60a5fa" },
-        rook:      { emoji: "♜", label: "Torre firme",       anim: "avatar-pulse",  color1: "#059669", color2: "#34d399" },
-        bishop:    { emoji: "♝", label: "Alfil astuto",      anim: "avatar-tilt",   color1: "#d97706", color2: "#fbbf24" },
-        queen:     { emoji: "♛", label: "Dama veloz",        anim: "avatar-spin",   color1: "#db2777", color2: "#f472b6" },
-        king:      { emoji: "♚", label: "Rey sabio",         anim: "avatar-nod",    color1: "#dc2626", color2: "#f87171" },
-        lion:      { emoji: "🦁", label: "León feroz",        anim: "avatar-pulse",  color1: "#b45309", color2: "#fbbf24" },
-        fox:       { emoji: "🦊", label: "Zorro astuto",      anim: "avatar-tilt",   color1: "#c2410c", color2: "#fb923c" },
-        owl:       { emoji: "🦉", label: "Búho sabio",        anim: "avatar-nod",    color1: "#78350f", color2: "#d97706" },
-        robot:     { emoji: "🤖", label: "Robot calculador",  anim: "avatar-wiggle", color1: "#334155", color2: "#94a3b8" },
-        ninja:     { emoji: "🥷", label: "Ninja sigiloso",    anim: "avatar-bounce", color1: "#18181b", color2: "#52525b" },
-        astronaut: { emoji: "🧑‍🚀", label: "Astronauta explorador", anim: "avatar-spin", color1: "#1d4ed8", color2: "#93c5fd" },
-        wizard:    { emoji: "🧙", label: "Mago místico",      anim: "avatar-pulse",  color1: "#6d28d9", color2: "#c4b5fd" },
-        dragon:    { emoji: "🐉", label: "Dragón imparable",  anim: "avatar-tilt",   color1: "#15803d", color2: "#4ade80" },
-        octopus:   { emoji: "🐙", label: "Pulpo estratega",   anim: "avatar-wiggle", color1: "#a21caf", color2: "#e879f9" },
-        star:      { emoji: "⭐", label: "Estrella brillante", anim: "avatar-spin",   color1: "#a16207", color2: "#fde047" },
-        shark:     { emoji: "🦈", label: "Tiburón implacable", anim: "avatar-bounce", color1: "#0e7490", color2: "#67e8f9" },
-        panda:     { emoji: "🐼", label: "Panda tranquilo",   anim: "avatar-nod",    color1: "#1f2937", color2: "#9ca3af" },
+        knight:  { emoji: "♞", label: "Caballo saltarín", anim: "avatar-bounce",  color1: "#7c3aed", color2: "#a78bfa" },
+        pawn:    { emoji: "♟", label: "Peón valiente",    anim: "avatar-wiggle",  color1: "#2563eb", color2: "#60a5fa" },
+        rook:    { emoji: "♜", label: "Torre firme",      anim: "avatar-pulse",   color1: "#059669", color2: "#34d399" },
+        bishop:  { emoji: "♝", label: "Alfil astuto",     anim: "avatar-tilt",    color1: "#d97706", color2: "#fbbf24" },
+        queen:   { emoji: "♛", label: "Dama veloz",       anim: "avatar-spin",    color1: "#db2777", color2: "#f472b6" },
+        king:    { emoji: "♚", label: "Rey sabio",        anim: "avatar-nod",     color1: "#dc2626", color2: "#f87171" },
       };
 
       let avatarStylesInjected = false;
@@ -86,14 +74,13 @@
           }
           #avatar-picker-box {
             background: #1e1e2e; color: #fff; padding: 20px; border-radius: 14px;
-            max-width: 320px; width: 90%; max-height: 80vh; text-align: center;
+            max-width: 320px; width: 90%; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,.4);
-            display: flex; flex-direction: column;
           }
-          #avatar-picker-box h3 { margin: 0 0 12px; font-size: 16px; flex-shrink: 0; }
+          #avatar-picker-box h3 { margin: 0 0 12px; font-size: 16px; }
           #avatar-picker-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-            margin-bottom: 14px; overflow-y: auto; padding-right: 4px;
+            margin-bottom: 14px;
           }
           .avatar-option {
             display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -125,10 +112,6 @@
         const nameEl = document.getElementById("mini-name");
         if (!nameEl) return;
         let holder = document.getElementById("mini-avatar");
-        if (state.avatarShowMini === false) {
-          if (holder) holder.innerHTML = "";
-          return;
-        }
         if (!holder) {
           holder = document.createElement("span");
           holder.id = "mini-avatar";
@@ -149,10 +132,6 @@
         [wEl, bEl].forEach((el) => {
           if (!el) return;
           let av = el.querySelector(".avatar-bubble");
-          if (state.avatarShowBoard === false) {
-            if (av) av.remove();
-            return;
-          }
           if (!av) {
             el.insertAdjacentHTML("afterbegin", avatarBubbleHTML_(state.avatar || "knight"));
           }
@@ -213,8 +192,6 @@
         history: [],
         savedGames: [],
         avatar: "knight",
-        avatarShowMini: true,
-        avatarShowBoard: true,
       };
 
       let state = loadState();
@@ -667,6 +644,18 @@
       let tournamentResultShown = false; // evita mostrar el popup de fin de partida más de una vez
       let tournamentClockTimer = null; // interval del reloj visual de la partida de torneo abierta
       let tournamentCurrentGameRow = null; // última fila de "games" conocida para la partida abierta
+
+      // --- Chat de partida (mensajes entre los dos jugadores de una mesa) ---
+      // Vive en una subcolección del documento de la partida
+      // (torneos/{room}/games/{round}_{board}/chat), no en el documento de
+      // la partida en sí: así un mensaje de chat no compite con las
+      // escrituras de cada jugada (mismo motivo por el que cada mesa ya
+      // tiene su propio documento, ver el comentario junto a
+      // gamesCollectionRef más arriba).
+      let matchChatUnsub = null;
+      let matchChatMessages = [];
+      let matchChatPanelOpen = false;
+      let matchChatUnreadCount = 0;
       let tournamentTimeoutClaimBusy = false; // evita reclamar la bandera caída más de una vez a la vez
 
       function animateMoveTransition(board, anim, movedPieceEl, capturedSquareEl) {
@@ -1875,30 +1864,6 @@
       if (pvpFlipToggle) {
         pvpFlipToggle.addEventListener("change", () => {
           if (gameStarted) render();
-        });
-      }
-
-      // Mostrar/ocultar el avatar del jugador junto al nombre y/o en el
-      // tablero, de forma independiente (panel de Configuración).
-      const avatarMiniToggle = document.getElementById("avatar-toggle-mini");
-      if (avatarMiniToggle) {
-        avatarMiniToggle.checked = state.avatarShowMini !== false;
-        avatarMiniToggle.addEventListener("change", () => {
-          state.avatarShowMini = avatarMiniToggle.checked;
-          save();
-          renderMiniAvatar();
-          toast(state.avatarShowMini ? "✓ Avatar visible junto a tu nombre" : "✓ Avatar oculto junto a tu nombre");
-        });
-      }
-
-      const avatarBoardToggle = document.getElementById("avatar-toggle-board");
-      if (avatarBoardToggle) {
-        avatarBoardToggle.checked = state.avatarShowBoard !== false;
-        avatarBoardToggle.addEventListener("change", () => {
-          state.avatarShowBoard = avatarBoardToggle.checked;
-          save();
-          renderBoardAvatars_();
-          toast(state.avatarShowBoard ? "✓ Avatar visible en el tablero" : "✓ Avatar oculto en el tablero");
         });
       }
 
@@ -4108,6 +4073,136 @@
       let gamesCollectionRef = null;
       function gameDocId_(round, board) {
         return round + "_" + board;
+      }
+
+      function matchChatCollectionRef_(round, board) {
+        return gamesCollectionRef.doc(gameDocId_(round, board)).collection("chat");
+      }
+
+      // Suscribe al chat de la mesa (round, board) actualmente abierta.
+      // Se guardan como mucho los últimos 200 mensajes en memoria (más que
+      // suficiente para una partida) para no dejar crecer el DOM sin límite
+      // en partidas muy charlatanas.
+      function subscribeMatchChat(round, board) {
+        unsubscribeMatchChat();
+        matchChatMessages = [];
+        matchChatUnreadCount = 0;
+        matchChatPanelOpen = false;
+        renderMatchChat();
+        matchChatUnsub = matchChatCollectionRef_(round, board)
+          .orderBy("at", "asc")
+          .limitToLast(200)
+          .onSnapshot(
+            (qsnap) => {
+              const previousCount = matchChatMessages.length;
+              matchChatMessages = qsnap.docs.map((d) => d.data());
+              const newCount = matchChatMessages.length - previousCount;
+              if (newCount > 0 && !matchChatPanelOpen) {
+                matchChatUnreadCount += newCount;
+              }
+              renderMatchChat();
+            },
+            () => {
+              // Silencioso: si esto falla (por ejemplo, reglas de
+              // Firestore que todavía no incluyen la subcolección "chat"),
+              // el resto de la partida (tablero, reloj, resultado) sigue
+              // funcionando igual; el chat simplemente no carga.
+            }
+          );
+      }
+
+      function unsubscribeMatchChat() {
+        if (matchChatUnsub) {
+          matchChatUnsub();
+          matchChatUnsub = null;
+        }
+        matchChatMessages = [];
+        matchChatUnreadCount = 0;
+        matchChatPanelOpen = false;
+        const panelEl = document.getElementById("tournament-match-chat-panel");
+        if (panelEl) panelEl.style.display = "none";
+        const inputEl = document.getElementById("tournament-match-chat-input");
+        if (inputEl) inputEl.value = "";
+      }
+
+      function renderMatchChat() {
+        const wrapEl = document.getElementById("tournament-match-chat");
+        const listEl = document.getElementById("tournament-match-chat-messages");
+        const noteEl = document.getElementById("tournament-match-chat-note");
+        const unreadEl = document.getElementById("tournament-match-chat-unread");
+        const inputRow = document.querySelector("#tournament-match-chat-panel .chat-input-row");
+        if (!wrapEl || !listEl) return;
+
+        const myColor = tournamentMyColor();
+        const canChat = !!myColor;
+        wrapEl.style.display = tournamentMatchActive ? "" : "none";
+        if (inputRow) inputRow.style.display = canChat ? "" : "none";
+        if (noteEl) noteEl.textContent = canChat ? "" : "Como espectador podés leer el chat, pero no escribir.";
+
+        if (unreadEl) {
+          if (matchChatUnreadCount > 0) {
+            unreadEl.textContent = String(matchChatUnreadCount);
+            unreadEl.style.display = "";
+          } else {
+            unreadEl.style.display = "none";
+          }
+        }
+
+        if (!matchChatMessages.length) {
+          listEl.innerHTML = '<p class="chat-message-empty">Todavía no hay mensajes. ¡Saludá a tu rival!</p>';
+        } else {
+          const myEmail = currentUser ? currentUser.email : "";
+          listEl.innerHTML = matchChatMessages
+            .map((m) => {
+              const mine = myEmail && (m.senderEmail || "").toLowerCase() === myEmail;
+              const name = escapeHtml_(m.senderName || "Jugador");
+              const text = escapeHtml_(m.text || "");
+              return (
+                `<div class="chat-message${mine ? " mine" : ""}">` +
+                `<span class="chat-message-meta">${name}</span>${text}` +
+                `</div>`
+              );
+            })
+            .join("");
+          listEl.scrollTop = listEl.scrollHeight;
+        }
+      }
+
+      function toggleMatchChatPanel() {
+        matchChatPanelOpen = !matchChatPanelOpen;
+        const panelEl = document.getElementById("tournament-match-chat-panel");
+        if (panelEl) panelEl.style.display = matchChatPanelOpen ? "" : "none";
+        if (matchChatPanelOpen) {
+          matchChatUnreadCount = 0;
+          renderMatchChat();
+          const listEl = document.getElementById("tournament-match-chat-messages");
+          if (listEl) listEl.scrollTop = listEl.scrollHeight;
+          const inputEl = document.getElementById("tournament-match-chat-input");
+          if (inputEl) inputEl.focus();
+        }
+      }
+
+      async function sendMatchChatMessage() {
+        const inputEl = document.getElementById("tournament-match-chat-input");
+        if (!inputEl) return;
+        const text = inputEl.value.trim();
+        if (!text) return;
+        if (!tournamentMatchCtx || !currentUser) return;
+        const myColor = tournamentMyColor();
+        if (!myColor) return; // los espectadores pueden leer, no escribir
+        inputEl.value = "";
+        try {
+          await matchChatCollectionRef_(tournamentMatchCtx.round, tournamentMatchCtx.board).add({
+            text: text.slice(0, 300),
+            senderEmail: currentUser.email,
+            senderName: currentUser.displayName || currentUser.email,
+            senderColor: myColor,
+            at: Date.now(),
+          });
+        } catch (err) {
+          inputEl.value = text; // devolvemos el texto al input para no perder el mensaje
+          toast("❌ No se pudo enviar el mensaje: " + err.message);
+        }
       }
       // Últimas partidas de la ronda actual (alimentado por
       // subscribeRoundGames), usado en vez de un inexistente "state.games".
@@ -7457,6 +7552,8 @@
             }
           }
 
+          subscribeMatchChat(round, board);
+
           render();
           updateTournamentMatchBar(gameRow);
           requestAnimationFrame(sizeFullscreenBoard);
@@ -7473,6 +7570,7 @@
         clearInterval(tournamentClockTimer);
         tournamentClockTimer = null;
         tournamentCurrentGameRow = null;
+        unsubscribeMatchChat();
 
         document.getElementById("tournament-match-bar").style.display = "none";
         ["new-game", "undo", "resign", "copy-game"].forEach((id) => {
@@ -7609,6 +7707,17 @@
           showError(err);
         } finally {
           tournamentMatchBusy = false;
+        }
+      });
+
+      document.getElementById("tournament-match-chat-toggle-btn").addEventListener("click", toggleMatchChatPanel);
+
+      document.getElementById("tournament-match-chat-send-btn").addEventListener("click", sendMatchChatMessage);
+
+      document.getElementById("tournament-match-chat-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          sendMatchChatMessage();
         }
       });
 
