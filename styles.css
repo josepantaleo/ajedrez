@@ -3521,6 +3521,18 @@
   margin-left: 4px;
 }
 
+/* Pulso suave en el botón de "Chat" cuando llega un mensaje nuevo y el
+   panel está cerrado, para que se note aunque el jugador no esté mirando
+   el badge numérico. Se saca apenas se abre el panel (ver renderMatchChat). */
+@keyframes chatTogglePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+}
+
+#tournament-match-chat-toggle-btn.chat-toggle-pulse {
+  animation: chatTogglePulse 1.4s ease-out infinite;
+}
+
 .chat-panel {
   margin-top: 10px;
   border: 1px solid var(--surface2);
@@ -3545,6 +3557,32 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.chat-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-mute-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 4px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chat-mute-btn:hover {
+  background: var(--surface2);
+}
+
+.chat-mute-btn.muted {
+  color: var(--danger);
 }
 
 .chat-clear-btn {

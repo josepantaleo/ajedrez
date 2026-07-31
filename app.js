@@ -265,6 +265,8 @@
         document.getElementById("alert-analyze-btn").style.display = "none";
         const backBtn = document.getElementById("alert-back-to-tournament-btn");
         if (backBtn) backBtn.style.display = "none";
+        const chatBtn = document.getElementById("alert-chat-btn");
+        if (chatBtn) chatBtn.style.display = "none";
         alertOnClose_ = null;
         document.getElementById("alert").classList.add("show");
       }
@@ -310,6 +312,24 @@
         btn.textContent = "🏆 Volver al torneo";
         btn.style.display = "inline-flex";
         btn.onclick = () => closeAlert_();
+      }
+
+      // Popup para un mensaje de chat que llega mientras la partida de
+      // torneo todavía no arrancó (sin jugadas): en ese momento el jugador
+      // probablemente ni está mirando el tablero, así que el badge del
+      // botón "Chat" solo no alcanza para que se entere. No se dispara si
+      // el chat está silenciado (ver matchChatMuted).
+      function showChatMessagePopup(senderName, text) {
+        const preview = text.length > 140 ? text.slice(0, 140) + "…" : text;
+        showAlert("💬 " + senderName + ": " + preview);
+        const btn = document.getElementById("alert-chat-btn");
+        if (btn) {
+          btn.style.display = "inline-flex";
+          btn.onclick = () => {
+            closeAlert_();
+            if (!matchChatPanelOpen) toggleMatchChatPanel();
+          };
+        }
       }
 
       document.getElementById("alert").onclick = (e) => {
@@ -426,6 +446,11 @@
           select() {
             if (!enabled) return;
             tone(880, 0, 0.045, { type: "sine", gain: 0.06 });
+          },
+          chatMessage() {
+            if (!enabled) return;
+            tone(700, 0, 0.06, { type: "sine", gain: 0.09 });
+            tone(920, 0.07, 0.08, { type: "sine", gain: 0.09 });
           },
           invalid() {
             if (!enabled) return;
@@ -656,6 +681,14 @@
       let matchChatMessages = [];
       let matchChatPanelOpen = false;
       let matchChatUnreadCount = 0;
+      // true mientras no llegó todavía el primer snapshot de la mesa actual:
+      // sirve para no sonar ni mostrar popup por todo el historial que ya
+      // existía al abrir/reabrir la mesa, solo por mensajes realmente nuevos.
+      let matchChatFirstSnapshot = true;
+      // Silencia el sonido y el popup de mensajes nuevos del chat de mesa
+      // (el badge de no leídos se sigue viendo igual). Es por dispositivo,
+      // no por mesa: una vez silenciado queda así para todas las partidas.
+      let matchChatMuted = localStorage.getItem("chessMatchChatMuted") === "on";
 
       // Llamada de audio 1 a 1 entre los dos jugadores de la mesa (WebRTC).
       // Se señaliza a través de Firestore (torneos/{room}/games/{round}_{board}/call/session),
@@ -4107,6 +4140,7 @@
         matchChatMessages = [];
         matchChatUnreadCount = 0;
         matchChatPanelOpen = false;
+        matchChatFirstSnapshot = true;
         renderMatchChat();
         matchChatUnsub = matchChatCollectionRef_(round, board)
           .orderBy("at", "asc")
@@ -4115,11 +4149,14 @@
             (qsnap) => {
               const previousCount = matchChatMessages.length;
               matchChatMessages = qsnap.docs.map((d) => d.data());
-              const newCount = matchChatMessages.length - previousCount;
+              const newMessages = matchChatMessages.slice(previousCount);
+              const newCount = newMessages.length;
               if (newCount > 0 && !matchChatPanelOpen) {
                 matchChatUnreadCount += newCount;
               }
               renderMatchChat();
+              notifyNewMatchChatMessages_(newMessages, matchChatFirstSnapshot);
+              matchChatFirstSnapshot = false;
             },
             () => {
               // Silencioso: si esto falla (por ejemplo, reglas de
@@ -4128,6 +4165,30 @@
               // funcionando igual; el chat simplemente no carga.
             }
           );
+      }
+
+      // Avisa (sonido / toast / popup) por los mensajes nuevos de la mesa
+      // que no son propios. Se salta por completo en el primer snapshot
+      // (isInitialLoad), que es simplemente la carga del historial ya
+      // existente al abrir la mesa, no mensajes "nuevos" de verdad.
+      function notifyNewMatchChatMessages_(newMessages, isInitialLoad) {
+        if (isInitialLoad || !newMessages.length || matchChatMuted) return;
+        const myEmail = currentUser ? currentUser.email.toLowerCase() : "";
+        const fromOpponent = newMessages.filter((m) => (m.senderEmail || "").toLowerCase() !== myEmail);
+        if (!fromOpponent.length) return;
+        SoundFX.chatMessage();
+        if (matchChatPanelOpen) return; // ya lo está viendo, no hace falta interrumpir
+        const last = fromOpponent[fromOpponent.length - 1];
+        const gameNotStarted = game.history().length === 0;
+        if (gameNotStarted) {
+          // La partida no arrancó: probablemente el jugador ni está mirando
+          // el tablero, así que un popup llama más la atención que el badge.
+          showChatMessagePopup(last.senderName || "Tu rival", last.text || "");
+        } else {
+          // Partida en curso: un toast avisa sin interrumpir el juego.
+          const preview = (last.text || "").length > 60 ? last.text.slice(0, 60) + "…" : last.text || "";
+          toast("💬 " + (last.senderName || "Tu rival") + ": " + preview);
+        }
       }
 
       function unsubscribeMatchChat() {
@@ -4152,6 +4213,7 @@
         const unreadEl = document.getElementById("tournament-match-chat-unread");
         const inputRow = document.querySelector("#tournament-match-chat-panel .chat-input-row");
         const clearBtn = document.getElementById("tournament-match-chat-clear-btn");
+        const toggleBtn = document.getElementById("tournament-match-chat-toggle-btn");
         if (!wrapEl || !listEl) return;
 
         const myColor = tournamentMyColor();
@@ -4162,6 +4224,7 @@
         if (clearBtn) {
           clearBtn.style.display = canChat && matchChatMessages.length ? "" : "none";
         }
+        renderMatchChatMuteBtn_();
 
         if (unreadEl) {
           if (matchChatUnreadCount > 0) {
@@ -4170,6 +4233,12 @@
           } else {
             unreadEl.style.display = "none";
           }
+        }
+        // Pulso llamativo en el botón "Chat" mientras haya mensajes sin leer
+        // y el panel esté cerrado; se apaga solo al abrir el panel (o al no
+        // quedar mensajes sin leer).
+        if (toggleBtn) {
+          toggleBtn.classList.toggle("chat-toggle-pulse", matchChatUnreadCount > 0 && !matchChatPanelOpen);
         }
 
         if (!matchChatMessages.length) {
@@ -4233,6 +4302,24 @@
           inputEl.value = text; // devolvemos el texto al input para no perder el mensaje
           toast("❌ No se pudo enviar el mensaje: " + err.message);
         }
+      }
+
+      // Prende/apaga el aviso (sonido + toast/popup) de mensajes nuevos del
+      // chat de mesa. El badge de no leídos y los mensajes en sí siguen
+      // funcionando igual estando silenciado; sólo se corta la interrupción.
+      function toggleMatchChatMute() {
+        matchChatMuted = !matchChatMuted;
+        localStorage.setItem("chessMatchChatMuted", matchChatMuted ? "on" : "off");
+        renderMatchChatMuteBtn_();
+        toast(matchChatMuted ? "🔕 Chat silenciado" : "🔔 Chat con notificaciones");
+      }
+
+      function renderMatchChatMuteBtn_() {
+        const btn = document.getElementById("tournament-match-chat-mute-btn");
+        if (!btn) return;
+        btn.textContent = matchChatMuted ? "🔕" : "🔔";
+        btn.title = matchChatMuted ? "Activar notificaciones de este chat" : "Silenciar notificaciones de este chat";
+        btn.classList.toggle("muted", matchChatMuted);
       }
 
       // Deja el contador de caracteres y el botón "Enviar" en su estado
@@ -8058,6 +8145,8 @@
       document.getElementById("tournament-match-call-mute-btn").addEventListener("click", toggleCallMute);
 
       document.getElementById("tournament-match-chat-toggle-btn").addEventListener("click", toggleMatchChatPanel);
+      document.getElementById("tournament-match-chat-mute-btn").addEventListener("click", toggleMatchChatMute);
+      renderMatchChatMuteBtn_();
 
       document.getElementById("tournament-match-chat-send-btn").addEventListener("click", sendMatchChatMessage);
 

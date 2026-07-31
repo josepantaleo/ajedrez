@@ -335,14 +335,24 @@
                     <div id="tournament-match-chat-panel" class="chat-panel" style="display: none">
                       <div class="chat-panel-header">
                         <span class="chat-panel-title">Chat de la mesa</span>
-                        <button
-                          class="chat-clear-btn"
-                          id="tournament-match-chat-clear-btn"
-                          type="button"
-                          title="Vaciar el chat de esta mesa"
-                        >
-                          🗑️ Vaciar
-                        </button>
+                        <div class="chat-panel-actions">
+                          <button
+                            class="chat-mute-btn"
+                            id="tournament-match-chat-mute-btn"
+                            type="button"
+                            title="Silenciar notificaciones de este chat"
+                          >
+                            🔔
+                          </button>
+                          <button
+                            class="chat-clear-btn"
+                            id="tournament-match-chat-clear-btn"
+                            type="button"
+                            title="Vaciar el chat de esta mesa"
+                          >
+                            🗑️ Vaciar
+                          </button>
+                        </div>
                       </div>
                       <div id="tournament-match-chat-messages" class="chat-messages"></div>
                       <p class="muted" id="tournament-match-chat-note" style="margin: 6px 0 0; font-size: 0.85em"></p>
@@ -3027,6 +3037,9 @@
           style="display: none; margin-top: 16px"
         >
           🔎 Analizar esta partida
+        </button>
+        <button class="btn primary" id="alert-chat-btn" type="button" style="display: none; margin-top: 10px">
+          💬 Abrir chat
         </button>
       </div>
     </div>
