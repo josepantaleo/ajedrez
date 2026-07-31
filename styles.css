@@ -325,7 +325,7 @@
         border-radius: 16px;
         background: linear-gradient(145deg, var(--accent), var(--accent2));
         color: #07111f;
-        font-size: 2.45rem;
+        font-size: 3.45rem;
         line-height: 1;
         box-shadow: 0 8px 18px
           color-mix(in srgb, var(--accent) 35%, transparent);

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Escuela de Ajedrez IPEM 146</title>
+    <title>Escuela de Ajedrez</title>
 
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -14,13 +14,17 @@
         <div class="brand">
           <div class="logo">♞</div>
           <div>
-            <h1>Escuela de Ajedrez</h1>
-            <p>IPEM N.º 146</p>
-            <br />
-            <h4>Profesores</h4>
-            <span><strong>Ajedrez:</strong> Gerardo Garro</span>
-            <br />
-            <span><strong>Web:</strong> José Pantaleo</span>
+            <h1>Escuela de Ajedrez <br> IPEM Nº 146 "Centenario" </h1>
+            
+            
+            <h5>Profesor Ajedrez: Gerardo Garro</h5>
+            <span><strong></strong> </span>
+           
+            <h5>Profesor Web: José Pantaleo</h5>
+            <span><strong></strong> </span>
+            <h5>Alumnos Informática 2026</h5>
+            <span><strong></strong> </span>
+            
           </div>
         </div>
 
@@ -49,7 +53,7 @@
           <div>
             <h2 id="page-title">
               ¡Bienvenido a la Escuela de Ajedrez! 👋 <br />
-              IPEM N.º 146 "Centenario" Villa Dolores Cba
+              
             </h2>
             <p id="page-subtitle">
               Aprendé, jugá y mejorá tu nivel partida a partida.
@@ -1718,16 +1722,10 @@
                 Sistema suizo con base de datos compartida en tiempo real. Esto significa que:
                 cada jugador puede abrir esta misma página desde su propio
                 celular o compu y va a ver los mismos emparejamientos y
-                resultados en tiempo real. Para jugar hace falta iniciar
-                sesión con una cuenta de Gmail. Solo la cuenta
-                <strong>ipem146centenario@gmail.com</strong> puede
-                administrar el torneo (crear, generar rondas, configurar,
-                finalizar o reiniciar); el resto de las cuentas juega o
-                mira en modo espectador.
+                resultados en tiempo real. Para inscribirte a un torneo o jugar hace falta iniciar
+                sesión con una cuenta de Gmail. 
               </p>
-             <a href="https://forms.gle/BN9KZcYM6WGhtSZm7" class="btn-inscripcion" target="_blank" rel="noopener">
-  📝 Inscripción
-</a>
+            
 
 
 
@@ -1848,6 +1846,10 @@
                 El email tiene que ser la cuenta de Gmail con la que cada
                 jugador va a iniciar sesión — así la app sabe automáticamente
                 con quién juega cada uno, sin tener que elegir color a mano.
+                Podés dejar esta lista vacía y crear el torneo sin jugadores:
+                cada uno va a poder inscribirse solo, iniciando sesión con
+                Google, desde la pantalla del torneo. Vos generás la primera
+                ronda cuando ya se haya anotado suficiente gente.
               </p>
               <label style="display: block; margin: 14px 0 6px; font-weight: 600"
                 >Cantidad de rondas (opcional)</label
@@ -2028,12 +2030,42 @@
                       id="tournament-mode-badge-active"
                       style="padding: 4px 10px; border-radius: 999px; background: var(--surface2); font-weight: 600; font-size: 12px"
                     ></span>
+                    <span
+                      id="tournament-pending-badge"
+                      style="display: none; padding: 4px 10px; border-radius: 999px; background: #f5a524; color: #1a1200; font-weight: 700; font-size: 12px"
+                    ></span>
                   </div>
                   <div style="display: flex; gap: 8px; flex-wrap: wrap">
                     <button class="btn" id="tournament-refresh-btn">🔄 Actualizar</button>
                   </div>
                 </div>
                 <p class="muted" id="tournament-round-display"></p>
+              </div>
+
+              <div class="card" id="tournament-self-register-card" style="display: none">
+                <h3>📝 Inscripción</h3>
+                <p class="muted" id="tournament-self-register-status" style="display: none; margin: 0"></p>
+                <div id="tournament-self-register-form" style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <input
+                    type="text"
+                    id="tournament-self-register-name"
+                    placeholder="Tu nombre"
+                    style="
+                      flex: 1;
+                      min-width: 160px;
+                      padding: 8px 10px;
+                      border-radius: 8px;
+                      border: 1px solid var(--surface2);
+                      background: var(--surface);
+                      color: var(--text);
+                    "
+                  />
+                  <button class="btn primary" id="tournament-self-register-btn">✅ Inscribirme</button>
+                </div>
+                <p class="muted" style="font-size: 12px; margin-top: 8px">
+                  Te anotás con el email de la cuenta de Google con la que iniciaste sesión (no se puede elegir otro): es la que se
+                  va a usar para asignarte tus partidas.
+                </p>
               </div>
 
               <div class="card" id="tournament-admin-panel" style="display: none; border: 2px solid var(--surface2)">
