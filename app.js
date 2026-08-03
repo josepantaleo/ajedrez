@@ -2090,7 +2090,10 @@
         });
         if (name === "jugar") render();
         if (name === "torneo" && typeof refreshTournament === "function") refreshTournament();
-        if (name === "torneo" && typeof lanRenderUI === "function" && lanState) lanRenderUI();
+        if (name === "torneo-lan") {
+          if (lanRole_ === "host" && lanHostState_) lanRenderHost_();
+          if (lanRole_ === "player" && lanClientState_) lanRenderClient_();
+        }
         if (name === "pantalla-publica" && typeof renderPublicScreen === "function") renderPublicScreen(lastTournamentState);
       }
 
@@ -9735,782 +9738,528 @@
       // la partida en vivo se actualizan solas gracias al listener en tiempo
       // real de Firestore (subscribeTournament / onSnapshot).
 
-      // =========================
-      // TORNEO LAN — Red local (WebRTC P2P, SIN internet ni servidor)
-      // =========================
-      // Arquitectura: un dispositivo hace de "árbitro" (host) y sostiene el
-      // estado del torneo (jugadores, emparejamientos, resultados) en
-      // memoria, igual que hacía el documento de Firestore en el modo
-      // online. Cada jugador se conecta directo al árbitro con una conexión
-      // WebRTC punto a punto (RTCPeerConnection + DataChannel). No hay
-      // servidor de señalización: la oferta/respuesta SDP se intercambia a
-      // mano (texto para copiar y pegar) porque los dispositivos están
-      // físicamente en la misma sala. Una vez conectados, todo viaja por la
-      // red local (Wi-Fi del router del aula, sin necesidad de que ese
-      // router tenga salida a internet).
+      // =====================================================================
+      // TORNEO LAN — modo sin internet ni Firebase (P2P con WebRTC DataChannel)
+      // =====================================================================
+      // No hay ningún servidor de por medio (ni siquiera de señalización):
+      // el intercambio de SDP se hace a mano, con un código de texto que se
+      // copia y pega una sola vez por jugador (ver lanEncodeSignal_ /
+      // lanDecodeSignal_). Una vez abierto el canal de datos, el anfitrión
+      // es la única fuente de verdad del estado del torneo (como lo es el
+      // documento de Firestore en el modo online) y lo retransmite entero a
+      // cada jugador conectado cada vez que cambia. Reutiliza a propósito
+      // la misma lógica de emparejamiento/puntaje que el modo online
+      // (buildNextRoundPairings_, rankPlayersCompute_, applyResultToPlayers_)
+      // para que ambos modos se comporten igual en las reglas del torneo;
+      // lo único que cambia es el transporte.
       //
-      // El árbitro reenvía ("relay") las jugadas entre los dos jugadores de
-      // cada mesa y valida cada jugada con su propia instancia de chess.js,
-      // así ningún jugador puede hacer trampa editando su propio cliente.
-      // Como cada mesa tiene su propio par de conexiones (canales de datos
-      // independientes), varias partidas corren en simultáneo sin pisarse.
-      //
-      // Alcance de esta primera versión (a diferencia del modo Internet):
-      // no incluye chat de mesa, llamada de audio, ni anuncios del árbitro.
-      // El desempate es simplemente por puntos (sin Buchholz). El reloj se
-      // sincroniza cada pocos segundos, no jugada a jugada.
+      // Alcance de esta primera versión: arma parejas, reloj de referencia
+      // y carga de resultados por ronda, igual que el torneo online — pero
+      // sin sincronizar jugada a jugada un tablero en vivo dentro de la
+      // app (eso queda para una vuelta futura). Sirve para dirigir un
+      // torneo presencial con tableros físicos, o combinado con la sección
+      // "Jugar" de cada dispositivo por separado.
 
-      const LAN_ICE_CONFIG = { iceServers: [] }; // sin STUN: no depende de internet, solo candidatos locales
-      const LAN_STATE_KEY = "chessSchoolLanTournamentState";
-      const LAN_NAME_KEY = "chessSchoolLanPlayerName";
+      const LAN_ICE_SERVERS_ = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+      const LAN_STATE_KEY_ = "chessapp_lan_tournament_state_v1";
 
-      let lanIsHost = false;
-      let lanMyId = null; // asignado por el árbitro al conectarse (solo jugador)
-      let lanMyName = "";
-      let lanState = null; // estado completo del torneo LAN (autoridad: el árbitro)
-      let lanHostPeers = {}; // (árbitro) playerId -> { pc, channel }
-      let lanPlayerPc = null; // (jugador) conexión al árbitro
-      let lanPlayerChannel = null;
-      let lanChessByMatch = {}; // (árbitro) "ronda_mesa" -> instancia Chess.js autoridad
-      let lanActiveMatch = null; // { round, board } de la mesa abierta en pantalla
-      let lanBoardCtx = null;
-      let lanClockTicker = null;
-      let lanLastBroadcastAt = 0;
-
-      function lanMatchKey(round, board) {
-        return round + "_" + board;
-      }
-
-      function lanNewId() {
-        return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-      }
-
-      function lanEncode(obj) {
+      function lanEncodeSignal_(obj) {
         return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
       }
 
-      function lanDecode(text) {
-        return JSON.parse(decodeURIComponent(escape(atob(text.trim()))));
+      function lanDecodeSignal_(text) {
+        try {
+          return JSON.parse(decodeURIComponent(escape(atob(text.trim()))));
+        } catch (err) {
+          throw new Error("Código inválido o incompleto. Revisá que lo hayas copiado entero.");
+        }
       }
 
-      async function lanWaitIceComplete(pc) {
-        if (pc.iceGatheringState === "complete") return;
-        await new Promise((resolve) => {
+      // Sin un servidor de señalización en vivo, lo más simple es meter el
+      // SDP completo (con todos sus candidatos ICE ya recolectados) en un
+      // único código de texto, en vez de intercambiar candidatos sueltos
+      // uno por uno. Por eso esperamos a que termine la recolección (o un
+      // máximo de 4s, por si el navegador tarda con algún candidato que
+      // nunca va a llegar) antes de generar el código.
+      function lanWaitIceGathering_(pc) {
+        if (pc.iceGatheringState === "complete") return Promise.resolve();
+        return new Promise((resolve) => {
+          const timer = setTimeout(finish, 4000);
+          function finish() {
+            clearTimeout(timer);
+            pc.removeEventListener("icegatheringstatechange", check);
+            resolve();
+          }
           function check() {
-            if (pc.iceGatheringState === "complete") {
-              pc.removeEventListener("icegatheringstatechange", check);
-              resolve();
-            }
+            if (pc.iceGatheringState === "complete") finish();
           }
           pc.addEventListener("icegatheringstatechange", check);
-          // Salvavidas: si por lo que sea nunca llega a "complete" (algunos
-          // navegadores viejos), no dejamos la pantalla trabada para
-          // siempre — seguimos con los candidatos que ya se juntaron.
-          setTimeout(resolve, 4000);
         });
       }
 
-      function lanSaveState() {
-        try {
-          if (lanState) localStorage.setItem(LAN_STATE_KEY, JSON.stringify(lanState));
-        } catch (err) {
-          /* localStorage puede fallar (privado/lleno); no es crítico */
-        }
+      // ---------- estado compartido del módulo LAN ----------
+      let lanRole_ = null; // "host" | "player"
+      let lanHostState_ = null; // estado completo del torneo (solo existe en el anfitrión)
+      const lanPeers_ = new Map(); // playerId -> { pc, channel }
+      let lanPendingInvite_ = null; // { pc, channel, playerId } — invitación generada, esperando la respuesta
+      let lanClientPc_ = null;
+      let lanClientChannel_ = null;
+      let lanClientName_ = "";
+      let lanClientState_ = null;
+      let lanClientMyId_ = null;
+
+      function lanNewTimeControl_() {
+        return {
+          minutes: getRawMinutesFromSelect("lan-time-mode", "lan-custom-minutes"),
+          increment: getIncrementFromSelect("lan-increment", "lan-custom-increment"),
+        };
       }
 
-      // ---------- Lado JUGADOR: genera oferta, se conecta con la respuesta ----------
-      async function lanPlayerGenerateOffer() {
-        const pc = new RTCPeerConnection(LAN_ICE_CONFIG);
+      // ---------------------- lado anfitrión ----------------------
+
+      async function lanHostCreateInvite_() {
+        const pc = new RTCPeerConnection(LAN_ICE_SERVERS_);
         const channel = pc.createDataChannel("torneo");
-        lanPlayerPc = pc;
-        lanPlayerChannel = channel;
-        lanSetupPlayerChannel(channel);
+        const playerId = "p_" + Math.random().toString(36).slice(2, 10);
+        lanWireChannelHost_(playerId, pc, channel);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        await lanWaitIceComplete(pc);
-        return lanEncode(pc.localDescription);
+        await lanWaitIceGathering_(pc);
+        lanPendingInvite_ = { pc, channel, playerId };
+        return lanEncodeSignal_({ type: "offer", sdp: pc.localDescription });
       }
 
-      async function lanPlayerConnect(answerCodeText) {
-        if (!lanPlayerPc) throw new Error("Primero generá tu código de conexión");
-        const answerObj = lanDecode(answerCodeText);
-        await lanPlayerPc.setRemoteDescription(answerObj);
+      async function lanHostConfirmInvite_(answerCode) {
+        if (!lanPendingInvite_) throw new Error("Generá primero un código de invitación.");
+        const data = lanDecodeSignal_(answerCode);
+        if (!data || data.type !== "answer" || !data.sdp) throw new Error("Ese código no es una respuesta válida.");
+        const { pc, playerId } = lanPendingInvite_;
+        await pc.setRemoteDescription(data.sdp);
+        const name = (data.name || "").trim() || "Jugador";
+        if (!lanHostState_.players.some((p) => p.id === playerId)) {
+          lanHostState_.players.push({
+            id: playerId,
+            name,
+            email: "",
+            points: 0,
+            byes: 0,
+            played: [],
+            colorBalance: 0,
+            status: "active",
+          });
+        }
+        lanPendingInvite_ = null;
+        lanBroadcast_();
       }
 
-      function lanSetupPlayerChannel(channel) {
-        channel.onopen = () => {
-          channel.send(JSON.stringify({ type: "hello", name: lanMyName }));
-          const statusEl = document.getElementById("lan-player-connect-status");
-          if (statusEl) statusEl.textContent = "✅ Conectado con el árbitro";
-        };
-        channel.onmessage = (ev) => {
+      function lanPersonalStatePayload_(playerId) {
+        return JSON.stringify({ type: "state", state: lanHostState_, yourId: playerId });
+      }
+
+      function lanWireChannelHost_(playerId, pc, channel) {
+        channel.addEventListener("open", () => {
+          const peer = lanPeers_.get(playerId) || {};
+          peer.pc = pc;
+          peer.channel = channel;
+          peer.connected = true;
+          lanPeers_.set(playerId, peer);
+          channel.send(lanPersonalStatePayload_(playerId));
+          lanRenderHost_();
+        });
+        channel.addEventListener("close", () => {
+          const peer = lanPeers_.get(playerId);
+          if (peer) peer.connected = false;
+          lanRenderHost_();
+        });
+        channel.addEventListener("message", (ev) => {
           let msg;
           try {
             msg = JSON.parse(ev.data);
           } catch (err) {
             return;
           }
-          lanPlayerHandleMessage(msg);
-        };
-        channel.onclose = () => {
-          toast("📡 Se perdió la conexión con el árbitro");
-        };
+          lanHostHandleMessage_(playerId, msg);
+        });
       }
 
-      function lanPlayerHandleMessage(msg) {
-        if (msg.type === "welcome") {
-          lanMyId = msg.id;
-          const statusEl = document.getElementById("lan-player-connect-status");
-          if (statusEl) statusEl.textContent = "⏳ Conectado — esperando que el árbitro te apruebe…";
+      function lanHostHandleMessage_(playerId, msg) {
+        if (!lanHostState_ || !msg) return;
+        if (msg.type === "report-result") {
+          lanApplyResult_(playerId, msg.round, msg.board, msg.result, true);
+        }
+      }
+
+      function lanBroadcast_() {
+        try {
+          localStorage.setItem(LAN_STATE_KEY_, JSON.stringify(lanHostState_));
+        } catch (err) {
+          // sin espacio en localStorage o modo privado: no es crítico, seguimos igual
+        }
+        lanPeers_.forEach((peer, playerId) => {
+          if (peer.channel && peer.channel.readyState === "open") {
+            peer.channel.send(lanPersonalStatePayload_(playerId));
+          }
+        });
+        lanRenderHost_();
+      }
+
+      function lanApplyResult_(byPlayerId, round, board, result, fromClient) {
+        if (!["1-0", "1/2-1/2", "0-1"].includes(result)) return;
+        const pairing = lanHostState_.pairings.find((p) => p.round === round && p.board === board);
+        if (!pairing || pairing.blackId === "") return;
+        if (fromClient && byPlayerId !== pairing.whiteId && byPlayerId !== pairing.blackId) return;
+        const byId = {};
+        lanHostState_.players.forEach((p) => (byId[p.id] = p));
+        const white = byId[pairing.whiteId];
+        const black = byId[pairing.blackId];
+        if (!white || !black) return;
+        if (pairing.result) applyResultToPlayers_(white, black, pairing.result, -1);
+        pairing.result = result;
+        applyResultToPlayers_(white, black, result, 1);
+        if (white.played.indexOf(black.id) === -1) white.played.push(black.id);
+        if (black.played.indexOf(white.id) === -1) black.played.push(white.id);
+        if (lanAllCurrentRoundResultsIn_()) lanHostState_.status = "round-done";
+        lanBroadcast_();
+      }
+
+      function lanAllCurrentRoundResultsIn_() {
+        const roundPairings = lanHostState_.pairings.filter((p) => p.round === lanHostState_.round);
+        return roundPairings.length > 0 && roundPairings.every((p) => p.result);
+      }
+
+      function lanAdvanceRound_() {
+        const players = lanHostState_.players.map((p) => ({ ...p, played: (p.played || []).slice() }));
+        const { nextRound, newPairings, updatedPlayers } = buildNextRoundPairings_(
+          players,
+          lanHostState_.round,
+          lanHostState_.timeControl,
+          lanHostState_.pairings,
+          null
+        );
+        lanHostState_.players = updatedPlayers;
+        lanHostState_.pairings = lanHostState_.pairings.concat(newPairings);
+        lanHostState_.round = nextRound;
+        lanHostState_.status = "playing";
+        lanBroadcast_();
+      }
+
+      function lanFinishTournament_() {
+        lanHostState_.status = "finished";
+        lanBroadcast_();
+      }
+
+      function lanRenderHost_() {
+        if (!lanHostState_) return;
+        document.getElementById("lan-host-title-display").textContent = lanHostState_.name || "Torneo LAN";
+        const badge = document.getElementById("lan-host-status-badge");
+        const statusLabels = { playing: "🟢 En juego", "round-done": "⏳ Ronda completa", finished: "🏁 Finalizado" };
+        badge.textContent = statusLabels[lanHostState_.status] || "Configuración";
+        const roundLabel = document.getElementById("lan-host-round-label");
+        roundLabel.textContent = lanHostState_.round
+          ? "Ronda " + lanHostState_.round + (lanHostState_.totalRounds ? " de " + lanHostState_.totalRounds : "")
+          : "Todavía no arrancó";
+
+        const listEl = document.getElementById("lan-players-list");
+        listEl.innerHTML = lanHostState_.players.length
+          ? lanHostState_.players
+              .map((p) => {
+                const peer = lanPeers_.get(p.id);
+                const isHost = p.id === "host";
+                const dot = isHost ? "🟢 (vos)" : peer && peer.connected ? "🟢 conectado" : "⚪ sin conexión";
+                return `<div class="pairing-row"><span>${escapeHtml_(p.name)}</span><span class="muted" style="font-size:13px">${dot} · ${p.points} pts</span></div>`;
+              })
+              .join("")
+          : '<p class="muted">Todavía no hay jugadores.</p>';
+
+        document.getElementById("lan-start-btn").style.display = lanHostState_.round === 0 && lanHostState_.players.length >= 2 ? "" : "none";
+        const canAdvance =
+          lanHostState_.round > 0 &&
+          (!lanHostState_.totalRounds || lanHostState_.round < lanHostState_.totalRounds) &&
+          lanAllCurrentRoundResultsIn_() &&
+          lanHostState_.status !== "finished";
+        document.getElementById("lan-next-round-btn").style.display = canAdvance ? "" : "none";
+        document.getElementById("lan-finish-btn").style.display = lanHostState_.round > 0 && lanHostState_.status !== "finished" ? "" : "none";
+
+        lanRenderPairings_(lanHostState_, "lan-pairings-card", "lan-pairings-round-label", "lan-pairings-list", null);
+        lanRenderStandings_(lanHostState_, "lan-standings-card", "lan-standings-list");
+      }
+
+      // Tabla de emparejamientos de la ronda actual. Si se pasa myId, cada
+      // fila donde ese jugador participa muestra botones para cargar el
+      // resultado; si myId es null (vista del anfitrión) los botones
+      // aparecen en todas las filas sin BYE.
+      function lanRenderPairings_(state, cardId, roundLabelId, listId, myId) {
+        const card = document.getElementById(cardId);
+        const roundPairings = state.pairings.filter((p) => p.round === state.round);
+        if (!state.round || roundPairings.length === 0) {
+          card.style.display = "none";
           return;
         }
-        if (msg.type === "approved") {
-          toast("✅ El árbitro te aprobó — ya sos parte del torneo");
-          const statusEl = document.getElementById("lan-player-connect-status");
-          if (statusEl) statusEl.textContent = "✅ Aprobado — ya formás parte del torneo";
-          return;
-        }
-        if (msg.type === "rejected") {
-          toast("❌ El árbitro no te aprobó para este torneo");
-          const statusEl = document.getElementById("lan-player-connect-status");
-          if (statusEl) statusEl.textContent = "❌ El árbitro no aprobó tu ingreso";
-          return;
-        }
-        if (msg.type === "state") {
-          lanState = msg.payload;
-          lanRenderUI();
-          return;
-        }
-        if (msg.type === "draw_offer") {
-          showAlert("🤝 Tu rival te ofrece tablas. ¿Aceptás?", "info");
-          const yesBtn = document.getElementById("alert-analyze-btn");
-          // Reutilizamos el cuadro de alerta genérico solo para avisar; la
-          // decisión se toma con un confirm simple para no complicar el
-          // flujo de esta primera versión.
-          setTimeout(() => {
-            if (confirm("Tu rival ofrece tablas. ¿Aceptás?")) {
-              lanPlayerChannel.send(JSON.stringify({ type: "drawaccept", matchKey: msg.matchKey }));
+        card.style.display = "";
+        document.getElementById(roundLabelId).textContent = "Ronda " + state.round;
+        const isHostView = myId === null;
+        document.getElementById(listId).innerHTML = roundPairings
+          .map((p) => {
+            const bye = p.blackId === "";
+            const canReport = !bye && !p.result && (isHostView || myId === p.whiteId || myId === p.blackId);
+            let resultHtml = "";
+            if (bye) {
+              resultHtml = '<span class="muted">BYE</span>';
+            } else if (p.result) {
+              resultHtml = "<strong>" + escapeHtml_(lanResultLabel_(p.result)) + "</strong>";
+            } else if (canReport) {
+              resultHtml = `
+                <button class="btn" data-lan-result="1-0" data-round="${p.round}" data-board="${p.board}">1-0</button>
+                <button class="btn" data-lan-result="1/2-1/2" data-round="${p.round}" data-board="${p.board}">½-½</button>
+                <button class="btn" data-lan-result="0-1" data-round="${p.round}" data-board="${p.board}">0-1</button>`;
+            } else {
+              resultHtml = '<span class="muted">Pendiente</span>';
             }
-          }, 50);
-          return;
-        }
+            return `<div class="pairing-row"><span>Mesa ${p.board}: ${escapeHtml_(p.whiteName)} (blancas) vs ${escapeHtml_(p.blackName)} (negras)</span><span>${resultHtml}</span></div>`;
+          })
+          .join("");
       }
 
-      // ---------- Lado ÁRBITRO: recibe la oferta, genera la respuesta ----------
-      async function lanHostGenerateAnswer(offerCodeText) {
-        const offerObj = lanDecode(offerCodeText);
-        const pc = new RTCPeerConnection(LAN_ICE_CONFIG);
-        const tempId = lanNewId();
-        lanHostPeers[tempId] = { pc, channel: null };
-        pc.ondatachannel = (ev) => {
-          lanHostPeers[tempId].channel = ev.channel;
-          lanSetupHostChannel(tempId, ev.channel);
-        };
-        await pc.setRemoteDescription(offerObj);
+      function lanResultLabel_(result) {
+        if (result === "1-0") return "1 - 0";
+        if (result === "0-1") return "0 - 1";
+        if (result === "1/2-1/2") return "½ - ½";
+        return result;
+      }
+
+      function lanRenderStandings_(state, cardId, listId) {
+        const card = document.getElementById(cardId);
+        if (!state.players.length) {
+          card.style.display = "none";
+          return;
+        }
+        card.style.display = "";
+        const ranked = rankPlayersCompute_(state.players, state.pairings);
+        document.getElementById(listId).innerHTML = `
+          <table class="standings-table">
+            <thead><tr><th>#</th><th>Jugador</th><th>Pts</th><th>V-E-D</th><th>Bucholz</th></tr></thead>
+            <tbody>
+              ${ranked
+                .map(
+                  (p, i) =>
+                    `<tr><td>${i + 1}</td><td>${escapeHtml_(p.name)}</td><td>${p.points}</td><td>${p._record.w}-${p._record.d}-${p._record.l}</td><td>${p._buchholz}</td></tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>`;
+      }
+
+      document.getElementById("lan-pairings-list").addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-lan-result]");
+        if (!btn) return;
+        lanApplyResult_(null, Number(btn.dataset.round), Number(btn.dataset.board), btn.dataset.lanResult, false);
+      });
+
+      // ---------------------- lado jugador ----------------------
+
+      async function lanJoinGenerateAnswer_(offerCode, name) {
+        const data = lanDecodeSignal_(offerCode);
+        if (!data || data.type !== "offer" || !data.sdp) throw new Error("Ese código no es una invitación válida.");
+        const pc = new RTCPeerConnection(LAN_ICE_SERVERS_);
+        pc.addEventListener("datachannel", (ev) => {
+          lanClientChannel_ = ev.channel;
+          lanWireChannelClient_(lanClientChannel_);
+        });
+        await pc.setRemoteDescription(data.sdp);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        await lanWaitIceComplete(pc);
-        return lanEncode(pc.localDescription);
+        await lanWaitIceGathering_(pc);
+        lanClientPc_ = pc;
+        lanClientName_ = name;
+        return lanEncodeSignal_({ type: "answer", sdp: pc.localDescription, name });
       }
 
-      function lanSetupHostChannel(playerId, channel) {
-        channel.onmessage = (ev) => {
+      function lanWireChannelClient_(channel) {
+        channel.addEventListener("open", () => {
+          const statusEl = document.getElementById("lan-join-connect-status");
+          if (statusEl) statusEl.textContent = "✅ Conectado con el anfitrión.";
+        });
+        channel.addEventListener("close", () => {
+          const badge = document.getElementById("lan-player-status-badge");
+          if (badge) badge.textContent = "⚪ Desconectado del anfitrión";
+        });
+        channel.addEventListener("message", (ev) => {
           let msg;
           try {
             msg = JSON.parse(ev.data);
           } catch (err) {
             return;
           }
-          lanHostHandleMessage(playerId, msg);
-        };
-        channel.onclose = () => {
-          const p = lanState && lanState.players.find((pl) => pl.id === playerId);
-          if (p) {
-            p.connected = false;
-            lanBroadcastState();
-            lanRenderUI();
-          }
-        };
-      }
-
-      function lanSendTo(playerId, obj) {
-        const peer = lanHostPeers[playerId];
-        if (peer && peer.channel && peer.channel.readyState === "open") {
-          peer.channel.send(JSON.stringify(obj));
-        }
-      }
-
-      function lanBroadcastState() {
-        lanLastBroadcastAt = Date.now();
-        Object.keys(lanHostPeers).forEach((id) => lanSendTo(id, { type: "state", payload: lanState }));
-        lanSaveState();
-      }
-
-      function lanHostHandleMessage(fromId, msg) {
-        if (msg.type === "hello") return lanHostRegisterPlayer(fromId, msg.name);
-        if (msg.type === "move") return lanHostApplyMove(fromId, msg.matchKey, msg.from, msg.to, msg.promotion);
-        if (msg.type === "resign") return lanHostResign(fromId, msg.matchKey);
-        if (msg.type === "drawoffer") return lanHostRelayDrawOffer(fromId, msg.matchKey);
-        if (msg.type === "drawaccept") return lanHostFinishDraw(msg.matchKey);
-      }
-
-      // Un jugador que se conecta por primera vez entra como "pendiente"
-      // (approved: false) y NO participa de los emparejamientos hasta que
-      // el árbitro lo apruebe a mano — mismo criterio que las inscripciones
-      // pendientes del modo Internet, para que no entre cualquiera que
-      // llegue a intercambiar el código.
-      function lanHostRegisterPlayer(id, name) {
-        if (!lanState) return;
-        let p = lanState.players.find((pl) => pl.id === id);
-        if (!p) {
-          p = { id, name: (name || "Jugador").slice(0, 40), points: 0, active: false, approved: false, connected: true };
-          lanState.players.push(p);
-          toast("🔔 " + p.name + " pide unirse al torneo LAN — aprobalo en el panel del árbitro");
-        } else {
-          p.connected = true;
-          if (name) p.name = name.slice(0, 40);
-        }
-        lanSendTo(id, { type: "welcome", id });
-        lanBroadcastState();
-        lanRenderUI();
-      }
-
-      function lanApprovePlayer(id) {
-        if (!lanState) return;
-        const p = lanState.players.find((pl) => pl.id === id);
-        if (!p) return;
-        p.approved = true;
-        p.active = true;
-        lanSendTo(id, { type: "approved" });
-        lanBroadcastState();
-        lanRenderUI();
-      }
-
-      function lanRejectPlayer(id) {
-        if (!lanState) return;
-        lanSendTo(id, { type: "rejected" });
-        lanState.players = lanState.players.filter((pl) => pl.id !== id);
-        const peer = lanHostPeers[id];
-        if (peer) {
-          try {
-            peer.channel && peer.channel.close();
-            peer.pc && peer.pc.close();
-          } catch (err) {
-            /* no importa si ya estaba cerrado */
-          }
-          delete lanHostPeers[id];
-        }
-        lanBroadcastState();
-        lanRenderUI();
-      }
-
-      // ---------- Emparejamientos ----------
-      function lanPlayedPairsSet() {
-        const set = new Set();
-        (lanState.rounds || []).forEach((r) => {
-          r.pairings.forEach((p) => {
-            if (p.blackId) {
-              set.add(p.whiteId + "|" + p.blackId);
-              set.add(p.blackId + "|" + p.whiteId);
-            }
-          });
+          lanClientHandleMessage_(msg);
         });
-        return set;
       }
 
-      function lanGenerateRound() {
-        if (!lanState) return;
-        const active = lanState.players.filter((p) => p.active);
-        if (active.length < 2) {
-          toast("Hacen falta al menos 2 jugadores conectados y activos");
-          return;
-        }
-        const playedPairs = lanPlayedPairsSet();
-        const queue = [...active].sort((a, b) => b.points - a.points || Math.random() - 0.5);
-        const pairings = [];
-        let board = 1;
-        while (queue.length) {
-          const a = queue.shift();
-          let idx = queue.findIndex((b) => !playedPairs.has(a.id + "|" + b.id));
-          if (idx === -1) idx = queue.length ? 0 : -1;
-          if (idx === -1) {
-            pairings.push({
-              board: board++,
-              whiteId: a.id,
-              blackId: null,
-              result: "bye",
-              fen: START_FEN_TOURNEY,
-              history: [],
-              status: "done",
-              clock: null,
-            });
-            a.points += 1;
-            continue;
-          }
-          const b = queue.splice(idx, 1)[0];
-          pairings.push({
-            board: board++,
-            whiteId: a.id,
-            blackId: b.id,
-            result: null,
-            fen: START_FEN_TOURNEY,
-            history: [],
-            status: "playing",
-            clock: lanState.timeControlMinutes ? { w: lanState.timeControlMinutes * 60, b: lanState.timeControlMinutes * 60 } : null,
-          });
-        }
-        const roundNum = (lanState.rounds || []).length + 1;
-        lanState.rounds = lanState.rounds || [];
-        lanState.rounds.push({ round: roundNum, pairings });
-        lanState.currentRound = roundNum;
-        lanState.status = "playing";
-        lanChessByMatch = {}; // nueva ronda, nuevas partidas: se limpian las instancias viejas
-        lanBroadcastState();
-        lanStartClockTicker();
-        lanRenderUI();
-        toast("🔔 Ronda " + roundNum + " generada — " + pairings.length + " mesas");
-      }
-
-      function lanFindPairing(matchKey) {
-        if (!lanState) return null;
-        for (const r of lanState.rounds || []) {
-          for (const p of r.pairings) {
-            if (lanMatchKey(r.round, p.board) === matchKey) return p;
-          }
-        }
-        return null;
-      }
-
-      function lanCurrentRoundObj() {
-        if (!lanState) return null;
-        return (lanState.rounds || []).find((r) => r.round === lanState.currentRound) || null;
-      }
-
-      function lanApplyResultPoints(pairing) {
-        const w = lanState.players.find((p) => p.id === pairing.whiteId);
-        const b = lanState.players.find((p) => p.id === pairing.blackId);
-        if (pairing.result === "1-0") {
-          if (w) w.points += 1;
-        } else if (pairing.result === "0-1") {
-          if (b) b.points += 1;
-        } else if (pairing.result === "1/2-1/2") {
-          if (w) w.points += 0.5;
-          if (b) b.points += 0.5;
+      function lanClientHandleMessage_(msg) {
+        if (!msg) return;
+        if (msg.type === "state") {
+          lanClientState_ = msg.state;
+          if (msg.yourId) lanClientMyId_ = msg.yourId;
+          document.getElementById("lan-join-box").style.display = "none";
+          document.getElementById("lan-role-box").style.display = "none";
+          document.getElementById("lan-player-active-box").style.display = "";
+          lanRenderClient_();
         }
       }
 
-      function lanHostApplyMove(fromId, matchKey, from, to, promotion) {
-        const pairing = lanFindPairing(matchKey);
-        if (!pairing || pairing.status !== "playing") return;
-        const isWhite = pairing.whiteId === fromId;
-        const isBlack = pairing.blackId === fromId;
-        if (!isWhite && !isBlack) return;
-        let chess = lanChessByMatch[matchKey];
-        if (!chess) {
-          chess = new Chess(pairing.fen);
-          lanChessByMatch[matchKey] = chess;
-        }
-        const turnColor = chess.turn();
-        if ((turnColor === "w" && !isWhite) || (turnColor === "b" && !isBlack)) return;
-        const move = chess.move({ from, to, promotion: promotion || "q" });
-        if (!move) return; // jugada ilegal: se ignora, el estado no cambia
-        pairing.fen = chess.fen();
-        pairing.history = chess.history();
-        pairing.lastFrom = from;
-        pairing.lastTo = to;
-        if (chess.game_over()) {
-          pairing.status = "done";
-          if (chess.in_checkmate()) {
-            pairing.result = turnColor === "w" ? "0-1" : "1-0";
-          } else {
-            pairing.result = "1/2-1/2";
-          }
-          lanApplyResultPoints(pairing);
-        }
-        lanBroadcastState();
-        if (lanIsHost) lanRenderUI();
+      function lanClientReportResult_(round, board, myColorResult) {
+        if (!lanClientChannel_ || lanClientChannel_.readyState !== "open") return;
+        lanClientChannel_.send(JSON.stringify({ type: "report-result", round, board, result: myColorResult }));
       }
 
-      function lanHostResign(fromId, matchKey) {
-        const pairing = lanFindPairing(matchKey);
-        if (!pairing || pairing.status !== "playing") return;
-        if (pairing.whiteId === fromId) pairing.result = "0-1";
-        else if (pairing.blackId === fromId) pairing.result = "1-0";
-        else return;
-        pairing.status = "done";
-        lanApplyResultPoints(pairing);
-        lanBroadcastState();
-        lanRenderUI();
-      }
+      function lanRenderClient_() {
+        const state = lanClientState_;
+        if (!state) return;
+        document.getElementById("lan-player-title-display").textContent = state.name || "Torneo LAN";
+        const statusLabels = { playing: "🟢 En juego", "round-done": "⏳ Ronda completa", finished: "🏁 Finalizado" };
+        document.getElementById("lan-player-status-badge").textContent = statusLabels[state.status] || "Conectado";
+        document.getElementById("lan-player-round-label").textContent = state.round
+          ? "Ronda " + state.round + (state.totalRounds ? " de " + state.totalRounds : "")
+          : "Todavía no arrancó";
 
-      function lanHostRelayDrawOffer(fromId, matchKey) {
-        const pairing = lanFindPairing(matchKey);
-        if (!pairing) return;
-        const opponentId = pairing.whiteId === fromId ? pairing.blackId : pairing.whiteId;
-        if (opponentId) lanSendTo(opponentId, { type: "draw_offer", matchKey });
-      }
-
-      function lanHostFinishDraw(matchKey) {
-        const pairing = lanFindPairing(matchKey);
-        if (!pairing || pairing.status !== "playing") return;
-        pairing.result = "1/2-1/2";
-        pairing.status = "done";
-        lanApplyResultPoints(pairing);
-        lanBroadcastState();
-        lanRenderUI();
-      }
-
-      // Reloj: solo el árbitro lo hace correr. Cada segundo descuenta al
-      // jugador que tiene el turno en cada mesa activa; si llega a 0, se
-      // declara la partida perdida por tiempo. Para no saturar la red local
-      // con un mensaje por segundo, el estado completo solo se retransmite
-      // cada 5 segundos (los clientes hacen la cuenta regresiva visual
-      // solos entre medio, ver lanRenderMatchClock).
-      function lanStartClockTicker() {
-        if (lanClockTicker) clearInterval(lanClockTicker);
-        lanClockTicker = setInterval(() => {
-          if (!lanIsHost || !lanState) return;
-          const round = lanCurrentRoundObj();
-          if (!round) return;
-          let changed = false;
-          round.pairings.forEach((p) => {
-            if (p.status !== "playing" || !p.clock) return;
-            const chess = lanChessByMatch[lanMatchKey(round.round, p.board)];
-            const turnColor = chess ? chess.turn() : "w";
-            p.clock[turnColor] = Math.max(0, p.clock[turnColor] - 1);
-            if (p.clock[turnColor] <= 0) {
-              p.status = "done";
-              p.result = turnColor === "w" ? "0-1" : "1-0";
-              lanApplyResultPoints(p);
-              changed = true;
-            }
-          });
-          if (changed || Date.now() - lanLastBroadcastAt > 5000) {
-            lanBroadcastState();
-            if (changed) lanRenderUI();
-          }
-        }, 1000);
-      }
-
-      // ---------- Interfaz ----------
-      function lanShowRole(role) {
-        lanIsHost = role === "host";
-        document.getElementById("lan-host-box").style.display = lanIsHost ? "" : "none";
-        document.getElementById("lan-player-box").style.display = lanIsHost ? "none" : "";
-        document.getElementById("lan-role-status").textContent = lanIsHost
-          ? "Modo árbitro: creá el torneo y conectá jugadores."
-          : "Modo jugador: generá tu código y esperá a que el árbitro lo confirme.";
-      }
-
-      function lanRenderUI() {
-        const statusBox = document.getElementById("lan-tournament-status-box");
-        if (!lanState) {
-          statusBox.style.display = "none";
-          return;
-        }
-        statusBox.style.display = "";
-        document.getElementById("lan-status-title").textContent = "🏆 " + (lanState.name || "Torneo LAN");
-        const roundTxt = lanState.currentRound ? "Ronda " + lanState.currentRound + (lanState.totalRounds ? " / " + lanState.totalRounds : "") : "Todavía no arrancó";
-        document.getElementById("lan-status-sub").textContent =
-          roundTxt + " · " + lanState.players.length + " jugador(es)" + (lanState.status === "finished" ? " · 🏁 Finalizado" : "");
-
-        // Emparejamientos de la ronda actual
-        const round = lanCurrentRoundObj();
-        const pairingsEl = document.getElementById("lan-pairings-list");
-        if (!round) {
-          pairingsEl.innerHTML = '<p class="muted">Todavía no se generó ninguna ronda.</p>';
+        const myPairingCard = document.getElementById("lan-player-mypairing-card");
+        const mine = state.pairings.find((p) => p.round === state.round && (p.whiteId === lanClientMyId_ || p.blackId === lanClientMyId_));
+        if (!mine || mine.blackId === "") {
+          myPairingCard.style.display = "none";
         } else {
-          pairingsEl.innerHTML = round.pairings
-            .map((p) => {
-              const wName = lanState.players.find((x) => x.id === p.whiteId)?.name || "?";
-              const bName = p.blackId ? lanState.players.find((x) => x.id === p.blackId)?.name || "?" : null;
-              const resultTxt = p.result === "bye" ? "🆓 BYE" : p.result ? p.result : p.status === "playing" ? "🔴 en juego" : "";
-              const isMine = !lanIsHost && (p.whiteId === lanMyId || p.blackId === lanMyId) && p.status === "playing";
-              const playBtn = isMine
-                ? `<button class="btn primary lan-play-btn" data-round="${round.round}" data-board="${p.board}" style="margin-left:8px">▶️ Jugar</button>`
-                : "";
-              return `<div class="toggle" style="align-items:center">
-                <div>Mesa ${p.board}: <b>${wName}</b> (blancas) vs <b>${bName || "—"}</b> (negras)<small>${resultTxt}</small></div>
-                ${playBtn}
+          myPairingCard.style.display = "";
+          const iAmWhite = mine.whiteId === lanClientMyId_;
+          const oppName = iAmWhite ? mine.blackName : mine.whiteName;
+          const myColor = iAmWhite ? "blancas" : "negras";
+          let body = `<p>Mesa ${mine.board} · Jugás con <strong>${myColor}</strong> contra <strong>${escapeHtml_(oppName)}</strong>.</p>`;
+          if (mine.result) {
+            body += `<p><strong>Resultado: ${escapeHtml_(lanResultLabel_(mine.result))}</strong></p>`;
+          } else {
+            const winResult = iAmWhite ? "1-0" : "0-1";
+            const loseResult = iAmWhite ? "0-1" : "1-0";
+            body += `
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
+                <button class="btn primary" data-lan-my-result="${winResult}">Gané</button>
+                <button class="btn" data-lan-my-result="1/2-1/2">Empate</button>
+                <button class="btn" data-lan-my-result="${loseResult}">Perdí</button>
               </div>`;
-            })
-            .join("");
-          pairingsEl.querySelectorAll(".lan-play-btn").forEach((btn) => {
-            btn.addEventListener("click", () => lanOpenMatch(parseInt(btn.dataset.round, 10), parseInt(btn.dataset.board, 10)));
+          }
+          document.getElementById("lan-player-mypairing").innerHTML = body;
+          document.querySelectorAll("[data-lan-my-result]").forEach((btn) => {
+            btn.onclick = () => lanClientReportResult_(mine.round, mine.board, btn.dataset.lanMyResult);
           });
         }
 
-        // Posiciones
-        const standingsEl = document.getElementById("lan-standings-list");
-        const sorted = [...lanState.players].sort((a, b) => b.points - a.points);
-        standingsEl.innerHTML = sorted
-          .map(
-            (p, i) =>
-              `<div class="toggle" style="align-items:center"><div>${i + 1}. <b>${p.name}</b>${p.connected === false ? " (desconectado)" : ""}</div><div><b>${p.points}</b> pts</div></div>`
-          )
-          .join("");
-
-        // Panel del árbitro: lista de conexiones (pendientes de aprobar primero)
-        if (lanIsHost) {
-          document.getElementById("lan-host-manage-box").style.display = "";
-          document.getElementById("lan-host-create-box").style.display = "none";
-          const listEl = document.getElementById("lan-host-players-list");
-          const pending = lanState.players.filter((p) => !p.approved);
-          const approved = lanState.players.filter((p) => p.approved);
-          let html = "";
-          if (pending.length) {
-            html +=
-              `<div class="panel-title">🔔 Pendientes de aprobación (${pending.length})</div>` +
-              pending
-                .map(
-                  (p) => `<div class="toggle" style="align-items:center">
-                    <div>${p.connected === false ? "🔴" : "🟢"} ${p.name}</div>
-                    <div style="display:flex;gap:8px">
-                      <button class="btn primary lan-approve-btn" data-id="${p.id}">✅ Aprobar</button>
-                      <button class="btn danger lan-reject-btn" data-id="${p.id}">✖ Rechazar</button>
-                    </div>
-                  </div>`
-                )
-                .join("");
-          }
-          html += "<div class='panel-title'>👥 Jugadores aprobados</div>";
-          html += approved.length
-            ? approved.map((p) => `<div class="toggle" style="align-items:center"><div>${p.connected === false ? "🔴" : "🟢"} ${p.name} — ${p.points} pts</div></div>`).join("")
-            : '<p class="muted">Todavía no aprobaste a nadie.</p>';
-          listEl.innerHTML = html;
-          listEl.querySelectorAll(".lan-approve-btn").forEach((btn) => btn.addEventListener("click", () => lanApprovePlayer(btn.dataset.id)));
-          listEl.querySelectorAll(".lan-reject-btn").forEach((btn) => btn.addEventListener("click", () => lanRejectPlayer(btn.dataset.id)));
-        }
-
-        // Si tengo una mesa abierta, la vuelvo a dibujar con el estado nuevo
-        if (lanActiveMatch) lanRenderMatchBoard();
+        lanRenderPairings_(state, "lan-player-pairings-card", "lan-player-pairings-round-label", "lan-player-pairings-list", lanClientMyId_);
+        lanRenderStandings_(state, "lan-player-standings-card", "lan-player-standings-list");
       }
 
-      function lanOpenMatch(round, board) {
-        lanActiveMatch = { round, board };
-        document.getElementById("lan-tournament-status-box").style.display = "none";
-        document.getElementById("lan-match-box").style.display = "";
-        lanRenderMatchBoard();
-      }
-
-      function lanCloseMatchView() {
-        lanActiveMatch = null;
-        document.getElementById("lan-match-box").style.display = "none";
-        document.getElementById("lan-tournament-status-box").style.display = "";
-      }
-
-      function lanFmtClock(seconds) {
-        if (seconds == null) return "";
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return m + ":" + String(s).padStart(2, "0");
-      }
-
-      function lanRenderMatchBoard() {
-        if (!lanActiveMatch) return;
-        const key = lanMatchKey(lanActiveMatch.round, lanActiveMatch.board);
-        const pairing = lanFindPairing(key);
-        if (!pairing) return;
-        const wName = lanState.players.find((x) => x.id === pairing.whiteId)?.name || "?";
-        const bName = pairing.blackId ? lanState.players.find((x) => x.id === pairing.blackId)?.name || "?" : "?";
-        document.getElementById("lan-match-title").textContent = `Mesa ${pairing.board}: ${wName} vs ${bName}`;
-
-        const chess = new Chess(pairing.fen);
-        lanBoardCtx = lanBoardCtx && lanBoardCtx.matchKey === key ? lanBoardCtx : { matchKey: key, selected: null };
-        lanBoardCtx.chess = chess;
-        lanBoardCtx.myColor = pairing.whiteId === lanMyId ? "w" : "b";
-
-        const boardEl = document.getElementById("lan-match-board");
-        renderBoardGrid(boardEl, chess.board(), {
-          selected: lanBoardCtx.selected,
-          highlight: pairing.lastFrom && pairing.lastTo ? [pairing.lastFrom, pairing.lastTo] : [],
-          onClick: lanOnSquareClick,
+      document.getElementById("lan-player-pairings-list") &&
+        document.getElementById("lan-player-pairings-list").addEventListener("click", (ev) => {
+          const btn = ev.target.closest("[data-lan-result]");
+          if (!btn) return;
+          lanClientReportResult_(Number(btn.dataset.round), Number(btn.dataset.board), btn.dataset.lanResult);
         });
 
-        const clockEl = document.getElementById("lan-match-clock");
-        if (pairing.clock) {
-          clockEl.innerHTML = `<div>⚪ ${lanFmtClock(pairing.clock.w)}</div><div>⚫ ${lanFmtClock(pairing.clock.b)}</div>`;
-        } else {
-          clockEl.innerHTML = "";
-        }
+      // ---------------------- interfaz / botones ----------------------
 
-        const statusEl = document.getElementById("lan-match-status-text");
-        if (pairing.status === "done") {
-          statusEl.textContent = "🏁 Partida terminada — resultado: " + pairing.result;
-        } else if (pairing.whiteId !== lanMyId && pairing.blackId !== lanMyId) {
-          statusEl.textContent = "👀 Estás mirando esta mesa.";
-        } else {
-          statusEl.textContent = chess.turn() === lanBoardCtx.myColor ? "✅ Tu turno" : "⏳ Turno del rival";
-        }
-      }
+      wireCustomToggle("lan-time-mode", "lan-custom-time-label");
+      wireCustomToggle("lan-increment", "lan-custom-increment-label");
 
-      async function lanOnSquareClick(sqName) {
-        const ctx = lanBoardCtx;
-        if (!ctx || !lanActiveMatch) return;
-        const pairing = lanFindPairing(ctx.matchKey);
-        if (!pairing || pairing.status !== "playing") return;
-        if (pairing.whiteId !== lanMyId && pairing.blackId !== lanMyId) return; // solo mira
-        if (ctx.chess.turn() !== ctx.myColor) {
-          toast("⏳ Esperá tu turno");
+      document.getElementById("lan-role-host-btn").addEventListener("click", () => {
+        lanRole_ = "host";
+        document.getElementById("lan-role-box").style.display = "none";
+        document.getElementById("lan-host-setup-box").style.display = "";
+        document.getElementById("lan-status-line").textContent = "Rol: anfitrión — configurá el torneo.";
+      });
+
+      document.getElementById("lan-role-join-btn").addEventListener("click", () => {
+        lanRole_ = "player";
+        document.getElementById("lan-role-box").style.display = "none";
+        document.getElementById("lan-join-box").style.display = "";
+        document.getElementById("lan-status-line").textContent = "Rol: jugador — pegá el código del anfitrión.";
+      });
+
+      document.getElementById("lan-create-btn").addEventListener("click", () => {
+        const name = document.getElementById("lan-name-input").value.trim() || "Torneo";
+        const hostName = document.getElementById("lan-host-name-input").value.trim() || "Anfitrión";
+        const totalRoundsRaw = document.getElementById("lan-rounds-input").value.trim();
+        if (totalRoundsRaw && (!/^\d+$/.test(totalRoundsRaw) || Number(totalRoundsRaw) < 1)) {
+          toast("❌ La cantidad de rondas tiene que ser un número entero mayor a 0 (o dejalo vacío)");
           return;
         }
-        const piece = ctx.chess.get(sqName);
-        if (ctx.selected === sqName) {
-          ctx.selected = null;
-          lanRenderMatchBoard();
+        const roundApprovalMode = document.getElementById("lan-round-mode").value === "auto" ? "auto" : "manual";
+        const woGraceMinutes = document.getElementById("lan-wo-grace-input").value.trim();
+        lanHostState_ = {
+          name,
+          round: 0,
+          status: "playing",
+          totalRounds: totalRoundsRaw ? Number(totalRoundsRaw) : null,
+          timeControl: lanNewTimeControl_(),
+          roundApprovalMode,
+          woGraceMinutes: woGraceMinutes ? Number(woGraceMinutes) : 0,
+          players: [{ id: "host", name: hostName, email: "", points: 0, byes: 0, played: [], colorBalance: 0, status: "active" }],
+          pairings: [],
+        };
+        document.getElementById("lan-host-setup-box").style.display = "none";
+        document.getElementById("lan-host-active-box").style.display = "";
+        document.getElementById("lan-status-line").textContent = "Torneo LAN creado. Agregá jugadores con un código por dispositivo.";
+        lanRenderHost_();
+      });
+
+      document.getElementById("lan-generate-invite-btn").addEventListener("click", async () => {
+        try {
+          const code = await lanHostCreateInvite_();
+          document.getElementById("lan-invite-output").value = code;
+          document.getElementById("lan-invite-output-box").style.display = "";
+          document.getElementById("lan-invite-status").textContent = "";
+        } catch (err) {
+          toast("❌ " + err.message);
+        }
+      });
+
+      document.getElementById("lan-copy-invite-btn").addEventListener("click", () => {
+        const el = document.getElementById("lan-invite-output");
+        el.select();
+        navigator.clipboard && navigator.clipboard.writeText(el.value).catch(() => {});
+        toast("✓ Código copiado");
+      });
+
+      document.getElementById("lan-confirm-invite-btn").addEventListener("click", async () => {
+        const answerCode = document.getElementById("lan-invite-answer-input").value;
+        const statusEl = document.getElementById("lan-invite-status");
+        try {
+          await lanHostConfirmInvite_(answerCode);
+          statusEl.textContent = "✓ Jugador conectado.";
+          document.getElementById("lan-invite-answer-input").value = "";
+          document.getElementById("lan-invite-output-box").style.display = "none";
+        } catch (err) {
+          statusEl.textContent = "❌ " + err.message;
+        }
+      });
+
+      document.getElementById("lan-start-btn").addEventListener("click", lanAdvanceRound_);
+      document.getElementById("lan-next-round-btn").addEventListener("click", lanAdvanceRound_);
+      document.getElementById("lan-finish-btn").addEventListener("click", lanFinishTournament_);
+
+      document.getElementById("lan-join-generate-btn").addEventListener("click", async () => {
+        const name = document.getElementById("lan-join-name-input").value.trim();
+        const offerCode = document.getElementById("lan-join-offer-input").value;
+        if (!name) {
+          toast("❌ Escribí tu nombre primero");
           return;
         }
-        if (ctx.selected) {
-          const from = ctx.selected;
-          let promotion = "q";
-          if (isPromotionMove(ctx.chess, from, sqName)) {
-            ctx.selected = null;
-            lanRenderMatchBoard();
-            promotion = await askPromotion(ctx.myColor);
-          }
-          const clone = new Chess(ctx.chess.fen());
-          const testMove = clone.move({ from, to: sqName, promotion });
-          ctx.selected = null;
-          if (testMove) {
-            lanPlayerChannel.send(JSON.stringify({ type: "move", matchKey: ctx.matchKey, from, to: sqName, promotion }));
-          } else {
-            lanRenderMatchBoard();
-          }
-          return;
+        try {
+          const code = await lanJoinGenerateAnswer_(offerCode, name);
+          document.getElementById("lan-join-answer-output").value = code;
+          document.getElementById("lan-join-answer-box").style.display = "";
+        } catch (err) {
+          toast("❌ " + err.message);
         }
-        if (piece && piece.color === ctx.myColor) {
-          ctx.selected = sqName;
-          lanRenderMatchBoard();
-        }
-      }
+      });
 
-      // ---------- Cableado de botones del modo LAN ----------
-      (function initLanTournamentUI() {
-        const onlineRadio = document.getElementById("tournament-connmode-online");
-        const lanRadio = document.getElementById("tournament-connmode-lan");
-        const onlineBox = document.getElementById("tournament-online-mode");
-        const lanBox = document.getElementById("tournament-lan-mode");
-        function applyConnMode(mode) {
-          onlineBox.style.display = mode === "lan" ? "none" : "";
-          lanBox.style.display = mode === "lan" ? "" : "none";
-          localStorage.setItem("chessSchoolTournamentConnMode", mode);
-        }
-        onlineRadio.addEventListener("change", () => applyConnMode("online"));
-        lanRadio.addEventListener("change", () => applyConnMode("lan"));
-        const savedMode = localStorage.getItem("chessSchoolTournamentConnMode");
-        if (savedMode === "lan") {
-          lanRadio.checked = true;
-          applyConnMode("lan");
-        }
-
-        const savedName = localStorage.getItem(LAN_NAME_KEY);
-        if (savedName) document.getElementById("lan-player-name").value = savedName;
-
-        document.getElementById("lan-be-host-btn").addEventListener("click", () => lanShowRole("host"));
-        document.getElementById("lan-be-player-btn").addEventListener("click", () => lanShowRole("player"));
-
-        document.getElementById("lan-player-gen-offer-btn").addEventListener("click", async () => {
-          const nameInput = document.getElementById("lan-player-name");
-          lanMyName = nameInput.value.trim();
-          if (!lanMyName) {
-            toast("❌ Escribí tu nombre primero");
-            return;
-          }
-          localStorage.setItem(LAN_NAME_KEY, lanMyName);
-          try {
-            const code = await lanPlayerGenerateOffer();
-            document.getElementById("lan-player-offer-code").value = code;
-            document.getElementById("lan-player-offer-wrap").style.display = "";
-          } catch (err) {
-            toast("❌ No se pudo generar el código: " + err.message);
-          }
-        });
-
-        document.getElementById("lan-player-copy-offer-btn").addEventListener("click", () => {
-          const el = document.getElementById("lan-player-offer-code");
-          el.select();
-          navigator.clipboard?.writeText(el.value).catch(() => {});
-          toast("📋 Código copiado");
-        });
-
-        document.getElementById("lan-player-connect-btn").addEventListener("click", async () => {
-          const text = document.getElementById("lan-player-answer-input").value;
-          const statusEl = document.getElementById("lan-player-connect-status");
-          try {
-            await lanPlayerConnect(text);
-            statusEl.textContent = "⏳ Conectando…";
-          } catch (err) {
-            statusEl.textContent = "❌ " + err.message;
-          }
-        });
-
-        document.getElementById("lan-create-tournament-btn").addEventListener("click", () => {
-          const name = document.getElementById("lan-tournament-name").value.trim() || "Torneo LAN";
-          const roundsRaw = document.getElementById("lan-tournament-rounds").value;
-          const totalRounds = roundsRaw ? parseInt(roundsRaw, 10) : null;
-          const timeMode = document.getElementById("lan-tournament-time-mode").value;
-          const timeControlMinutes = timeMode === "none" ? null : parseInt(timeMode, 10);
-          lanIsHost = true;
-          lanState = {
-            name,
-            status: "lobby",
-            totalRounds,
-            timeControlMinutes,
-            currentRound: 0,
-            players: [],
-            rounds: [],
-          };
-          lanHostPeers = {};
-          lanSaveState();
-          document.getElementById("lan-host-create-box").style.display = "none";
-          document.getElementById("lan-host-manage-box").style.display = "";
-          lanRenderUI();
-          toast("🏆 Torneo LAN creado — ya podés conectar jugadores");
-        });
-
-        document.getElementById("lan-host-gen-answer-btn").addEventListener("click", async () => {
-          const text = document.getElementById("lan-host-offer-input").value;
-          if (!text.trim()) {
-            toast("❌ Pegá primero el código A del jugador");
-            return;
-          }
-          try {
-            const code = await lanHostGenerateAnswer(text);
-            document.getElementById("lan-host-answer-code").value = code;
-            document.getElementById("lan-host-answer-wrap").style.display = "";
-          } catch (err) {
-            toast("❌ No se pudo generar el código: " + err.message);
-          }
-        });
-
-        document.getElementById("lan-host-copy-answer-btn").addEventListener("click", () => {
-          const el = document.getElementById("lan-host-answer-code");
-          el.select();
-          navigator.clipboard?.writeText(el.value).catch(() => {});
-          toast("📋 Código copiado");
-        });
-
-        document.getElementById("lan-generate-round-btn").addEventListener("click", () => lanGenerateRound());
-
-        document.getElementById("lan-finish-tournament-btn").addEventListener("click", () => {
-          if (!lanState) return;
-          if (!confirm("¿Finalizar el torneo LAN?")) return;
-          lanState.status = "finished";
-          lanBroadcastState();
-          lanRenderUI();
-        });
-
-        document.getElementById("lan-match-exit-btn").addEventListener("click", () => lanCloseMatchView());
-
-        document.getElementById("lan-match-resign-btn").addEventListener("click", () => {
-          if (!lanActiveMatch || lanIsHost) return;
-          if (!confirm("¿Seguro que te querés rendir?")) return;
-          lanPlayerChannel.send(JSON.stringify({ type: "resign", matchKey: lanMatchKey(lanActiveMatch.round, lanActiveMatch.board) }));
-        });
-
-        document.getElementById("lan-match-draw-btn").addEventListener("click", () => {
-          if (!lanActiveMatch || lanIsHost) return;
-          lanPlayerChannel.send(JSON.stringify({ type: "drawoffer", matchKey: lanMatchKey(lanActiveMatch.round, lanActiveMatch.board) }));
-          toast("🤝 Oferta de tablas enviada");
-        });
-      })();
+      document.getElementById("lan-join-copy-answer-btn").addEventListener("click", () => {
+        const el = document.getElementById("lan-join-answer-output");
+        el.select();
+        navigator.clipboard && navigator.clipboard.writeText(el.value).catch(() => {});
+        toast("✓ Código copiado");
+      });

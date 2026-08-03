@@ -34,6 +34,7 @@
           <button data-page="aprender">📚 Aprender</button>
           <button data-page="ejercicios">🧩 Ejercicios</button>
           <button data-page="torneo">🏆 Torneo</button>
+          <button data-page="torneo-lan">📶 Torneo LAN</button>
           <button data-page="pantalla-publica">📺 Pantalla pública</button>
           <button data-page="estadisticas">📊 Estadísticas</button>
           <button data-page="configuracion">⚙️ Configuración</button>
@@ -1876,29 +1877,6 @@
               </div>
             </div>
 
-            <div class="card" id="tournament-connmode-card">
-              <div class="panel-title">🔌 Modo de conexión</div>
-              <p class="muted" style="font-size: 13px; margin-top: 0">
-                "Internet" usa la base de datos compartida (Firebase) y hace
-                falta Wi-Fi/datos. "Red local (LAN)" conecta los dispositivos
-                directamente entre sí por la misma red Wi-Fi/router, sin
-                necesidad de internet: sirve para jugar varias partidas del
-                torneo al mismo tiempo aunque no haya conexión afuera del aula.
-              </p>
-              <div class="toggle" style="cursor: default">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer">
-                  <input type="radio" name="tournament-connmode" id="tournament-connmode-online" value="online" checked />
-                  🌐 Internet (Firebase)
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer">
-                  <input type="radio" name="tournament-connmode" id="tournament-connmode-lan" value="lan" />
-                  📡 Red local — LAN (sin internet)
-                </label>
-              </div>
-            </div>
-
-            <div id="tournament-online-mode">
-
             <div id="tournament-auth-box" class="card" style="display: none">
               <h3>Iniciar sesión</h3>
               <p class="muted" id="tournament-auth-status">No iniciaste sesión todavía.</p>
@@ -2586,129 +2564,180 @@
                 </p>
               </div>
             </div>
+          </div>
+        </section>
 
-            </div><!-- /#tournament-online-mode -->
+        <section class="page" id="page-torneo-lan">
+          <div class="grid" style="grid-template-columns: 1fr; gap: 20px">
+            <div class="card">
+              <h2>📶 Torneo LAN</h2>
+              <p class="muted">
+                Modo sin internet ni cuenta de Google: los dispositivos se conectan
+                directamente entre sí (P2P, WebRTC) siempre que estén en la misma red
+                (o cerca, con Bluetooth/Wi-Fi Direct según el navegador). Un
+                dispositivo es el <strong>anfitrión</strong> (lleva el torneo) y el
+                resto se suma como <strong>jugador</strong>. Como no hay ningún
+                servidor de por medio, conectar cada jugador requiere intercambiar un
+                código una sola vez (por WhatsApp, viva voz, o como prefieran) —
+                después de eso todo se sincroniza solo mientras las pestañas queden
+                abiertas.
+              </p>
+              <p class="lesson-gate-note" id="lan-status-line">Todavía no elegiste un rol.</p>
+            </div>
 
-            <div id="tournament-lan-mode" style="display: none">
-              <div class="card" id="lan-role-box">
-                <h3>📡 Torneo por red local (sin internet)</h3>
-                <p class="muted" style="font-size: 13px">
-                  Todos los dispositivos tienen que estar conectados a la
-                  misma red Wi-Fi/router (no hace falta que ese router tenga
-                  internet). Un dispositivo hace de <b>árbitro</b> (crea el
-                  torneo y arma los emparejamientos) y el resto se conecta
-                  como <b>jugador</b>. La conexión es directa entre
-                  dispositivos (P2P), sin pasar por ningún servidor externo.
+            <div id="lan-role-box" class="card">
+              <h3>¿Cómo vas a participar?</h3>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px">
+                <button class="btn primary" id="lan-role-host-btn">🖥️ Soy el anfitrión (armo el torneo)</button>
+                <button class="btn" id="lan-role-join-btn">📱 Soy jugador (me sumo a un torneo)</button>
+              </div>
+            </div>
+
+            <!-- ===================== FLUJO JUGADOR ===================== -->
+            <div id="lan-join-box" class="card" style="display: none">
+              <h3>Unirme a un torneo LAN</h3>
+              <label style="display: block; margin: 10px 0 6px; font-weight: 600">Tu nombre</label>
+              <input type="text" id="lan-join-name-input" placeholder="Como querés que te vean en la tabla" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
+
+              <label style="display: block; margin: 14px 0 6px; font-weight: 600">Código del anfitrión</label>
+              <textarea id="lan-join-offer-input" rows="4" placeholder="Pegá acá el código que te pasó el anfitrión" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 12px; resize: vertical"></textarea>
+              <button class="btn primary" id="lan-join-generate-btn" style="margin-top: 10px">Generar mi código de respuesta</button>
+
+              <div id="lan-join-answer-box" style="display: none; margin-top: 14px">
+                <label style="display: block; margin-bottom: 6px; font-weight: 600">Tu código de respuesta — pasáselo al anfitrión</label>
+                <textarea id="lan-join-answer-output" rows="4" readonly style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 12px"></textarea>
+                <button class="btn" id="lan-join-copy-answer-btn" style="margin-top: 8px">📋 Copiar código</button>
+                <p class="muted" id="lan-join-connect-status" style="font-size: 13px; margin-top: 8px">
+                  Esperando que el anfitrión confirme la conexión…
                 </p>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap">
-                  <button class="btn primary" id="lan-be-host-btn">🧑‍⚖️ Soy el árbitro (armo el torneo)</button>
-                  <button class="btn" id="lan-be-player-btn">♟️ Soy jugador (me conecto al árbitro)</button>
+              </div>
+            </div>
+
+            <!-- ===================== FLUJO ANFITRIÓN ===================== -->
+            <div id="lan-host-setup-box" class="card" style="display: none">
+              <h3>Crear torneo LAN</h3>
+              <label style="display: block; margin: 10px 0 6px; font-weight: 600">Nombre del torneo</label>
+              <input type="text" id="lan-name-input" placeholder="Torneo escolar 2026" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); margin-bottom: 14px" />
+
+              <label style="display: block; margin-bottom: 6px; font-weight: 600">Tu nombre (anfitrión)</label>
+              <input type="text" id="lan-host-name-input" placeholder="Nombre del anfitrión" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
+              <p class="muted" style="font-size: 13px; margin: 6px 0 0">
+                El anfitrión también puede jugar: se agrega solo como un jugador más.
+              </p>
+
+              <label style="display: block; margin: 14px 0 6px; font-weight: 600">Cantidad de rondas (opcional)</label>
+              <input type="number" id="lan-rounds-input" min="1" placeholder="Dejalo vacío para decidir vos cuándo termina" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
+
+              <label for="lan-time-mode" style="display: block; margin: 14px 0 6px; font-weight: 600">Tiempo por jugador</label>
+              <select id="lan-time-mode" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)">
+                <option value="none">Sin reloj</option>
+                <option value="1">1 minuto</option>
+                <option value="3">3 minutos</option>
+                <option value="5" selected>5 minutos</option>
+                <option value="10">10 minutos</option>
+                <option value="15">15 minutos</option>
+                <option value="30">30 minutos</option>
+                <option value="custom">Personalizado</option>
+              </select>
+              <label for="lan-custom-minutes" id="lan-custom-time-label" style="display: none; margin: 10px 0 6px; font-weight: 600">Minutos personalizados</label>
+              <input type="number" id="lan-custom-minutes" min="1" max="180" value="5" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
+
+              <label for="lan-increment" style="display: block; margin: 14px 0 6px; font-weight: 600">Incremento por jugada</label>
+              <select id="lan-increment" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)">
+                <option value="0" selected>0 segundos</option>
+                <option value="2">2 segundos</option>
+                <option value="5">5 segundos</option>
+                <option value="10">10 segundos</option>
+                <option value="30">30 segundos</option>
+                <option value="custom">Personalizado</option>
+              </select>
+              <label for="lan-custom-increment" id="lan-custom-increment-label" style="display: none; margin: 10px 0 6px; font-weight: 600">Incremento personalizado (segundos)</label>
+              <input type="number" id="lan-custom-increment" min="0" max="60" value="0" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
+
+              <label for="lan-round-mode" style="display: block; margin: 14px 0 6px; font-weight: 600">Avance de ronda</label>
+              <select id="lan-round-mode" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)">
+                <option value="manual" selected>Manual (requiere aprobación del anfitrión)</option>
+                <option value="auto">Automático (cuenta regresiva de 30 segundos)</option>
+              </select>
+
+              <label for="lan-wo-grace-input" style="display: block; margin: 14px 0 6px; font-weight: 600">Tiempo reglamentario de espera (minutos)</label>
+              <input type="number" id="lan-wo-grace-input" min="0" step="1" placeholder="Dejalo vacío o en 0 para desactivar" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
+
+              <button class="btn primary" id="lan-create-btn" style="margin-top: 14px">Crear torneo LAN</button>
+            </div>
+
+            <div id="lan-host-active-box" style="display: none">
+              <div class="card">
+                <h3 id="lan-host-title-display" style="margin: 0 0 10px">Torneo LAN</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px">
+                  <span id="lan-host-status-badge" class="badge">Configuración</span>
+                  <span class="muted" id="lan-host-round-label" style="font-size: 13px"></span>
                 </div>
-                <p class="lesson-gate-note" id="lan-role-status"></p>
+
+                <h4 style="margin: 0 0 8px">➕ Agregar jugador</h4>
+                <p class="muted" style="font-size: 13px; margin: 0 0 10px">
+                  Generá un código para cada dispositivo, pasáselo (WhatsApp, de
+                  palabra, como sea) y después pegá acá el código de respuesta que
+                  te manden para confirmarlo.
+                </p>
+                <button class="btn primary" id="lan-generate-invite-btn">Generar código de invitación</button>
+                <div id="lan-invite-output-box" style="display: none; margin-top: 10px">
+                  <label style="display: block; margin-bottom: 6px; font-weight: 600">Código de invitación — pasáselo al jugador</label>
+                  <textarea id="lan-invite-output" rows="4" readonly style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 12px"></textarea>
+                  <button class="btn" id="lan-copy-invite-btn" style="margin-top: 8px">📋 Copiar código</button>
+
+                  <label style="display: block; margin: 14px 0 6px; font-weight: 600">Código de respuesta del jugador</label>
+                  <textarea id="lan-invite-answer-input" rows="4" placeholder="Pegá acá el código de respuesta que te mandó" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 12px"></textarea>
+                  <button class="btn primary" id="lan-confirm-invite-btn" style="margin-top: 8px">Confirmar jugador</button>
+                  <p class="muted" id="lan-invite-status" style="font-size: 13px; margin-top: 8px"></p>
+                </div>
+
+                <h4 style="margin: 20px 0 8px">👥 Jugadores conectados</h4>
+                <div id="lan-players-list"></div>
+
+                <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap">
+                  <button class="btn primary" id="lan-start-btn" style="display: none">🎲 Sortear ronda 1</button>
+                  <button class="btn primary" id="lan-next-round-btn" style="display: none">➡️ Sortear próxima ronda</button>
+                  <button class="btn" id="lan-finish-btn" style="display: none">🏁 Finalizar torneo</button>
+                </div>
               </div>
 
-              <!-- ---- Alta de jugador: genera un código para el árbitro ---- -->
-              <div class="card" id="lan-player-box" style="display: none">
-                <h3>♟️ Unirme al torneo LAN</h3>
-                <label style="display: block; margin: 8px 0 6px; font-weight: 600">Tu nombre</label>
-                <input type="text" id="lan-player-name" placeholder="Como querés que te vean en el torneo"
-                  style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
-                <button class="btn primary" id="lan-player-gen-offer-btn" style="margin-top: 10px">1️⃣ Generar código de conexión</button>
-
-                <div id="lan-player-offer-wrap" style="display: none; margin-top: 12px">
-                  <label style="display: block; margin-bottom: 6px; font-weight: 600">Código A — dáselo al árbitro</label>
-                  <textarea id="lan-player-offer-code" rows="4" readonly style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 11px"></textarea>
-                  <button class="btn" id="lan-player-copy-offer-btn" style="margin-top: 6px">📋 Copiar código A</button>
-
-                  <label style="display: block; margin: 14px 0 6px; font-weight: 600">Pegá acá el código B que te devuelve el árbitro</label>
-                  <textarea id="lan-player-answer-input" rows="4" placeholder="Pegar código B del árbitro"
-                    style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 11px"></textarea>
-                  <button class="btn primary" id="lan-player-connect-btn" style="margin-top: 6px">2️⃣ Conectar</button>
-                  <p class="lesson-gate-note" id="lan-player-connect-status"></p>
-                </div>
-              </div>
-
-              <!-- ---- Panel del árbitro/host ---- -->
-              <div class="card" id="lan-host-box" style="display: none">
-                <h3>🧑‍⚖️ Panel del árbitro (LAN)</h3>
-
-                <div id="lan-host-create-box">
-                  <label style="display: block; margin: 8px 0 6px; font-weight: 600">Nombre del torneo</label>
-                  <input type="text" id="lan-tournament-name" placeholder="Torneo escolar LAN"
-                    style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
-
-                  <label style="display: block; margin: 14px 0 6px; font-weight: 600">Cantidad de rondas (opcional)</label>
-                  <input type="number" id="lan-tournament-rounds" min="1" placeholder="Vacío = vos decidís cuándo termina"
-                    style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)" />
-
-                  <label for="lan-tournament-time-mode" style="display: block; margin: 14px 0 6px; font-weight: 600">Tiempo por jugador</label>
-                  <select id="lan-tournament-time-mode" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)">
-                    <option value="none">Sin reloj</option>
-                    <option value="1">1 minuto</option>
-                    <option value="3">3 minutos</option>
-                    <option value="5" selected>5 minutos</option>
-                    <option value="10">10 minutos</option>
-                    <option value="15">15 minutos</option>
-                  </select>
-
-                  <button class="btn primary" id="lan-create-tournament-btn" style="margin-top: 14px">🏆 Crear torneo LAN</button>
-                </div>
-
-                <div id="lan-host-manage-box" style="display: none; margin-top: 16px">
-                  <div class="panel-title">➕ Conectar un jugador nuevo</div>
-                  <p class="muted" style="font-size: 13px">
-                    Pedile al alumno que toque "Soy jugador", genere su
-                    "Código A" y te lo pase. Pegalo acá abajo para generar el
-                    "Código B" que tenés que devolverle. Una vez conectado,
-                    va a aparecer como <b>pendiente de aprobación</b> más
-                    abajo — no participa del torneo hasta que lo apruebes.
-                  </p>
-                  <textarea id="lan-host-offer-input" rows="4" placeholder="Pegar código A del jugador"
-                    style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 11px"></textarea>
-                  <button class="btn primary" id="lan-host-gen-answer-btn" style="margin-top: 6px">Generar código B</button>
-
-                  <div id="lan-host-answer-wrap" style="display: none; margin-top: 10px">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600">Código B — dáselo al jugador</label>
-                    <textarea id="lan-host-answer-code" rows="4" readonly style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text); font-family: monospace; font-size: 11px"></textarea>
-                    <button class="btn" id="lan-host-copy-answer-btn" style="margin-top: 6px">📋 Copiar código B</button>
-                  </div>
-
-                  <div id="lan-host-players-list" style="margin-top: 14px"></div>
-
-                  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px">
-                    <button class="btn primary" id="lan-generate-round-btn">▶️ Generar próxima ronda</button>
-                    <button class="btn danger" id="lan-finish-tournament-btn">🏁 Finalizar torneo</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ---- Estado general del torneo LAN (jugadores, standings, emparejamientos) ---- -->
-              <div class="card" id="lan-tournament-status-box" style="display: none">
-                <h3 id="lan-status-title">🏆 Torneo LAN</h3>
-                <p class="muted" id="lan-status-sub"></p>
-
-                <div class="panel-title">📋 Emparejamientos — ronda actual</div>
+              <div class="card" id="lan-pairings-card" style="display: none; margin-top: 20px">
+                <h3 style="margin: 0 0 10px">Emparejamientos — <span id="lan-pairings-round-label"></span></h3>
                 <div id="lan-pairings-list"></div>
+              </div>
 
-                <div class="panel-title" style="margin-top: 18px">📊 Posiciones</div>
+              <div class="card" id="lan-standings-card" style="display: none; margin-top: 20px">
+                <h3 style="margin: 0 0 10px">📊 Tabla de posiciones</h3>
                 <div id="lan-standings-list"></div>
               </div>
+            </div>
 
-              <!-- ---- Tablero de la partida LAN en curso ---- -->
-              <div class="card" id="lan-match-box" style="display: none">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px">
-                  <h3 id="lan-match-title" style="margin: 0">Mesa</h3>
-                  <button class="btn" id="lan-match-exit-btn">⬅️ Volver al torneo</button>
+            <!-- ===================== VISTA JUGADOR (torneo en curso) ===================== -->
+            <div id="lan-player-active-box" style="display: none">
+              <div class="card">
+                <h3 id="lan-player-title-display" style="margin: 0 0 10px">Torneo LAN</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center">
+                  <span id="lan-player-status-badge" class="badge">Conectado</span>
+                  <span class="muted" id="lan-player-round-label" style="font-size: 13px"></span>
                 </div>
-                <div class="clock" id="lan-match-clock" style="margin: 10px 0"></div>
-                <div class="board" id="lan-match-board"></div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
-                  <button class="btn" id="lan-match-resign-btn">🏳️ Rendirme</button>
-                  <button class="btn" id="lan-match-draw-btn">🤝 Ofrecer tablas</button>
-                </div>
-                <p class="lesson-gate-note" id="lan-match-status-text"></p>
               </div>
-            </div><!-- /#tournament-lan-mode -->
+
+              <div class="card" id="lan-player-mypairing-card" style="display: none; margin-top: 20px">
+                <h3 style="margin: 0 0 10px">Tu partida</h3>
+                <div id="lan-player-mypairing"></div>
+              </div>
+
+              <div class="card" id="lan-player-pairings-card" style="display: none; margin-top: 20px">
+                <h3 style="margin: 0 0 10px">Emparejamientos — <span id="lan-player-pairings-round-label"></span></h3>
+                <div id="lan-player-pairings-list"></div>
+              </div>
+
+              <div class="card" id="lan-player-standings-card" style="display: none; margin-top: 20px">
+                <h3 style="margin: 0 0 10px">📊 Tabla de posiciones</h3>
+                <div id="lan-player-standings-list"></div>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -2685,6 +2685,12 @@
         font-weight: 600;
       }
 
+      #lan-players-list .pairing-row,
+      #lan-pairings-list .pairing-row,
+      #lan-player-pairings-list .pairing-row {
+        justify-content: space-between;
+      }
+
       #tournament-pairings-list {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
