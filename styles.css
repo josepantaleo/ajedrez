@@ -19,6 +19,14 @@
         box-sizing: border-box;
       }
 
+      html {
+        overflow-x: hidden;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
       body {
         margin: 0;
         font-family: Inter, system-ui, Arial, sans-serif;
@@ -51,6 +59,7 @@
 
       @media (prefers-reduced-motion: reduce) {
         body::before { animation: none; }
+        .pairing-status-no-show { animation: none; }
       }
 
       @keyframes bgDrift {
@@ -62,15 +71,6 @@
       .app {
         position: relative;
         z-index: 1;
-      }
-
-      body.light-mode {
-        --bg: #eef2f7;
-        --surface: #ffffff;
-        --surface2: #e8edf4;
-        --text: #172235;
-        --muted: #5f6d80;
-        background: linear-gradient(135deg, #f8fafc, #dfe7f1);
       }
 
       /* =========================
@@ -253,6 +253,47 @@
         font-size: 0.95rem;
       }
 
+      /* Mini-nav de anclas de la página "Configuración": salta directo a
+         cada sección (Perfil, Ayudas y sonido, Colores, Fichas, Datos)
+         sin tener que scrollear toda la página buscándola. */
+      .settings-quicknav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .settings-quicknav a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: var(--surface2);
+        color: var(--text);
+        font-size: 0.88rem;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+        transition:
+          transform 0.15s ease,
+          filter 0.15s ease;
+      }
+
+      .settings-quicknav a:hover {
+        filter: brightness(1.12);
+        transform: translateY(-1px);
+      }
+
+      .settings-quicknav a:active {
+        transform: translateY(0);
+      }
+
+      #page-configuracion .card[id^="config-"] {
+        scroll-margin-top: 18px;
+      }
+
       @media (max-width: 800px) {
         .theme-grid {
           grid-template-columns: repeat(2, 1fr);
@@ -262,6 +303,12 @@
       @media (max-width: 500px) {
         .theme-grid {
           grid-template-columns: 1fr;
+        }
+        /* Formulario de inscripción al torneo: en mobile el botón ocupa
+           todo el ancho (mismo ancho que el input de arriba) en vez de
+           quedar chico pegado al texto, más fácil de tocar */
+        #tournament-self-register-btn {
+          width: 100%;
         }
       }
 
@@ -291,11 +338,6 @@
         position: sticky;
         top: 0;
         height: 100vh;
-      }
-
-      .light-mode .sidebar {
-        background: #fff;
-        border-color: #d9e0e9;
       }
 
       .brand {
@@ -778,7 +820,8 @@
          navegador, en vez de medidas fijas en px)
       ========================================================= */
 
-      body.fullscreen-game {
+      body.fullscreen-game ,
+      body.tournament-board-max  {
         height: 100vh;
         height: 100dvh;
         width: 100vw;
@@ -787,7 +830,8 @@
         box-sizing: border-box;
       }
 
-      body.fullscreen-game .app {
+      body.fullscreen-game .app ,
+      body.tournament-board-max .app  {
         display: flex !important;
         height: 100vh;
         height: 100dvh;
@@ -796,14 +840,19 @@
 
       /* Ocultar elementos innecesarios */
       body.fullscreen-game .sidebar,
+      body.tournament-board-max .sidebar,
       body.fullscreen-game .topbar,
+      body.tournament-board-max .topbar,
       body.fullscreen-game .status,
+      body.tournament-board-max .status,
       body.fullscreen-game .floating-moves-card,
+      body.tournament-board-max .floating-moves-card,
       body.fullscreen-game .eval,
-      body.fullscreen-game .fullscreen-edu-panel,
-      body.fullscreen-game .fullscreen-config-panel,
+      body.tournament-board-max .eval,
       body.fullscreen-game .right,
-      body.fullscreen-game .left {
+      body.tournament-board-max .right,
+      body.fullscreen-game .left ,
+      body.tournament-board-max .left  {
         display: none !important;
       }
 
@@ -814,7 +863,9 @@
          quedaba atrapado dentro de la página en vez de ocupar toda
          la pantalla. Por eso se veía solo una parte del tablero. */
       body.fullscreen-game .page,
-      body.fullscreen-game .page.active {
+      body.tournament-board-max .page,
+      body.fullscreen-game .page.active ,
+      body.tournament-board-max .page.active  {
         filter: none !important;
         transform: none !important;
         animation: none !important;
@@ -823,9 +874,13 @@
       /* Contenedor único: columna flex que reparte el espacio real
          entre reloj / tablero / controles, sin adivinar alturas */
       body.fullscreen-game .main,
+      body.tournament-board-max .main,
       body.fullscreen-game .game-layout,
+      body.tournament-board-max .game-layout,
       body.fullscreen-game .board-area,
-      body.fullscreen-game #game-card {
+      body.tournament-board-max .board-area,
+      body.fullscreen-game #game-card ,
+      body.tournament-board-max #game-card  {
         width: 100vw !important;
         height: 100vh !important;
         height: 100dvh !important;
@@ -868,7 +923,8 @@
         }
       }
 
-      body.fullscreen-game .clock {
+      body.fullscreen-game .clock ,
+      body.tournament-board-max .clock  {
         position: static !important;
         flex: 0 0 auto !important;
         display: flex !important;
@@ -885,7 +941,8 @@
         max-width: 100%;
       }
 
-      body.fullscreen-game .clock div {
+      body.fullscreen-game .clock div ,
+      body.tournament-board-max .clock div  {
         padding: clamp(6px, 1vh, 10px) clamp(12px, 3vw, 24px) !important;
         min-width: 0 !important;
         text-align: center !important;
@@ -900,29 +957,56 @@
         animation: fs-clock-pulse 2.5s ease-in-out infinite alternate !important;
       }
 
-      body.fullscreen-game .clock div.active {
+      body.fullscreen-game .clock div.active ,
+      body.tournament-board-max .clock div.active  {
         border-color: var(--accent) !important;
         background: linear-gradient(135deg, #3a2e12, #6b531a) !important;
         color: #ffeaad !important;
         box-shadow: 0 0 30px rgba(242, 184, 75, 0.4) !important;
       }
 
-      body.fullscreen-game .clock-player-name {
+      body.fullscreen-game .clock-player-name ,
+      body.tournament-board-max .clock-player-name  {
         font-size: clamp(0.65rem, 1.6vh, 0.85rem) !important;
         letter-spacing: normal !important;
         color: rgba(255, 255, 255, 0.75) !important;
         text-shadow: none !important;
       }
 
-      body.fullscreen-game .clock div.active .clock-player-name {
+      body.fullscreen-game .clock div.active .clock-player-name ,
+      body.tournament-board-max .clock div.active .clock-player-name  {
         color: #ffeaad !important;
+      }
+
+      /* Orden visual en pantalla completa: reloj arriba, tablero enseguida
+         (lo más grande posible), y TODOS los botones —tanto los del
+         torneo (volver/tablas/abandonar/chat/llamada) como los del juego
+         (jugadas legales/salir)— agrupados al final, en una sola fila.
+         El DOM no cambia (así no se rompe ningún listener de JS), solo el
+         orden visual con flexbox. */
+      body.fullscreen-game .clock ,
+      body.tournament-board-max .clock  {
+        order: 1;
+      }
+      body.fullscreen-game .board-frame ,
+      body.tournament-board-max .board-frame  {
+        order: 2;
+      }
+      body.fullscreen-game #tournament-match-bar ,
+      body.tournament-board-max #tournament-match-bar  {
+        order: 3;
+      }
+      body.fullscreen-game .controls-panel ,
+      body.tournament-board-max .controls-panel  {
+        order: 4;
       }
 
       /* El tablero ocupa todo el espacio disponible entre el reloj y
          los controles. El tamaño exacto (cuadrado, sin recortes) lo
          calcula JS con precisión en cada resize/orientationchange,
          estas reglas son el respaldo si JS no llegó a correr aún */
-      body.fullscreen-game .board-frame {
+      body.fullscreen-game .board-frame ,
+      body.tournament-board-max .board-frame  {
         flex: 0 0 auto;
         min-height: 0;
         min-width: 0;
@@ -951,7 +1035,8 @@
         box-sizing: border-box;
       }
 
-      body.fullscreen-game .board {
+      body.fullscreen-game .board ,
+      body.tournament-board-max .board  {
         width: 100% !important;
         height: 100% !important;
         max-width: 100% !important;
@@ -961,9 +1046,98 @@
         overflow: hidden;
       }
 
+      /* Piezas capturadas flotantes: solo existen visualmente en modo
+         pantalla completa / tablero maximizado, donde .right (el panel
+         normal de "Material capturado") queda oculto. Fuera de esos modos
+         se muestra el panel de siempre en .right, así que esto se mantiene
+         display:none por defecto. */
+      #captured-floating {
+        display: none;
+      }
+      body.fullscreen-game #captured-floating,
+      body.tournament-board-max #captured-floating {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        position: fixed;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 20;
+        background: linear-gradient(145deg, #183354, #081120);
+        border: 1px solid rgba(92, 200, 255, 0.22);
+        border-radius: 14px;
+        padding: 10px 12px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        max-width: 120px;
+      }
+      .captured-floating-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .captured-floating-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      @media (max-width: 900px) {
+        body.fullscreen-game #captured-floating,
+        body.tournament-board-max #captured-floating {
+          left: 6px;
+          padding: 8px;
+          max-width: 84px;
+        }
+      }
+
+      .announcement-history-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--surface2);
+      }
+      .announcement-history-item:last-child {
+        border-bottom: none;
+      }
+      .announcement-history-time {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .round-countdown-banner {
+        border-left: 4px solid #2fbf71;
+      }
+      .round-countdown-time {
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        margin-left: 6px;
+        letter-spacing: 0.02em;
+      }
+      .round-countdown-banner.round-countdown-urgent {
+        border-left-color: #e5484d;
+        animation: round-countdown-pulse 1s ease-in-out infinite;
+      }
+      .round-countdown-banner.round-countdown-urgent .round-countdown-time {
+        color: #e5484d;
+      }
+      @keyframes round-countdown-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
       /* Controles: parte del flujo normal (ya no position:fixed),
          así nunca se superponen al tablero ni quedan cortados */
-      body.fullscreen-game .controls-panel {
+      body.fullscreen-game .controls-panel ,
+      body.tournament-board-max .controls-panel  {
         position: static !important;
         flex: 0 0 auto !important;
         display: flex !important;
@@ -980,20 +1154,155 @@
         max-width: 100%;
       }
 
-      body.fullscreen-game .controls-panel .btn {
+      body.fullscreen-game .controls-panel .btn ,
+      body.tournament-board-max .controls-panel .btn  {
         padding: 8px 12px;
         font-size: 0.85rem;
         min-width: auto;
       }
 
+      /* Barra de partida de torneo (volver, tablas/abandonar, chat,
+         llamada): en vez de quedar arriba como bloque aparte con título y
+         texto, acá se convierte en una fila más de botones compactos —
+         mismo estilo visual que .controls-panel— para que el tablero se
+         quede con todo el espacio posible. El título y el estado en texto
+         se ocultan porque esa info ya se ve sobre el reloj (nombres de
+         cada jugador) y en la barra de estado normal fuera de pantalla
+         completa. */
+      body.fullscreen-game #tournament-match-bar ,
+      body.tournament-board-max #tournament-match-bar  {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        width: auto !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 8px 14px !important;
+        background: rgba(8, 16, 32, 0.85) !important;
+        border: 1px solid rgba(92, 200, 255, 0.25) !important;
+        border-radius: 20px !important;
+        backdrop-filter: blur(16px) !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+        z-index: 60 !important;
+        box-sizing: border-box !important;
+      }
+
+      /* "Desarma" el div contenedor de título+volver: sus hijos (título,
+         que se oculta, y el botón "Volver") pasan a ser ítems directos de
+         la fila de abajo, junto al resto de los botones. */
+      body.fullscreen-game #tournament-match-bar > div:first-child ,
+      body.tournament-board-max #tournament-match-bar > div:first-child  {
+        display: contents !important;
+      }
+
+      body.fullscreen-game #tournament-match-title ,
+      body.tournament-board-max #tournament-match-title ,
+      body.fullscreen-game #tournament-match-status ,
+      body.tournament-board-max #tournament-match-status  {
+        display: none !important;
+      }
+
+      body.fullscreen-game #tournament-match-spectator-note ,
+      body.tournament-board-max #tournament-match-spectator-note  {
+        flex: 0 0 100%;
+        margin: 0 !important;
+        font-size: 0.7rem !important;
+        text-align: center;
+      }
+
+      /* Botones (volver / tablas / abandonar / chat / llamada), mismo
+         tamaño compacto que los botones de .controls-panel */
+      body.fullscreen-game #tournament-match-bar .btn ,
+      body.tournament-board-max #tournament-match-bar .btn  {
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
+        min-width: auto !important;
+        min-height: 34px !important;
+      }
+
+      body.fullscreen-game #tournament-match-controls ,
+      body.tournament-board-max #tournament-match-controls  {
+        margin: 0 !important;
+        gap: 6px !important;
+      }
+
+      /* Chat: el botón entra en la fila; el panel, al abrirse, flota por
+         encima en vez de empujar la fila hacia abajo (así el tamaño del
+         tablero, ya calculado por JS, no queda desactualizado al abrir o
+         cerrar el chat). */
+      body.fullscreen-game #tournament-match-chat ,
+      body.tournament-board-max #tournament-match-chat  {
+        display: inline-flex !important;
+        margin: 0 !important;
+        position: relative;
+      }
+
+      body.fullscreen-game #tournament-match-chat-panel ,
+      body.tournament-board-max #tournament-match-chat-panel  {
+        position: absolute !important;
+        bottom: calc(100% + 10px) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: min(90vw, 320px) !important;
+        max-height: 40vh !important;
+        font-size: 0.78rem !important;
+        z-index: 70 !important;
+      }
+
+      /* Llamada de audio: el botón/estado entra en la fila igual que el
+         resto */
+      body.fullscreen-game #tournament-match-call ,
+      body.tournament-board-max #tournament-match-call  {
+        display: inline-flex !important;
+        margin: 0 !important;
+      }
+
+      body.fullscreen-game #tournament-match-call > div ,
+      body.tournament-board-max #tournament-match-call > div  {
+        font-size: 0.72rem !important;
+        gap: 6px !important;
+      }
+
+      body.fullscreen-game #tournament-match-call-note ,
+      body.tournament-board-max #tournament-match-call-note  {
+        display: none !important; /* texto informativo, no crítico: se saca para ahorrar espacio */
+      }
+
+      @media (max-height: 480px) {
+        body.fullscreen-game #tournament-match-bar ,
+        body.tournament-board-max #tournament-match-bar  {
+          padding: 5px 10px !important;
+        }
+        body.fullscreen-game #tournament-match-spectator-note ,
+        body.tournament-board-max #tournament-match-spectator-note  {
+          display: none !important; /* en celular horizontal, solo botones */
+        }
+      }
+
+      /* Monitores grandes / proyector de torneo: el cálculo de JS ya
+         usa el alto y ancho reales disponibles, así que en pantallas
+         muy anchas el tablero puede crecer más allá del 92vw por
+         defecto sin quedar gigante en celulares ni tablets. */
+      @media (min-width: 1400px) {
+        body.tournament-board-max .board-frame {
+          width: min(78vh, calc(100dvh - 190px));
+          height: min(78vh, calc(100dvh - 190px));
+        }
+      }
+
       /* Pantallas muy bajas (celular en horizontal): reloj y
          controles más compactos para no robarle aire al tablero */
       @media (max-height: 480px) {
-        body.fullscreen-game .clock div {
+        body.fullscreen-game .clock div ,
+        body.tournament-board-max .clock div  {
           font-size: 1rem !important;
           padding: 5px 10px !important;
         }
-        body.fullscreen-game .controls-panel .btn {
+        body.fullscreen-game .controls-panel .btn ,
+        body.tournament-board-max .controls-panel .btn  {
           padding: 6px 10px;
           font-size: 0.78rem;
         }
@@ -1158,26 +1467,6 @@
 
       .square.drag-origin .piece {
         opacity: 0.35;
-      }
-
-      .piece.piece-landed {
-        animation: pieceLand 0.28s cubic-bezier(0.2, 0.9, 0.4, 1.3);
-      }
-
-      .piece.piece-landed-capture {
-        animation: pieceLandCapture 0.32s cubic-bezier(0.2, 0.9, 0.4, 1.2);
-      }
-
-      @keyframes pieceLand {
-        0% { transform: scale(0.55); opacity: 0.4; }
-        60% { transform: scale(1.14); opacity: 1; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-
-      @keyframes pieceLandCapture {
-        0% { transform: scale(1.55) rotate(-8deg); opacity: 0; }
-        60% { transform: scale(0.9) rotate(3deg); opacity: 1; }
-        100% { transform: scale(1) rotate(0deg); opacity: 1; }
       }
 
       .piece.piece-promoted {
@@ -1580,11 +1869,13 @@
           width: 100%;
           min-width: 0;
         }
-        body.fullscreen-game .controls-panel {
+        body.fullscreen-game .controls-panel ,
+        body.tournament-board-max .controls-panel  {
           display: flex;
           width: auto;
         }
-        body.fullscreen-game .controls-panel .btn {
+        body.fullscreen-game .controls-panel .btn ,
+        body.tournament-board-max .controls-panel .btn  {
           width: auto;
         }
       }
@@ -1784,8 +2075,6 @@
         color: var(--muted);
       }
 
-      .lesson-grid,
-      .puzzle-grid,
       .theme-grid {
         grid-template-columns: repeat(3, 1fr);
       }
@@ -1943,20 +2232,113 @@
         .sidebar {
           position: static;
           height: auto;
-          padding: 12px;
+          padding: 10px 10px 6px;
         }
+        /* La marca (logo + texto largo de la escuela) ocupa mucho alto en
+           mobile; se achica y se muestra en una fila compacta en vez de
+           la tarjeta grande pensada para el sidebar de escritorio. */
+        .brand {
+          margin: -2px -2px 10px;
+          padding: 10px;
+          gap: 10px;
+        }
+        .brand .logo {
+          flex: 0 0 40px;
+          width: 40px;
+          height: 40px;
+          font-size: 2.1rem;
+          border-radius: 12px;
+        }
+        .brand h1 {
+          font-size: 0.92rem;
+        }
+        .brand h5,
+        .brand span {
+          display: none;
+        }
+        /* Nav como barra de pestañas pegada arriba: siempre a mano
+           mientras se scrollea la página, con scroll horizontal prolijo
+           (sin barra de scroll visible) y botones que no se cortan. */
         .nav {
           display: flex;
-          overflow: auto;
+          gap: 6px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          position: sticky;
+          top: 0;
+          z-index: 30;
+          margin: 0 -10px;
+          padding: 6px 10px;
+          background: rgba(8, 18, 32, 0.96);
+          backdrop-filter: blur(10px);
+        }
+        .nav::-webkit-scrollbar {
+          display: none;
+        }
+        .nav button {
+          flex: 0 0 auto;
+          white-space: nowrap;
+          padding: 10px 14px;
+          font-size: 0.88rem;
         }
         .profile-mini {
           display: none;
         }
         .main {
-          padding: 15px;
+          padding: 14px;
         }
         .game-layout {
           display: block;
+        }
+        /* Encabezado de cada página: apilado y centrado, con el botón
+           principal ocupando todo el ancho para que sea fácil de tocar. */
+        .topbar {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+        .topbar h2 {
+          font-size: 1.25rem;
+        }
+        .top-actions {
+          flex-direction: column;
+        }
+        .top-actions .btn {
+          width: 100%;
+        }
+        /* Tablas anchas (historial, posiciones del torneo): scroll
+           horizontal propio en vez de romper el layout de la página. */
+        #history-card .table,
+        #tournament-standings-list {
+          display: block;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .standings-table {
+          min-width: 560px;
+        }
+        #history-card .table {
+          min-width: 480px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .learning-path {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+        .chat-input-row .btn {
+          min-width: 0;
+          padding: 10px 12px;
+        }
+        .chat-input-counter {
+          display: none;
         }
       }
 
@@ -2430,6 +2812,17 @@
       .pairing-status-suspended {
         background: rgba(249, 115, 22, 0.18);
         color: #f97316;
+      }
+
+      .pairing-status-no-show {
+        background: rgba(239, 107, 115, 0.22);
+        color: var(--danger);
+        animation: noShowPulse 1.6s ease-in-out infinite;
+      }
+
+      @keyframes noShowPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 107, 115, 0.45); }
+        50% { box-shadow: 0 0 0 5px rgba(239, 107, 115, 0); }
       }
 
       .pairing-status-pending {
@@ -3436,6 +3829,45 @@
   border-bottom: none;
 }
 
+.public-screen-active-row-cycle {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  border-bottom: none;
+  padding: 10px 0 16px;
+  font-size: clamp(1.3rem, 2.6vw, 2.1rem);
+  font-weight: 700;
+}
+
+.public-screen-cycle-counter {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.6em;
+}
+
+.public-screen-cycle-progress {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface2);
+  overflow: hidden;
+}
+
+.public-screen-cycle-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent2);
+  animation: public-screen-cycle-progress-anim 10s linear forwards;
+}
+
+@keyframes public-screen-cycle-progress-anim {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 .public-screen-board-badge {
   display: inline-block;
   min-width: 1.8em;
@@ -3465,6 +3897,122 @@
   padding: 8px 0;
 }
 
+/* Tablero en miniatura de la mesa activa que se muestra en el carrusel de
+   la pantalla pública. Reusa la grilla base de ".board" (ver la regla
+   ".board" más arriba) y solo ajusta tamaño y el cursor/hover para dejar
+   claro que se puede tocar. */
+.public-screen-mini-board-wrap {
+  width: min(150px, 40vw);
+  margin: 10px auto 0;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.public-screen-mini-board-wrap:hover,
+.public-screen-mini-board-wrap:focus-visible {
+  transform: scale(1.05);
+}
+
+.public-screen-mini-board .piece {
+  font-size: clamp(9px, 3.2vw, 15px);
+}
+
+.public-screen-zoom-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+/* Modal de "zoom": mismo patrón visual que #avatar-picker-backdrop/box
+   (ver más arriba), pero para mostrar en grande el tablero de una mesa
+   puntual de la pantalla pública. */
+#public-screen-zoom-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+#public-screen-zoom-box {
+  background: var(--surface, #1e1e2e);
+  color: var(--text, #fff);
+  padding: 20px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  max-width: 90vw;
+}
+
+.public-screen-zoom-vs {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.public-screen-zoom-board-wrap {
+  width: min(64vh, 480px);
+  max-width: 80vw;
+  margin: 0 auto 16px;
+}
+
+.public-screen-zoom-board .piece {
+  font-size: clamp(24px, 6vw, 46px);
+}
+
+.public-screen-zoom-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#public-screen-zoom-fullscreen-btn,
+#public-screen-zoom-close {
+  background: var(--surface2, #444);
+  color: var(--text, #fff);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* En pantalla completa ya no hay nada detrás (el fondo semitransparente
+   de #public-screen-zoom-backdrop no tiene sentido con la pestaña
+   entera oculta), así que se pone un fondo sólido y se agranda todo:
+   tablero, nombres y botones, pensado para verse bien desde lejos en un
+   proyector. */
+#public-screen-zoom-backdrop:fullscreen {
+  background: var(--bg, #111);
+}
+
+#public-screen-zoom-backdrop:fullscreen #public-screen-zoom-box {
+  background: transparent;
+  box-shadow: none;
+  max-width: 100vw;
+}
+
+#public-screen-zoom-backdrop:fullscreen .public-screen-zoom-board-wrap {
+  width: min(80vh, 820px);
+  max-width: 92vw;
+}
+
+#public-screen-zoom-backdrop:fullscreen .public-screen-zoom-vs {
+  font-size: clamp(1.3rem, 3vw, 2.2rem);
+  margin-bottom: 22px;
+}
+
+#public-screen-zoom-backdrop:fullscreen #public-screen-zoom-fullscreen-btn,
+#public-screen-zoom-backdrop:fullscreen #public-screen-zoom-close {
+  font-size: 1rem;
+  padding: 10px 22px;
+}
+
 .public-screen-footer {
   margin-top: 24px;
   text-align: center;
@@ -3477,30 +4025,6 @@
   background: var(--bg);
   overflow-y: auto;
   padding: 40px;
-}
-.btn-inscripcion {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #f2b84b, #f29b4b);
-  color: #1b120d;
-  font-weight: 700;
-  font-size: 1rem;
-  text-decoration: none;
-  box-shadow: 0 4px 14px rgba(242, 184, 75, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.btn-inscripcion:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(242, 184, 75, 0.5);
-}
-
-.btn-inscripcion:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(242, 184, 75, 0.3);
 }
 /* =========================
    CHAT DE PARTIDA (torneo online)

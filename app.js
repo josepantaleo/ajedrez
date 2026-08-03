@@ -9,12 +9,56 @@
         levelLabel,
       } from "./utils.js";
 
+      // PWA: registra el service worker que cachea el "app shell" (ver
+      // sw.js) para que la app se pueda instalar y las lecciones/
+      // ejercicios funcionen sin conexión. Los "if" de abajo evitan
+      // romper en navegadores viejos sin soporte, o si se abre el
+      // archivo directo desde disco (file://) en vez de servido por http.
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch(() => {
+            // Silencioso: si falla el registro (por ejemplo, servidor sin
+            // HTTPS en un dominio que no sea localhost), la app sigue
+            // funcionando normal, solo sin instalación/offline.
+          });
+        });
+      }
+
       // Instrumentación temporal de rendimiento (mediciones con
       // performance.now/JSON.stringify y sus console.log asociados), usada
       // en su momento para diagnosticar cuellos de botella en el torneo.
       // Queda apagada por defecto para no gastar CPU en la ruta crítica en
       // producción; para reactivarla al depurar, poner esto en true.
       const PERF_DEBUG = false;
+
+      // =========================
+      // FEEDBACK TÁCTIL (sin el flash gris de Android/Chrome)
+      // =========================
+      // Android/Chrome pinta un "tap highlight" gris por defecto sobre
+      // cualquier elemento tocable. Lo apagamos globalmente y lo
+      // reemplazamos por un feedback propio (un breve "hundido": escala +
+      // opacidad) para que el toque se siga sintiendo, en vez de
+      // desaparecer sin más. Se inyecta una sola vez, al cargar el script.
+      (function injectTapFeedbackStyles_() {
+        const style = document.createElement("style");
+        style.textContent = `
+          html, *, *::before, *::after {
+            -webkit-tap-highlight-color: transparent;
+          }
+          button, .btn, a, [role="button"], .avatar-bubble, .avatar-option {
+            touch-action: manipulation;
+          }
+          button:active,
+          .btn:active,
+          .avatar-option:active,
+          .avatar-bubble:active {
+            transform: scale(0.96);
+            opacity: 0.85;
+            transition: transform 0.08s ease-out, opacity 0.08s ease-out;
+          }
+        `;
+        document.head.appendChild(style);
+      })();
 
       const PIECES = {
         wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
@@ -52,9 +96,11 @@
             border: 2px solid rgba(255,255,255,.6);
             vertical-align: middle; margin-right: 8px;
             user-select: none; flex-shrink: 0;
+            transition: transform 0.15s ease-out;
           }
           .avatar-bubble.large { width: 54px; height: 54px; font-size: 28px; }
           .avatar-bubble.static { animation: none !important; }
+          .avatar-bubble:hover { transform: scale(1.08); }
           @keyframes avatar-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
           @keyframes avatar-wiggle { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
           @keyframes avatar-pulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
@@ -67,13 +113,28 @@
           .avatar-tilt   { animation: avatar-tilt 1.6s ease-in-out infinite; }
           .avatar-spin   { animation: avatar-spin 3.2s linear infinite; }
           .avatar-nod    { animation: avatar-nod 1.2s ease-in-out infinite; }
+          /* Quien tenga activado "reducir movimiento" en su sistema no
+             tiene por qué ver 6 mascotas dando vueltas sin parar en cada
+             pantalla; se les congela la pose (sin perder el color/forma
+             que identifica a cada una). */
+          @media (prefers-reduced-motion: reduce) {
+            .avatar-bounce, .avatar-wiggle, .avatar-pulse,
+            .avatar-tilt, .avatar-spin, .avatar-nod { animation: none; }
+            .avatar-bubble:hover { transform: none; }
+          }
           #avatar-picker-backdrop {
             position: fixed; inset: 0; background: rgba(0,0,0,.55);
             display: flex; align-items: center; justify-content: center;
             z-index: 9999;
           }
+          /* Antes en colores fijos (#1e1e2e / #fff), lo que dejaba el
+             modal desentonando si la app tiene o suma un tema claro. Usa
+             las mismas variables que ya define el resto de la app
+             (--surface/--text), con el valor anterior como fallback por
+             si este archivo se usa suelto sin ese tema. */
           #avatar-picker-box {
-            background: #1e1e2e; color: #fff; padding: 20px; border-radius: 14px;
+            background: var(--surface, #1e1e2e); color: var(--text, #fff);
+            padding: 20px; border-radius: 14px;
             max-width: 320px; width: 90%; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,.4);
           }
@@ -86,12 +147,28 @@
             display: flex; flex-direction: column; align-items: center; gap: 6px;
             padding: 8px 4px; border-radius: 10px; cursor: pointer;
             border: 2px solid transparent;
+            transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
           }
-          .avatar-option.selected { border-color: #fff; background: rgba(255,255,255,.08); }
+          .avatar-option:hover { background: var(--surface2, rgba(255,255,255,.08)); }
+          .avatar-option.selected { border-color: var(--accent, #fff); background: var(--surface2, rgba(255,255,255,.08)); }
+          /* Las opciones ahora llevan tabindex/role="button" (ver
+             openAvatarPicker), así que necesitan un foco visible propio
+             para quien navega con teclado; antes no había forma de saber
+             cuál estaba seleccionada sin mouse. */
+          .avatar-option:focus-visible {
+            outline: 2px solid var(--accent, #fff);
+            outline-offset: 2px;
+          }
           .avatar-option span.opt-label { font-size: 11px; opacity: .85; }
           #avatar-picker-close {
-            background: #444; color: #fff; border: none; border-radius: 8px;
+            background: var(--surface2, #444); color: var(--text, #fff); border: none; border-radius: 8px;
             padding: 8px 16px; cursor: pointer; font-size: 13px;
+            transition: filter 0.15s ease-out;
+          }
+          #avatar-picker-close:hover { filter: brightness(1.15); }
+          #avatar-picker-close:focus-visible {
+            outline: 2px solid var(--accent, #fff);
+            outline-offset: 2px;
           }
         `;
         document.head.appendChild(style);
@@ -147,7 +224,7 @@
         const options = Object.keys(AVATAR_MASCOTS).map((id) => {
           const sel = id === current ? " selected" : "";
           return `
-            <div class="avatar-option${sel}" data-avatar="${id}">
+            <div class="avatar-option${sel}" data-avatar="${id}" tabindex="0" role="button" aria-pressed="${id === current}" aria-label="${escapeHtml_(AVATAR_MASCOTS[id].label)}">
               ${avatarBubbleHTML_(id, { large: true })}
               <span class="opt-label">${escapeHtml_(AVATAR_MASCOTS[id].label)}</span>
             </div>`;
@@ -162,22 +239,38 @@
         backdrop.addEventListener("click", (e) => {
           if (e.target === backdrop) closeAvatarPicker_();
         });
+        document.addEventListener("keydown", handleAvatarPickerEscape_);
+        const chooseAvatar = (opt) => {
+          state.avatar = opt.dataset.avatar;
+          save();
+          renderMiniAvatar();
+          renderBoardAvatars_();
+          closeAvatarPicker_();
+          toast("✓ Mascota actualizada");
+        };
         backdrop.querySelectorAll(".avatar-option").forEach((opt) => {
-          opt.addEventListener("click", () => {
-            state.avatar = opt.dataset.avatar;
-            save();
-            renderMiniAvatar();
-            renderBoardAvatars_();
-            closeAvatarPicker_();
-            toast("✓ Mascota actualizada");
+          opt.addEventListener("click", () => chooseAvatar(opt));
+          // Con tabindex/role="button" recién agregados, el div responde
+          // a Enter/Espacio como cualquier botón nativo (antes ni
+          // siquiera se podía llegar acá con el teclado).
+          opt.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              chooseAvatar(opt);
+            }
           });
         });
         document.getElementById("avatar-picker-close").addEventListener("click", closeAvatarPicker_);
       }
 
+      function handleAvatarPickerEscape_(e) {
+        if (e.key === "Escape") closeAvatarPicker_();
+      }
+
       function closeAvatarPicker_() {
         const el = document.getElementById("avatar-picker-backdrop");
         if (el) el.remove();
+        document.removeEventListener("keydown", handleAvatarPickerEscape_);
       }
 
       const DEFAULT_STATE = {
@@ -249,12 +342,12 @@
         toast("❌ " + msg);
       }
 
-      function toast(text) {
+      function toast(text, durationMs) {
         const el = document.getElementById("toast");
         el.textContent = text;
         el.classList.add("show");
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+        toastTimer = setTimeout(() => el.classList.remove("show"), durationMs || 2200);
       }
 
       function showAlert(text, variant) {
@@ -356,6 +449,7 @@
       const SoundFX = (() => {
         let ctx = null;
         let enabled = true;
+        let ringInterval = null; // setInterval activo del ringtone de llamada (entrante/saliente), o null si no está sonando
 
         function ensureCtx() {
           if (!ctx) {
@@ -452,6 +546,12 @@
             tone(700, 0, 0.06, { type: "sine", gain: 0.09 });
             tone(920, 0.07, 0.08, { type: "sine", gain: 0.09 });
           },
+          announcement() {
+            if (!enabled) return;
+            tone(660, 0, 0.1, { type: "sine", gain: 0.15 });
+            tone(880, 0.12, 0.1, { type: "sine", gain: 0.15 });
+            tone(1040, 0.24, 0.16, { type: "sine", gain: 0.16 });
+          },
           invalid() {
             if (!enabled) return;
             tone(160, 0, 0.13, { type: "square", gain: 0.09 });
@@ -474,6 +574,27 @@
             tone(659, 0.1, 0.1, { type: "triangle", gain: 0.14 });
             tone(784, 0.2, 0.1, { type: "triangle", gain: 0.14 });
             tone(1047, 0.3, 0.28, { type: "triangle", gain: 0.17 });
+          },
+          // Ringtone de llamada de audio (torneo): un patrón de dos tonos tipo
+          // "ring-ring" que se repite cada 2s hasta llamar a stopRing(). Sirve
+          // tanto para el que llama (esperando que atiendan) como para el que
+          // recibe la llamada entrante; se corta en cuanto se atiende, se
+          // rechaza o se cuelga.
+          startRing() {
+            if (ringInterval) return; // ya está sonando, no duplicar
+            const ringPattern = () => {
+              if (!enabled) return;
+              tone(1000, 0, 0.35, { type: "sine", gain: 0.15 });
+              tone(1000, 0.45, 0.35, { type: "sine", gain: 0.15 });
+            };
+            ringPattern();
+            ringInterval = setInterval(ringPattern, 2000);
+          },
+          stopRing() {
+            if (ringInterval) {
+              clearInterval(ringInterval);
+              ringInterval = null;
+            }
           },
         };
         return fx;
@@ -548,7 +669,16 @@
           }
         }
       }
-      initStockfishWorker();
+      // El worker de Stockfish (motor contra la IA) ya NO se arranca acá al
+      // cargar la página: eso descargaba y ponía en marcha el motor
+      // (WASM/JS pesado desde CDN) en TODAS las pantallas, incluidas
+      // partidas de torneo online o "pasar y jugar" donde nunca se usa. Se
+      // inicializa una sola vez, de forma perezosa, la primera vez que
+      // realmente hace falta (ver ensureStockfishWorker(), llamada al
+      // activar el modo "vs IA" y antes de pedirle una jugada al bot).
+      function ensureStockfishWorker() {
+        if (!sfWorker) initStockfishWorker();
+      }
 
       function getStockfishSkill(difficulty) {
         switch(difficulty) {
@@ -590,6 +720,7 @@
           return;
         }
         if (!botEnabled || !gameStarted || game.game_over() || game.turn() !== botColor) return;
+        ensureStockfishWorker();
         botThinking = true;
         render();
 
@@ -948,6 +1079,13 @@
               const square = document.createElement("div");
               square.className = "square " + ((r + c) % 2 ? "dark" : "light");
               square.dataset.square = sqName;
+              // Sin esto, el navegador espera ~300ms después de un tap para
+              // descartar un posible doble-tap-para-zoom antes de disparar
+              // "click" (retraso clásico de touch en mobile). El arrastre de
+              // piezas ya es instantáneo porque usa pointerdown/pointermove
+              // directamente, pero un simple toque para seleccionar/mover
+              // una casilla dependía de ese "click" con delay. Esto lo saca.
+              square.style.touchAction = "manipulation";
 
               if (c === (isFlipped ? 7 : 0)) {
                 const rank = document.createElement("span");
@@ -1011,6 +1149,7 @@
             pieceEl.className = "piece " + (pieceObj.color === "w" ? "white-piece" : "black-piece");
             pieceEl.textContent = PIECES[pieceObj.color + pieceObj.type.toUpperCase()];
             pieceEl.dataset.piece = pieceObj.type.toUpperCase();
+            pieceEl.style.touchAction = "manipulation";
             square.appendChild(pieceEl);
             attachPieceDrag(pieceEl, sqName);
             if (justMovedAnim && justMovedAnim.to === sqName) {
@@ -1060,7 +1199,9 @@
       function renderCapturedMaterial() {
         const capturedWEl = document.getElementById("captured-w");
         const capturedBEl = document.getElementById("captured-b");
-        if (!capturedWEl && !capturedBEl) return; // esta pantalla no tiene el panel (ej. análisis)
+        const capturedWFloatEl = document.getElementById("captured-w-float");
+        const capturedBFloatEl = document.getElementById("captured-b-float");
+        if (!capturedWEl && !capturedBEl && !capturedWFloatEl && !capturedBFloatEl) return; // esta pantalla no tiene el panel (ej. análisis)
 
         // IMPORTANTE: no usamos game.history() para esto. En una partida de
         // torneo, cada actualización llega como un FEN nuevo y se carga con
@@ -1122,12 +1263,12 @@
 
         // Piezas negras capturadas se muestran del lado de las blancas (lo
         // que ganaron), y viceversa.
-        if (capturedWEl) {
-          capturedWEl.innerHTML = glyphsHtml(missingBlack, "b") + advantageHtml(diff > 0 ? diff : 0);
-        }
-        if (capturedBEl) {
-          capturedBEl.innerHTML = glyphsHtml(missingWhite, "w") + advantageHtml(diff < 0 ? -diff : 0);
-        }
+        const wHtml = glyphsHtml(missingBlack, "b") + advantageHtml(diff > 0 ? diff : 0);
+        const bHtml = glyphsHtml(missingWhite, "w") + advantageHtml(diff < 0 ? -diff : 0);
+        if (capturedWEl) capturedWEl.innerHTML = wHtml;
+        if (capturedBEl) capturedBEl.innerHTML = bHtml;
+        if (capturedWFloatEl) capturedWFloatEl.innerHTML = wHtml;
+        if (capturedBFloatEl) capturedBFloatEl.innerHTML = bHtml;
       }
 
       function updateEvalBar() {
@@ -1556,12 +1697,15 @@
       }
 
       function clonePosition(g) {
-        // Objeto simple para snapshots de análisis
+        // Snapshot liviano para el visor de análisis: el FEN ya contiene
+        // toda la información de la posición (tablero, turno, enroques,
+        // al paso), así que no hace falta guardar también un array 8x8
+        // de piezas por cada jugada. Antes esto multiplicaba por ~64 el
+        // tamaño de cada posición guardada; con hasta 30 partidas y ~80
+        // jugadas cada una, eso se releía y reescribía entero en cada
+        // save()/loadState(). El tablero se reconstruye al vuelo (ver
+        // renderAnalysisBoard) solo para la jugada que se está mirando.
         return {
-          board: g.board(),
-          turn: g.turn(),
-          castling: {},
-          enPassant: null,
           fen: g.fen(),
         };
       }
@@ -1611,6 +1755,18 @@
       let clockTimer = null;
       let clock = { w: 300, b: 300 };
       let clockEnabled = false;
+      // Reloj local ("Jugar"): antes se restaba 1 segundo por cada tick de
+      // setInterval(...,1000). En mobile, cuando el navegador pasa a
+      // segundo plano (se bloquea la pantalla, se cambia de app), el
+      // sistema operativo pausa/frena esos intervalos para ahorrar
+      // batería — al volver, el reloj mostraba más tiempo del que
+      // realmente había pasado. Ahora, igual que el reloj de torneo
+      // (ver updateTournamentClockDisplay), el tiempo restante se calcula
+      // contra un timestamp real (turnStartAt) en vez de contar ticks:
+      // así da igual cuántos ticks se hayan salteado, el cálculo siempre
+      // es correcto en cuanto vuelve a primer plano.
+      let turnStartAt = null;
+      let clockFlagged = false;
 
       // Lee minutos/incremento personalizables a partir de un par
       // select+input (se reutiliza para el reloj de "Jugar" y para el
@@ -1697,10 +1853,20 @@
         // termina pisando (y desincronizando entre pantallas) el reloj
         // del torneo, que comparte los mismos elementos #clock-w/#clock-b.
         if (tournamentMatchActive) return;
-        const increment = getIncrement();
-        if (!increment || !clockEnabled || game.game_over()) return;
         const prevTurn = game.turn() === 'w' ? 'b' : 'w';
-        clock[prevTurn] += increment;
+        // Se "cobra" el tiempo realmente transcurrido en este turno recién
+        // terminado contra el timestamp de cuándo empezó a pensar, no
+        // contra cuántos ticks de 1s llegaron a correr (que en mobile
+        // pueden haberse salteado si la pantalla estuvo bloqueada).
+        if (clockEnabled && turnStartAt) {
+          const elapsed = Math.max(0, Math.round((Date.now() - turnStartAt) / 1000));
+          clock[prevTurn] = Math.max(0, clock[prevTurn] - elapsed);
+        }
+        const increment = getIncrement();
+        if (increment && clockEnabled && !game.game_over()) {
+          clock[prevTurn] += increment;
+        }
+        turnStartAt = clockEnabled ? Date.now() : null;
         updateClockDisplay();
       }
 
@@ -1709,26 +1875,34 @@
         const initial = getInitialTime();
         clockEnabled = initial > 0;
         clock = { w: initial, b: initial };
+        clockFlagged = false;
+        turnStartAt = start && initial > 0 ? Date.now() : null;
 
         if (start && initial > 0) {
+          // El intervalo ya no resta segundos: solo refresca la pantalla
+          // cada 1s. El tiempo real que queda se recalcula siempre contra
+          // turnStartAt (ver getClockRemaining_), así que aunque el
+          // navegador se salte ticks en segundo plano, en cuanto vuelve a
+          // primer plano el próximo tick muestra el valor correcto.
           clockTimer = setInterval(() => {
             if (tournamentMatchActive || game.game_over()) return;
-            const turn = game.turn();
-            clock[turn]--;
-            if (clock[turn] <= 0) {
-              clock[turn] = 0;
-              clearInterval(clockTimer);
-              const winner = turn === 'w' ? 'Negras' : 'Blancas';
-              state.games++;
-              const record = saveFinishedGame(`Tiempo agotado · Ganaron las ${winner}`);
-              save();
-              showAlert(`⏱️ Tiempo agotado. Ganaron las ${winner}.`);
-              if (record) offerAnalysis(record.id);
-            }
             updateClockDisplay();
           }, 1000);
         }
         updateClockDisplay();
+      }
+
+      // Tiempo restante real de un color: si es su turno, se descuenta el
+      // tiempo transcurrido desde turnStartAt (cálculo por timestamp, no
+      // por conteo de ticks); si no es su turno, el valor guardado no
+      // cambia.
+      function getClockRemaining_(color) {
+        if (!clockEnabled) return clock[color];
+        if (game.turn() === color && turnStartAt && !game.game_over()) {
+          const elapsed = Math.max(0, Math.round((Date.now() - turnStartAt) / 1000));
+          return Math.max(0, clock[color] - elapsed);
+        }
+        return clock[color];
       }
 
       function updateClockDisplay() {
@@ -1743,10 +1917,28 @@
         renderBoardAvatars_();
         const wTime = w.querySelector(".clock-time");
         const bTime = b.querySelector(".clock-time");
-        (wTime || w).textContent = formatTime(clock.w);
-        (bTime || b).textContent = formatTime(clock.b);
+        const wSecs = getClockRemaining_("w");
+        const bSecs = getClockRemaining_("b");
+        (wTime || w).textContent = formatTime(wSecs);
+        (bTime || b).textContent = formatTime(bSecs);
         w.classList.toggle("active", game.turn() === "w" && !game.game_over());
         b.classList.toggle("active", game.turn() === "b" && !game.game_over());
+
+        if (clockEnabled && !clockFlagged && !game.game_over()) {
+          const turn = game.turn();
+          const remaining = turn === "w" ? wSecs : bSecs;
+          if (remaining <= 0) {
+            clockFlagged = true;
+            clock[turn] = 0;
+            clearInterval(clockTimer);
+            const winner = turn === "w" ? "Negras" : "Blancas";
+            state.games++;
+            const record = saveFinishedGame(`Tiempo agotado · Ganaron las ${winner}`);
+            save();
+            showAlert(`⏱️ Tiempo agotado. Ganaron las ${winner}.`);
+            if (record) offerAnalysis(record.id);
+          }
+        }
       }
 
 
@@ -1898,6 +2090,7 @@
         });
         if (name === "jugar") render();
         if (name === "torneo" && typeof refreshTournament === "function") refreshTournament();
+        if (name === "torneo" && typeof lanRenderUI === "function" && lanState) lanRenderUI();
         if (name === "pantalla-publica" && typeof renderPublicScreen === "function") renderPublicScreen(lastTournamentState);
       }
 
@@ -1919,27 +2112,47 @@
         });
       }
 
+      // Sonido: checkbox rápido en "Jugar" + espejo centralizado en "Configuración".
+      // Antes esta preferencia no se guardaba entre sesiones; ahora persiste
+      // igual que el resto (movimientos legales, amenazas, explicaciones).
+      let soundEnabled = localStorage.getItem("chessSoundEnabled") !== "off";
       const soundToggle = document.getElementById("toggle-sound");
-      if (soundToggle) {
-        SoundFX.setEnabled(soundToggle.checked);
-        soundToggle.addEventListener("change", () => {
-          SoundFX.setEnabled(soundToggle.checked);
-          if (soundToggle.checked) {
-            SoundFX.unlock();
-            SoundFX.select();
-          }
-        });
+      const soundToggleCfg = document.getElementById("toggle-sound-cfg");
+
+      function syncSoundUI() {
+        if (soundToggle) soundToggle.checked = soundEnabled;
+        if (soundToggleCfg) soundToggleCfg.checked = soundEnabled;
       }
+
+      function setSoundEnabled(value) {
+        soundEnabled = value;
+        localStorage.setItem("chessSoundEnabled", soundEnabled ? "on" : "off");
+        SoundFX.setEnabled(soundEnabled);
+        syncSoundUI();
+        if (soundEnabled) {
+          SoundFX.unlock();
+          SoundFX.select();
+        }
+      }
+
+      SoundFX.setEnabled(soundEnabled);
+      syncSoundUI();
+      if (soundToggle) soundToggle.addEventListener("change", () => setSoundEnabled(soundToggle.checked));
+      if (soundToggleCfg) soundToggleCfg.addEventListener("change", () => setSoundEnabled(soundToggleCfg.checked));
+
       // Los navegadores requieren un gesto del usuario para habilitar audio
       document.body.addEventListener("pointerdown", () => SoundFX.unlock(), { once: true });
 
       // Activar/desactivar el resaltado de jugadas posibles (checkbox del
-      // panel "Modo educativo" + botón rápido, disponible también en pantalla completa)
+      // panel "Modo educativo" + espejo en "Configuración" + botón rápido,
+      // disponible también en pantalla completa)
       const legalMovesCheckbox = document.getElementById("toggle-legal");
+      const legalMovesCheckboxCfg = document.getElementById("toggle-legal-cfg");
       const legalMovesBtn = document.getElementById("toggle-legal-btn");
 
       function syncLegalMovesUI() {
         if (legalMovesCheckbox) legalMovesCheckbox.checked = showLegalMoves;
+        if (legalMovesCheckboxCfg) legalMovesCheckboxCfg.checked = showLegalMoves;
         if (legalMovesBtn) {
           legalMovesBtn.textContent = showLegalMoves ? "🎯 Jugadas: ON" : "🎯 Jugadas: OFF";
           legalMovesBtn.classList.toggle("off", !showLegalMoves);
@@ -1958,27 +2171,211 @@
       if (legalMovesCheckbox) {
         legalMovesCheckbox.addEventListener("change", () => setShowLegalMoves(legalMovesCheckbox.checked));
       }
+      if (legalMovesCheckboxCfg) {
+        legalMovesCheckboxCfg.addEventListener("change", () => setShowLegalMoves(legalMovesCheckboxCfg.checked));
+      }
       if (legalMovesBtn) {
         legalMovesBtn.addEventListener("click", () => setShowLegalMoves(!showLegalMoves));
       }
       syncLegalMovesUI();
 
       // Activar/desactivar el resaltado de piezas amenazadas (checkbox del
-      // panel "Modo educativo")
+      // panel "Modo educativo" + espejo en "Configuración")
       const threatsCheckbox = document.getElementById("toggle-threats");
-      if (threatsCheckbox) {
-        threatsCheckbox.checked = showThreats;
-        threatsCheckbox.addEventListener("change", () => {
-          showThreats = threatsCheckbox.checked;
-          localStorage.setItem("chessShowThreats", showThreats ? "on" : "off");
+      const threatsCheckboxCfg = document.getElementById("toggle-threats-cfg");
+
+      function syncThreatsUI() {
+        if (threatsCheckbox) threatsCheckbox.checked = showThreats;
+        if (threatsCheckboxCfg) threatsCheckboxCfg.checked = showThreats;
+      }
+
+      function setShowThreats(value) {
+        showThreats = value;
+        localStorage.setItem("chessShowThreats", showThreats ? "on" : "off");
+        syncThreatsUI();
+        if (gameStarted) render();
+        toast(showThreats ? "⚔️ Amenazas activadas" : "⚔️ Amenazas desactivadas");
+      }
+
+      if (threatsCheckbox) threatsCheckbox.addEventListener("change", () => setShowThreats(threatsCheckbox.checked));
+      if (threatsCheckboxCfg) threatsCheckboxCfg.addEventListener("change", () => setShowThreats(threatsCheckboxCfg.checked));
+      syncThreatsUI();
+
+      // Notificaciones del chat de partidas: espejo en Configuración del
+      // botón 🔕/🔔 que ya vive dentro de cada mesa de torneo (ver
+      // toggleMatchChatMute / setMatchChatMuted). El checkbox se muestra en
+      // positivo ("notificaciones activadas") para ser consistente con el
+      // resto de los toggles de esta pantalla, aunque el dato que se guarda
+      // (matchChatMuted) esté en negativo.
+      const chatNotifCheckboxCfg = document.getElementById("toggle-chatnotif-cfg");
+      function syncChatNotifCfgUI_() {
+        if (chatNotifCheckboxCfg) chatNotifCheckboxCfg.checked = !matchChatMuted;
+      }
+      if (chatNotifCheckboxCfg) {
+        chatNotifCheckboxCfg.checked = !matchChatMuted;
+        chatNotifCheckboxCfg.addEventListener("change", () => {
+          setMatchChatMuted(!chatNotifCheckboxCfg.checked);
+          toast(matchChatMuted ? "🔕 Chat silenciado" : "🔔 Chat con notificaciones");
+        });
+      }
+
+      // Avatar: el botón de Perfil abre el mismo selector de mascotas que
+      // ya se usa desde la burbuja del sidebar (ver openAvatarPicker).
+      const avatarBtnCfg = document.getElementById("config-avatar-btn");
+      if (avatarBtnCfg) avatarBtnCfg.addEventListener("click", openAvatarPicker);
+
+      // Perfil: nombre y curso. Antes el formulario no hacía nada al
+      // guardar; ahora persiste en el mismo state que ya usa el resto de
+      // la app (ver DEFAULT_STATE / save()).
+      const studentNameInput = document.getElementById("student-name");
+      const studentCourseInput = document.getElementById("student-course");
+      if (studentNameInput) studentNameInput.value = state.name === "Alumno" ? "" : state.name;
+      if (studentCourseInput) studentCourseInput.value = state.course || "";
+      const saveProfileBtn = document.getElementById("save-profile");
+      if (saveProfileBtn) {
+        saveProfileBtn.addEventListener("click", () => {
+          const name = studentNameInput ? studentNameInput.value.trim() : "";
+          const course = studentCourseInput ? studentCourseInput.value.trim() : "";
+          state.name = name || "Alumno";
+          state.course = course;
+          save();
+          updateProfile();
+          toast("💾 Perfil guardado");
+        });
+      }
+
+      // "Restaurar todas las preferencias": tema + fichas + los 4 toggles
+      // de ayudas/sonido a sus valores de fábrica, de una sola vez. Es
+      // intencionalmente distinto de "Borrar progreso": no toca XP,
+      // historial ni el perfil (nombre/curso/avatar) del alumno.
+      const resetPreferencesBtn = document.getElementById("reset-preferences");
+      if (resetPreferencesBtn) {
+        resetPreferencesBtn.addEventListener("click", () => {
+          if (!confirm("¿Restaurar tema, fichas y las 4 ayudas de juego a los valores de fábrica? No afecta tu progreso ni tu perfil.")) {
+            return;
+          }
+          applyTheme("blue");
+          applyPieceStyle("classic");
+          showLegalMoves = true;
+          localStorage.setItem("chessShowLegalMoves", "on");
+          syncLegalMovesUI();
+          showThreats = true;
+          localStorage.setItem("chessShowThreats", "on");
+          syncThreatsUI();
+          explainMode = true;
+          localStorage.setItem("chessExplainMode", "on");
+          syncExplainUI();
+          setSoundEnabled(true);
+          setMatchChatMuted(false);
           if (gameStarted) render();
-          toast(showThreats ? "⚔️ Amenazas activadas" : "⚔️ Amenazas desactivadas");
+          toast("↺ Preferencias restauradas a los valores de fábrica");
+        });
+      }
+
+      // "Exportar datos" / "Importar datos": antes ninguno de los dos
+      // botones tenía código detrás (no hacían nada). El respaldo incluye
+      // el state completo (perfil, XP, historial, avatar) MÁS las
+      // preferencias que se guardan aparte en localStorage (tema, fichas,
+      // los 4 toggles de ayudas/sonido y el silenciado de chat), para que
+      // "exportar" sea de verdad una copia completa de todo lo que la app
+      // recuerda de este alumno en este navegador. Deliberadamente NO
+      // incluye la config de Firebase ni la sala del torneo: eso es
+      // configuración de la escuela, no datos del alumno.
+      const BACKUP_KEYS = [
+        "chessSchoolData",
+        "chessTheme",
+        "chessPieceStyle",
+        "chessShowLegalMoves",
+        "chessShowThreats",
+        "chessExplainMode",
+        "chessSoundEnabled",
+        "chessMatchChatMuted",
+      ];
+
+      const exportJsonBtn = document.getElementById("export-json");
+      if (exportJsonBtn) {
+        exportJsonBtn.addEventListener("click", () => {
+          const backup = { app: "escuela-de-ajedrez", version: 1, exportedAt: new Date().toISOString(), data: {} };
+          BACKUP_KEYS.forEach((key) => {
+            const value = localStorage.getItem(key);
+            if (value !== null) backup.data[key] = value;
+          });
+          const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const safeName = (state.name || "alumno").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "") || "alumno";
+          const dateStr = new Date().toISOString().slice(0, 10);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `ajedrez-${safeName}-${dateStr}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast("📤 Datos exportados");
+        });
+      }
+
+      const importJsonInput = document.getElementById("import-json");
+      if (importJsonInput) {
+        importJsonInput.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            let parsed;
+            try {
+              parsed = JSON.parse(reader.result);
+            } catch (err) {
+              toast("❌ Ese archivo no es un JSON válido");
+              importJsonInput.value = "";
+              return;
+            }
+            const payload = parsed && parsed.data && typeof parsed.data === "object" ? parsed.data : null;
+            if (!payload || !payload.chessSchoolData) {
+              toast("❌ Ese archivo no parece un respaldo de esta app");
+              importJsonInput.value = "";
+              return;
+            }
+            if (!confirm("¿Importar este respaldo? Se reemplaza tu progreso, perfil y preferencias actuales por los del archivo. No se puede deshacer.")) {
+              importJsonInput.value = "";
+              return;
+            }
+            BACKUP_KEYS.forEach((key) => {
+              if (typeof payload[key] === "string") localStorage.setItem(key, payload[key]);
+            });
+            importJsonInput.value = "";
+            toast("📥 Datos importados. Recargando…");
+            // Recargamos en vez de resincronizar a mano cada variable en
+            // memoria (tema, fichas, los 4 toggles, state...): son muchas
+            // y están repartidas por todo el archivo, así que recargar es
+            // la forma más simple y segura de que todo quede consistente.
+            setTimeout(() => location.reload(), 700);
+          };
+          reader.onerror = () => toast("❌ No se pudo leer el archivo");
+          reader.readAsText(file);
+        });
+      }
+
+      // "Borrar progreso": antes el botón no tenía ningún handler y no
+      // borraba nada. Ahora sí resetea XP, historial y estadísticas,
+      // conservando nombre/curso/avatar (eso es "perfil", no "progreso").
+      const resetDataBtn = document.getElementById("reset-data");
+      if (resetDataBtn) {
+        resetDataBtn.addEventListener("click", () => {
+          if (!confirm("¿Borrar todo tu progreso (XP, historial de partidas y estadísticas)? Esto no se puede deshacer.")) {
+            return;
+          }
+          state = { ...DEFAULT_STATE, name: state.name, course: state.course, avatar: state.avatar };
+          save();
+          updateProfile();
+          toast("🗑️ Progreso borrado");
         });
       }
 
       document.getElementById("new-game").onclick = () => {
         const modeValue = document.getElementById("mode").value;
         botEnabled = modeValue === "bot";
+        if (botEnabled) ensureStockfishWorker();
         botDifficulty = document.getElementById("bot-difficulty").value;
         const humanColor = document.getElementById("bot-color").value;
         botColor = humanColor === 'w' ? 'b' : 'w';
@@ -2082,7 +2479,8 @@
       // completa, dejando el espacio real que ocupan el reloj y los controles
       // en CADA dispositivo (celular, tablet, notebook, con o sin notch).
       function sizeFullscreenBoard() {
-        if (!document.body.classList.contains("fullscreen-game")) return;
+        const bc = document.body.classList;
+        if (!bc.contains("fullscreen-game") && !bc.contains("tournament-board-max")) return;
         const boardFrame = document.querySelector(".board-frame");
         const gameCard = document.getElementById("game-card");
         if (!boardFrame || !gameCard) return;
@@ -2406,7 +2804,7 @@
         const accSums = { w: [], b: [] };
 
         for (let i = 0; i < record.moves.length; i++) {
-          const color = positions[i].turn; // quién mueve en esta jugada
+          const color = positions[i].fen.split(" ")[1]; // quién mueve en esta jugada
           const scoreBefore = scores[i];
           const scoreAfter = scores[i + 1];
           // ambos "scores" están en perspectiva de quien mueve en esa posición;
@@ -2498,7 +2896,7 @@
 
         scores.forEach((rawScore, i) => {
           // convertir a perspectiva de blancas para el gráfico
-          const turnAt = record.positions[i].turn;
+          const turnAt = record.positions[i].fen.split(" ")[1];
           const whiteScore = turnAt === "w" ? rawScore : -rawScore;
           const clamped = Math.max(-600, Math.min(600, whiteScore));
           const pct = 50 + (clamped / 600) * 50; // 0 (negras dominan) .. 100 (blancas dominan)
@@ -2517,13 +2915,14 @@
         const boardEl = document.getElementById("analysis-board");
         boardEl.innerHTML = "";
         const pos = record.positions[analysisPly];
-        if (!pos || !pos.board) return;
+        if (!pos || !pos.fen) return;
+        const board = new Chess(pos.fen).board();
 
         for (let r = 0; r < 8; r++) {
           for (let c = 0; c < 8; c++) {
             const sq = document.createElement("div");
             sq.className = "square " + ((r + c) % 2 ? "dark" : "light");
-            const p = pos.board[r][c];
+            const p = board[r][c];
             if (p) {
               const piece = document.createElement("div");
               piece.className = "piece " + (p.color === "w" ? "white-piece" : "black-piece");
@@ -2539,7 +2938,7 @@
         const a = record.analysis;
         if (a && evalEl) {
           const rawScore = a.scores[analysisPly];
-          const turnAt = pos.turn;
+          const turnAt = pos.fen.split(" ")[1];
           const whiteScore = turnAt === "w" ? rawScore : -rawScore;
           let text;
           if (Math.abs(whiteScore) >= MATE_SCORE - 300) {
@@ -2797,6 +3196,7 @@
       // =========================
       let explainMode = localStorage.getItem("chessExplainMode") !== "off";
       const explainToggleEl = document.getElementById("toggle-explain");
+      const explainToggleElCfg = document.getElementById("toggle-explain-cfg");
       const EDU_DEFAULT_TITLE = "Pensá antes de mover";
       const EDU_DEFAULT_TEXT = "Antes de jugar, preguntate: ¿qué amenaza mi rival?";
 
@@ -2807,15 +3207,22 @@
         if (textEl) textEl.textContent = EDU_DEFAULT_TEXT;
       }
 
-      if (explainToggleEl) {
-        explainToggleEl.checked = explainMode;
-        explainToggleEl.onchange = () => {
-          explainMode = explainToggleEl.checked;
-          localStorage.setItem("chessExplainMode", explainMode ? "on" : "off");
-          if (!explainMode) resetEduPanel();
-          toast(explainMode ? "📚 Explicaciones activadas" : "📚 Explicaciones desactivadas");
-        };
+      function syncExplainUI() {
+        if (explainToggleEl) explainToggleEl.checked = explainMode;
+        if (explainToggleElCfg) explainToggleElCfg.checked = explainMode;
       }
+
+      function setExplainMode(value) {
+        explainMode = value;
+        localStorage.setItem("chessExplainMode", explainMode ? "on" : "off");
+        syncExplainUI();
+        if (!explainMode) resetEduPanel();
+        toast(explainMode ? "📚 Explicaciones activadas" : "📚 Explicaciones desactivadas");
+      }
+
+      syncExplainUI();
+      if (explainToggleEl) explainToggleEl.onchange = () => setExplainMode(explainToggleEl.checked);
+      if (explainToggleElCfg) explainToggleElCfg.onchange = () => setExplainMode(explainToggleElCfg.checked);
 
       // Decide si corresponde explicar la jugada de "moverColor" (solo al rival del bot, o a todos en modo local)
       function shouldExplainMover(moverColor) {
@@ -4131,7 +4538,250 @@
         return gamesCollectionRef.doc(gameDocId_(round, board)).collection("chat");
       }
 
-      // Suscribe al chat de la mesa (round, board) actualmente abierta.
+      // --- Anuncios del torneo (mensaje del árbitro/admin para todos los
+      // conectados, sin depender de ninguna mesa) ---
+      // A diferencia del chat de mesa (privado entre dos rivales), esto vive
+      // en una subcolección propia del documento raíz del torneo
+      // (torneos/{room}/announcements), separada de "games" para no competir
+      // con las escrituras de las partidas. Se escucha una sola vez por
+      // conexión al torneo (subscribeAnnouncements, llamada junto con
+      // subscribeTournament en connectFirebase), no por mesa: así llega
+      // tanto a quien está mirando el torneo como a quien tiene una mesa
+      // abierta.
+      let announcementsCollectionRef = null;
+      let announcementsUnsub = null;
+      let lastAnnouncementId_ = null; // último anuncio ya mostrado, para no repetir el toast
+      let announcementHistory_ = []; // últimos anuncios (más nuevo primero), para el listado desplegable
+
+      // --- Carrusel de "mesas en juego" de la pantalla pública ---
+      // En vez de listar todas las mesas activas apiladas (poco legible en
+      // un proyector con muchas mesas), se muestra una a la vez en letra
+      // grande y se pasa a la siguiente cada 10s.
+      let publicScreenActiveGames_ = []; // mesas activas de la ronda actual, orden fijo por número de mesa
+      let publicScreenCycleIndex_ = 0; // índice dentro de publicScreenActiveGames_ que se está mostrando ahora
+      let publicScreenCycleTimer_ = null;
+      let publicScreenZoomKey_ = null; // "round-board" de la mesa abierta en el modal de zoom, o null si está cerrado
+
+      // --- Countdown de ronda sincronizado con el reloj del servidor ---
+      // Firestore no tiene un equivalente al ".info/serverTimeOffset" de
+      // Realtime Database, así que lo estimamos nosotros: cada vez que nos
+      // llega (sin hasPendingWrites) el Timestamp server-side
+      // meta.roundCountdownSetAt, comparamos ese instante "real" contra
+      // nuestro Date.now() local en el momento de recibirlo. La diferencia
+      // (drift de reloj del dispositivo + latencia de red, en general
+      // despreciable) es countdownClockOffsetMs_, y de ahí en más
+      // syncedNow_() la usa para que la cuenta regresiva no dependa de que
+      // el celular de cada chico tenga bien puesta la hora.
+      let countdownClockOffsetMs_ = 0;
+      let roundCountdownTimer_ = null;
+
+      function syncedNow_() {
+        return Date.now() + countdownClockOffsetMs_;
+      }
+
+      function assertAdminOrReferee() {
+        if (!isCurrentUserAdmin(lastTournamentState) && !isCurrentUserReferee()) {
+          throw new Error("Esta acción es exclusiva del administrador o del árbitro del torneo");
+        }
+      }
+
+      function subscribeAnnouncements() {
+        if (announcementsUnsub) {
+          announcementsUnsub();
+          announcementsUnsub = null;
+        }
+        lastAnnouncementId_ = null;
+        announcementHistory_ = [];
+        let firstSnapshot = true;
+        announcementsUnsub = announcementsCollectionRef
+          .orderBy("ts", "desc")
+          .limit(10)
+          .onSnapshot(
+            (qsnap) => {
+              announcementHistory_ = qsnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+              renderAnnouncementHistory_();
+              const top = announcementHistory_[0] || null;
+              renderAnnouncementBanner_(top);
+              // No mostramos el toast del anuncio que ya estaba puesto al
+              // conectarnos (firstSnapshot), solo los que llegan después,
+              // para no interrumpir a alguien que recién entra al torneo.
+              if (!firstSnapshot && top && top.id !== lastAnnouncementId_) {
+                toast("📢 " + (top.text || ""), 6000);
+                SoundFX.announcement();
+              }
+              lastAnnouncementId_ = top ? top.id : null;
+              firstSnapshot = false;
+            },
+            () => {
+              // Si falla (por ejemplo, torneo viejo sin la subcolección
+              // todavía), no rompemos el resto de la app: el anuncio
+              // simplemente no se muestra.
+            }
+          );
+      }
+
+      let announcementBannerTimer_ = null;
+
+      function renderAnnouncementBanner_(data) {
+        const bannerEl = document.getElementById("tournament-announcement-banner");
+        const textEl = document.getElementById("tournament-announcement-text");
+        if (!bannerEl || !textEl) return;
+        clearTimeout(announcementBannerTimer_);
+        if (!data || !data.text) {
+          bannerEl.style.display = "none";
+          return;
+        }
+        textEl.textContent = data.text;
+        bannerEl.style.display = "";
+        announcementBannerTimer_ = setTimeout(() => {
+          bannerEl.style.display = "none";
+        }, 6000);
+      }
+
+      // Formatea la hora de un anuncio para el listado desplegable. ts es un
+      // Timestamp de Firestore (o null en el instante entre el add() local y
+      // que vuelva el valor real del servidor).
+      function formatAnnouncementTime_(ts) {
+        if (!ts || typeof ts.toDate !== "function") return "";
+        return ts.toDate().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function stopRoundCountdownTimer_() {
+        if (roundCountdownTimer_) {
+          clearInterval(roundCountdownTimer_);
+          roundCountdownTimer_ = null;
+        }
+      }
+
+      // Dibuja (y hace tickear) el banner de countdown de ronda. Se llama
+      // desde renderTournamentState en cada snapshot, así que siempre
+      // arranca desde los datos más frescos de meta.roundCountdownSetAt /
+      // roundCountdownMs; el setInterval interno solo se ocupa de refrescar
+      // el texto entre snapshots.
+      function renderRoundCountdown_(state) {
+        const bannerEl = document.getElementById("tournament-round-countdown-banner");
+        const labelEl = document.getElementById("tournament-round-countdown-label");
+        const timeEl = document.getElementById("tournament-round-countdown-time");
+        const cancelBtn = document.getElementById("tournament-round-countdown-cancel-btn");
+        if (!bannerEl || !labelEl || !timeEl) return;
+
+        stopRoundCountdownTimer_();
+
+        const setAt = state.meta.roundCountdownSetAt;
+        const durationMs = state.meta.roundCountdownMs;
+        const hasTarget = setAt && typeof setAt.toMillis === "function" && durationMs;
+
+        if (cancelBtn) cancelBtn.style.display = hasTarget ? "" : "none";
+
+        if (!hasTarget) {
+          bannerEl.style.display = "none";
+          bannerEl.classList.remove("round-countdown-urgent");
+          return;
+        }
+
+        const targetMs = setAt.toMillis() + durationMs;
+        labelEl.textContent = `Ronda ${state.meta.round + 1} arranca en`;
+        bannerEl.style.display = "";
+
+        const tick = () => {
+          const remainingMs = targetMs - syncedNow_();
+          if (remainingMs <= 0) {
+            timeEl.textContent = "¡ya!";
+            bannerEl.classList.remove("round-countdown-urgent");
+            stopRoundCountdownTimer_();
+            return;
+          }
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          timeEl.textContent = formatTime(remainingSec);
+          bannerEl.classList.toggle("round-countdown-urgent", remainingSec <= 60);
+        };
+
+        tick();
+        roundCountdownTimer_ = setInterval(tick, 250);
+      }
+
+      function escapeAnnouncementHtml_(s) {
+        return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+
+      function renderAnnouncementHistory_() {
+        const toggleBtn = document.getElementById("tournament-announcement-history-toggle");
+        const listEl = document.getElementById("tournament-announcement-history-list");
+        if (!toggleBtn || !listEl) return;
+        if (!announcementHistory_.length) {
+          toggleBtn.style.display = "none";
+          listEl.style.display = "none";
+          return;
+        }
+        toggleBtn.style.display = "";
+        toggleBtn.textContent = `📋 Ver anuncios (${announcementHistory_.length})`;
+        listEl.innerHTML = announcementHistory_
+          .map((a) => {
+            const time = formatAnnouncementTime_(a.ts);
+            return (
+              `<div class="announcement-history-item">` +
+              `<span class="announcement-history-text">${escapeAnnouncementHtml_(a.text)}</span>` +
+              (time ? `<span class="announcement-history-time">${time}</span>` : "") +
+              `</div>`
+            );
+          })
+          .join("");
+      }
+
+      async function sendTournamentAnnouncement(text) {
+        assertAdminOrReferee();
+        const clean = (text || "").trim();
+        if (!clean) throw new Error("Escribí un mensaje para anunciar");
+        await announcementsCollectionRef.add({
+          text: clean,
+          ts: firebase.firestore.FieldValue.serverTimestamp(),
+          byEmail: currentUser ? currentUser.email : null,
+        });
+      }
+
+      // Arranca (o reemplaza) el countdown visible de "la próxima ronda
+      // arranca en...". Guardamos el instante de arranque como
+      // serverTimestamp() (roundCountdownSetAt) más una duración en ms
+      // (roundCountdownMs) en vez de guardar directamente un Timestamp
+      // "target": así el instante de arranque real queda fijado por el
+      // reloj del servidor en el momento en que el admin/árbitro apretó el
+      // botón, sin depender de qué hora tenga puesta SU celular tampoco.
+      async function fbSetRoundCountdown(minutes) {
+        assertAdminOrReferee();
+        const m = Number(minutes);
+        if (!m || m <= 0) throw new Error("Elegí una cantidad de minutos válida");
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) throw new Error("Todavía no creaste un torneo");
+          const data = snap.data();
+          tx.update(fbRoomRef, {
+            meta: {
+              ...data.meta,
+              roundCountdownSetAt: firebase.firestore.FieldValue.serverTimestamp(),
+              roundCountdownMs: Math.round(m * 60000),
+            },
+          });
+        });
+      }
+
+      // Cancela el countdown activo (si lo hay) antes de que llegue a cero.
+      async function fbCancelRoundCountdown() {
+        assertAdminOrReferee();
+        await fbDb.runTransaction(async (tx) => {
+          const snap = await tx.get(fbRoomRef);
+          if (!snap.exists) return;
+          const data = snap.data();
+          tx.update(fbRoomRef, {
+            meta: { ...data.meta, roundCountdownSetAt: null, roundCountdownMs: null },
+          });
+        });
+      }
+
+      // Suscribe al chat de la mesa (round, board) actualmente abierta. Es
+      // exclusivo de los dos rivales de esa mesa (igual que la llamada de
+      // audio, ver renderCallUI): un espectador ni siquiera se suscribe, así
+      // no lee ni gasta lecturas de Firestore en una conversación que no le
+      // corresponde.
       // Se guardan como mucho los últimos 200 mensajes en memoria (más que
       // suficiente para una partida) para no dejar crecer el DOM sin límite
       // en partidas muy charlatanas.
@@ -4142,6 +4792,7 @@
         matchChatPanelOpen = false;
         matchChatFirstSnapshot = true;
         renderMatchChat();
+        if (!tournamentMyColor()) return; // espectador: sin chat
         matchChatUnsub = matchChatCollectionRef_(round, board)
           .orderBy("at", "asc")
           .limitToLast(200)
@@ -4218,11 +4869,15 @@
 
         const myColor = tournamentMyColor();
         const canChat = !!myColor;
-        wrapEl.style.display = tournamentMatchActive ? "" : "none";
-        if (inputRow) inputRow.style.display = canChat ? "" : "none";
-        if (noteEl) noteEl.textContent = canChat ? "" : "Como espectador podés leer el chat, pero no escribir.";
+        // El chat es exclusivo entre los dos rivales de la mesa (igual que
+        // la llamada de audio): un espectador no lo ve, ni siquiera en
+        // solo-lectura.
+        wrapEl.style.display = tournamentMatchActive && canChat ? "" : "none";
+        if (!canChat) return;
+        if (inputRow) inputRow.style.display = "";
+        if (noteEl) noteEl.textContent = "";
         if (clearBtn) {
-          clearBtn.style.display = canChat && matchChatMessages.length ? "" : "none";
+          clearBtn.style.display = matchChatMessages.length ? "" : "none";
         }
         renderMatchChatMuteBtn_();
 
@@ -4307,10 +4962,15 @@
       // Prende/apaga el aviso (sonido + toast/popup) de mensajes nuevos del
       // chat de mesa. El badge de no leídos y los mensajes en sí siguen
       // funcionando igual estando silenciado; sólo se corta la interrupción.
-      function toggleMatchChatMute() {
-        matchChatMuted = !matchChatMuted;
+      function setMatchChatMuted(muted) {
+        matchChatMuted = muted;
         localStorage.setItem("chessMatchChatMuted", matchChatMuted ? "on" : "off");
         renderMatchChatMuteBtn_();
+        syncChatNotifCfgUI_();
+      }
+
+      function toggleMatchChatMute() {
+        setMatchChatMuted(!matchChatMuted);
         toast(matchChatMuted ? "🔕 Chat silenciado" : "🔔 Chat con notificaciones");
       }
 
@@ -4338,7 +4998,7 @@
       // Cualquiera de los dos jugadores puede hacerlo; los espectadores no
       // tienen el botón visible (ver canChat en renderMatchChat).
       async function clearMatchChat() {
-        if (!tournamentMatchCtx) return;
+        if (!tournamentMatchCtx || !tournamentMyColor()) return;
         if (!matchChatMessages.length) return;
         if (!confirm("¿Vaciar el chat de esta mesa? Se borran los mensajes para los dos jugadores y no se puede deshacer.")) {
           return;
@@ -4408,6 +5068,7 @@
       // tanto al cortar una llamada propia como al detectar que el rival ya
       // cortó/canceló/rechazó del otro lado.
       function teardownCallLocal_() {
+        SoundFX.stopRing();
         if (callPc) {
           callPc.onicecandidate = null;
           callPc.ontrack = null;
@@ -4448,9 +5109,12 @@
         return pc;
       }
 
-      // Quien inicia la llamada.
+      // Quien inicia la llamada. Solo los dos rivales de la mesa pueden
+      // hacerlo (el botón ya está oculto para espectadores en renderCallUI,
+      // pero este chequeo evita que alguien la dispare igual desde la
+      // consola del navegador).
       async function startAudioCall() {
-        if (!tournamentMatchCtx || callState !== "idle") return;
+        if (!tournamentMatchCtx || callState !== "idle" || !tournamentMyColor()) return;
         const round = tournamentMatchCtx.round;
         const board = tournamentMatchCtx.board;
         try {
@@ -4461,6 +5125,7 @@
         }
         callState = "outgoing";
         renderCallUI();
+        SoundFX.startRing();
 
         callPc = newCallPeerConnection_();
         callLocalStream.getTracks().forEach((track) => callPc.addTrack(track, callLocalStream));
@@ -4490,9 +5155,11 @@
         listenRemoteCandidates_(round, board, "answerCandidates");
       }
 
-      // Quien atiende una llamada entrante.
+      // Quien atiende una llamada entrante. Mismo motivo que en
+      // startAudioCall: el chequeo de tournamentMyColor() no depende solo
+      // de que el botón esté oculto para espectadores.
       async function acceptIncomingCall_(offer) {
-        if (!tournamentMatchCtx) return;
+        if (!tournamentMatchCtx || !tournamentMyColor()) return;
         const round = tournamentMatchCtx.round;
         const board = tournamentMatchCtx.board;
         try {
@@ -4528,6 +5195,7 @@
         listenRemoteCandidates_(round, board, "offerCandidates");
         callState = "active";
         renderCallUI();
+        SoundFX.stopRing();
       }
 
       async function declineIncomingCall_() {
@@ -4602,10 +5270,12 @@
               callState = "incoming";
               callPendingOffer = data.offer;
               renderCallUI();
+              SoundFX.startRing();
             } else if (data.status === "active" && iAmCaller && data.answer && callPc && !callPc.currentRemoteDescription) {
               callPc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
               callState = "active";
               renderCallUI();
+              SoundFX.stopRing(); // el rival atendió: corta el ring-back del que llamaba
             }
           },
           () => {
@@ -4752,6 +5422,14 @@
           // incomparecencia se convierta en WO automático (0 = deshabilitado,
           // hay que declararlo a mano como siempre). Ver fbAutoDeclareForfeits.
           woGraceMinutes: 0,
+          // Countdown de "la próxima ronda arranca en...", ver
+          // fbSetRoundCountdown/renderRoundCountdown_. roundCountdownSetAt es
+          // un Timestamp de Firestore (server-side) y roundCountdownMs la
+          // duración elegida por el admin/árbitro; el instante real de
+          // arranque es roundCountdownSetAt + roundCountdownMs, calculado
+          // igual en todos los clientes sin importar el reloj de cada uno.
+          roundCountdownSetAt: null,
+          roundCountdownMs: null,
         };
         if (!data) {
           return { meta: { ...defaults }, players: [], pairings: [] };
@@ -4774,6 +5452,7 @@
         }
         fbRoomRef = fbDb.collection("torneos").doc(room || "main");
         gamesCollectionRef = fbRoomRef.collection("games");
+        announcementsCollectionRef = fbRoomRef.collection("announcements");
         // Nos reconectamos a un torneo (nuevo o distinto "room"): olvidamos
         // qué ronda teníamos suscripta y limpiamos las partidas ya
         // cargadas, para que subscribeRoundGames() no se quede pensando
@@ -4791,6 +5470,7 @@
           });
         }
         subscribeTournament();
+        subscribeAnnouncements();
       }
 
       function updateAuthUI() {
@@ -4807,6 +5487,24 @@
           signoutBtn.style.display = "none";
         }
         updateModeBadge();
+        updateConfigAccountUI_();
+      }
+
+      // Resumen de cuenta en Configuración: mismo currentUser que ya
+      // resuelve onAuthStateChanged en connectFirebase() (se conecta solo
+      // al cargar la página, con o sin visitar "Torneo"), así que este
+      // card puede quedar al día sin depender de esa pantalla.
+      function updateConfigAccountUI_() {
+        const statusEl = document.getElementById("config-account-status");
+        const signoutBtn = document.getElementById("config-signout-btn");
+        if (!statusEl || !signoutBtn) return;
+        if (currentUser) {
+          statusEl.textContent = `Conectado como ${currentUser.displayName} (${currentUser.email})`;
+          signoutBtn.style.display = "";
+        } else {
+          statusEl.textContent = "Todavía no iniciaste sesión con Gmail. Entrá a \"Torneo\" para hacerlo.";
+          signoutBtn.style.display = "none";
+        }
       }
 
       function isCurrentUserAdmin(state) {
@@ -4867,7 +5565,27 @@
         gamesRoundUnsub = gamesCollectionRef.where("round", "==", round).onSnapshot(
           (qsnap) => {
             lastRoundGames = qsnap.docs.map((d) => d.data());
-            renderTournamentState(lastTournamentState);
+            // Mientras hay una mesa abierta (tournamentMatchActive), el panel
+            // de emparejamientos/clasificación está oculto detrás del
+            // tablero: reconstruirlo en cada jugada de CUALQUIER mesa del
+            // torneo (no solo la propia) es trabajo de DOM/CPU tirado a la
+            // basura que además compite por el hilo principal justo cuando
+            // más importa la respuesta rápida al arrastrar una pieza. Antes
+            // esto se notaba más cuanto más avanzada estaba la ronda, porque
+            // más jugadas de más mesas significan más disparos de este
+            // listener. Se saltea acá y se refresca una sola vez al volver
+            // a la pantalla del torneo (ver exitTournamentMatch).
+            if (!tournamentMatchActive) {
+              renderTournamentState(lastTournamentState);
+            }
+            // Repintamos el tablerito de la mesa que se está mostrando
+            // ahora en el carrusel de la pantalla pública (si hay una),
+            // más el modal de zoom si está abierto (ver ambas funciones):
+            // así se ve la partida EN VIVO, no una foto congelada del
+            // momento en que se abrió la pantalla o del último cambio de
+            // carrusel.
+            refreshPublicScreenActiveMiniBoard_();
+            renderPublicScreenZoomBoard_();
             handleLiveMatchUpdate(lastTournamentState);
           },
           () => {
@@ -4912,13 +5630,29 @@
               );
             }
             const state = normalizeTournamentState(snap.exists ? snap.data() : null);
+            // No recalculamos el offset con writes propios todavía pendientes
+            // de confirmar (el serverTimestamp() local vale null hasta que
+            // el server lo resuelve) para no contaminar la estimación.
+            if (!snap.metadata.hasPendingWrites) {
+              const setAt = state.meta.roundCountdownSetAt;
+              if (setAt && typeof setAt.toMillis === "function") {
+                countdownClockOffsetMs_ = setAt.toMillis() - Date.now();
+              }
+            }
             const previousStatus = lastKnownTournamentStatus_;
             lastKnownTournamentStatus_ = state.meta.status;
             lastTournamentState = state;
             const hasActiveOrFinishedRound = state.meta.status === "active" || state.meta.status === "finished";
             subscribeRoundGames(hasActiveOrFinishedRound ? state.meta.round : null);
-            renderTournamentState(state);
-            if (typeof renderPublicScreen === "function") renderPublicScreen(state);
+            // Mismo criterio que en subscribeRoundGames: con una mesa
+            // abierta, el panel de emparejamientos y la pantalla pública
+            // están ocultos/no son lo que se está mirando, así que no vale
+            // la pena reconstruirlos ahora (se refrescan al volver a la
+            // pantalla del torneo, ver exitTournamentMatch).
+            if (!tournamentMatchActive) {
+              renderTournamentState(state);
+              if (typeof renderPublicScreen === "function") renderPublicScreen(state);
+            }
             handleLiveMatchUpdate(state);
             if (previousStatus !== null && previousStatus !== state.meta.status) {
               if (state.meta.status === "finished") {
@@ -5957,7 +6691,7 @@
         return getTournamentStateOnce();
       }
 
-      async function fbMakeMove(round, board, fen, lastMoveSan, gameOverResult, lastFrom, lastTo, clientMoveAt) {
+      async function fbMakeMove(round, board, fen, lastMoveSan, gameOverResult, lastFrom, lastTo, clientMoveAt, isTimeoutClaim) {
         round = Number(round);
         board = Number(board);
         // Sello de tiempo tomado en el cliente apenas se hizo la jugada
@@ -5974,6 +6708,71 @@
         // dudas a que nunca sea posterior al "ahora" real.
         const effectiveMoveAt = Math.min(clientMoveAt || Date.now(), Date.now());
         const gameDocRef = gamesCollectionRef.doc(gameDocId_(round, board));
+
+        // ATAJO para todo lo que NO sea un reclamo de tiempo agotado
+        // (jugada normal, jaque mate, tablas, rendición), tenga o no
+        // reloj la partida: en el camino caliente de cada jugada, quien
+        // escribe este documento es SIEMPRE el mismo jugador que acaba de
+        // mover, nunca compite con otro cliente escribiendo el mismo
+        // documento a la vez (la única excepción real es justo el reclamo
+        // de tiempo, que por eso sigue yendo por la transacción de abajo).
+        // Al no haber carrera posible acá, no hace falta pagar el
+        // round-trip de LECTURA que exige runTransaction(): nos alcanza
+        // con el reloj/estado que ya tenemos cacheado en el cliente
+        // (actualizado en tiempo real por subscribeRoundGames) para
+        // calcular el descuento de tiempo nosotros mismos, y escribimos
+        // directo con un solo update(). Eso deja la transacción SOLO en
+        // claimTournamentTimeout (ver isTimeoutClaim), que es el único
+        // punto donde de verdad puede haber dos clientes escribiendo el
+        // mismo documento casi al mismo tiempo.
+        const cachedGame =
+          lastRoundGames.find((g) => g.round === round && g.board === board) ||
+          (tournamentCurrentGameRow &&
+          tournamentCurrentGameRow.round === round &&
+          tournamentCurrentGameRow.board === board
+            ? tournamentCurrentGameRow
+            : null);
+        if (cachedGame && !isTimeoutClaim) {
+          if (cachedGame.status === "finished") throw new Error("Esa partida ya terminó");
+          if (cachedGame.status === "suspended") throw new Error("Esta partida está suspendida por el árbitro");
+
+          const isRealMove = cachedGame.clock && fen !== cachedGame.fen;
+          if (isRealMove) {
+            const joined = cachedGame.joined || { w: false, b: false };
+            if (!joined.w || !joined.b) {
+              throw new Error("Todavía no entraron los dos jugadores a la partida");
+            }
+          }
+
+          const patch = { fen, lastMoveSan: lastMoveSan || "" };
+          if (lastFrom) patch.lastFrom = lastFrom;
+          if (lastTo) patch.lastTo = lastTo;
+          if (isRealMove) {
+            const moverColor = new Chess(cachedGame.fen).turn();
+            const elapsed = cachedGame.turnStartAt
+              ? Math.max(0, Math.round((effectiveMoveAt - cachedGame.turnStartAt) / 1000))
+              : 0;
+            const newClock = { ...cachedGame.clock, [moverColor]: Math.max(0, cachedGame.clock[moverColor] - elapsed) };
+            if (!gameOverResult && cachedGame.increment) {
+              newClock[moverColor] += cachedGame.increment;
+            }
+            patch.clock = newClock;
+            patch.turnStartAt = effectiveMoveAt;
+          }
+          if (gameOverResult) {
+            patch.status = "finished";
+            patch.result = gameOverResult;
+          }
+          await gameDocRef.update(patch);
+          const writtenGame = { ...cachedGame, ...patch };
+          if (!gameOverResult) {
+            return { gameRow: writtenGame };
+          }
+          const fastState = await fbSubmitResult(round, board, gameOverResult);
+          fastState.gameRow = writtenGame;
+          return fastState;
+        }
+
         let writtenGame = null;
         await fbDb.runTransaction(async (tx) => {
           const snap = await tx.get(gameDocRef);
@@ -6086,9 +6885,10 @@
 
       async function fbResetAll() {
         assertAdmin();
-        // Las partidas viven en su propia subcolección (ver
-        // gamesCollectionRef): sobrescribir el documento principal con
-        // .set() no las borra solas, hay que borrarlas explícitamente.
+        // Las partidas y los anuncios viven en sus propias subcolecciones
+        // (ver gamesCollectionRef / announcementsCollectionRef): sobrescribir
+        // el documento principal con .set() no las borra solas, hay que
+        // borrarlas explícitamente.
         const gamesSnap = await gamesCollectionRef.get();
         // Firestore permite hasta 500 operaciones por batch; en la
         // práctica un torneo escolar nunca se acerca a eso, pero
@@ -6098,6 +6898,15 @@
           const batch = fbDb.batch();
           docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
           await batch.commit();
+        }
+        if (announcementsCollectionRef) {
+          const announcementsSnap = await announcementsCollectionRef.get();
+          const announcementDocs = announcementsSnap.docs;
+          for (let i = 0; i < announcementDocs.length; i += 400) {
+            const batch = fbDb.batch();
+            announcementDocs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+          }
         }
         await fbRoomRef.set({ meta: { name: "", round: 0, status: "setup", adminEmails: [], totalRounds: null }, players: [], pairings: [] });
         return getTournamentStateOnce();
@@ -6616,6 +7425,56 @@
       // arranca/para desde renderTournamentState en cada actualización de
       // estado, igual que el temporizador de aprobación automática.
       let tournamentWOGraceTimer = null;
+      // Mesas donde YA se avisó al árbitro que ninguno de los dos jugadores
+      // se presentó (ver checkDoubleNoShowBoards_ más abajo). No se declara
+      // WO automático en este caso —puede deberse a un problema de conexión
+      // que afecte a ambos por igual, y ahí sí conviene que lo revise una
+      // persona—, pero antes quedaba en silencio hasta que el árbitro
+      // entrara a mirar la lista de mesas. Este Set evita mandar el mismo
+      // aviso cada 15s mientras la mesa siga sin resolverse.
+      let alertedDoubleNoShowBoards_ = new Set();
+
+      // A diferencia de fbAutoDeclareForfeits (que sí declara WO cuando
+      // entró exactamente uno de los dos), acá el caso es que NINGUNO de
+      // los dos entró pasado el tiempo de tolerancia. A propósito no se
+      // declara ganador automático: puede ser que los dos tengan un
+      // problema real (conexión, se equivocaron de horario, etc.) y
+      // conviene que un humano lo mire antes de darle el punto a alguien
+      // sin partida. Lo que sí se puede hacer es avisarle al árbitro en
+      // vez de dejarlo en silencio hasta que entre a mirar la lista de
+      // mesas a mano.
+      function checkDoubleNoShowBoards_(state) {
+        const graceMinutes = Number(state.meta.woGraceMinutes) || 0;
+        if (!graceMinutes) return;
+        const graceMs = graceMinutes * 60000;
+        const now = Date.now();
+        const round = state.meta.round;
+        const gamesByBoard = new Map();
+        lastRoundGames.forEach((g) => gamesByBoard.set(g.board, g));
+
+        state.pairings
+          .filter((p) => p.round === round && p.blackId !== "" && !p.result)
+          .forEach((p) => {
+            const game = gamesByBoard.get(p.board);
+            const joined = (game && game.joined) || { w: false, b: false };
+            const key = round + "_" + p.board;
+            const isDoubleNoShow =
+              game && game.status === "ongoing" && game.startedAt && !joined.w && !joined.b && now - game.startedAt >= graceMs;
+            if (isDoubleNoShow) {
+              if (!alertedDoubleNoShowBoards_.has(key)) {
+                alertedDoubleNoShowBoards_.add(key);
+                toast(
+                  `🔴 Mesa #${p.board}: ni ${p.whiteName} ni ${p.blackName} se presentaron. No se declaró WO automático — revisalo a mano.`
+                );
+              }
+            } else {
+              // Si alguno terminó entrando (o la mesa se resolvió de otra
+              // forma), se saca del set para poder volver a avisar si en
+              // el futuro pasara algo raro parecido en la misma mesa.
+              alertedDoubleNoShowBoards_.delete(key);
+            }
+          });
+      }
 
       function stopWOGraceTimer() {
         clearInterval(tournamentWOGraceTimer);
@@ -6642,6 +7501,15 @@
           } catch (err) {
             // Silencioso: puede fallar si otra pestaña ya resolvió lo mismo,
             // o si el estado cambió (ronda cerrada, torneo terminado, etc.).
+          }
+          // Chequeo de "ninguno se presentó" aparte: es una simple lectura
+          // del estado que ya tenemos suscripto (no pega contra Firestore),
+          // así que conviene que corra siempre, incluso si fbAutoDeclareForfeits
+          // de arriba falló por el motivo que sea.
+          try {
+            if (lastTournamentState) checkDoubleNoShowBoards_(lastTournamentState);
+          } catch (err) {
+            // Silencioso por la misma razón que arriba.
           }
         };
         tick();
@@ -6914,6 +7782,13 @@
           }
         }
 
+        const announceComposerEl = document.getElementById("tournament-announcement-composer");
+        if (announceComposerEl) announceComposerEl.style.display = isAdmin || isCurrentUserReferee() ? "" : "none";
+
+        const countdownComposerEl = document.getElementById("tournament-round-countdown-composer");
+        if (countdownComposerEl) countdownComposerEl.style.display = isAdmin || isCurrentUserReferee() ? "" : "none";
+        renderRoundCountdown_(state);
+
         document.getElementById("tournament-admin-panel").style.display = isAdmin ? "" : "none";
         document.getElementById("tournament-next-round-btn").style.display = !isFinished && state.meta.round === 0 ? "" : "none";
         document.getElementById("tournament-finish-btn").style.display = isFinished ? "none" : "";
@@ -7068,6 +7943,22 @@
           } else if (game && game.status === "suspended") {
             statusCls = "suspended";
             statusText = "⏸️ Suspendida";
+          } else if (
+            graceMinutes > 0 &&
+            game &&
+            game.status === "ongoing" &&
+            game.startedAt &&
+            !joinedInfo.w &&
+            !joinedInfo.b &&
+            Date.now() - game.startedAt >= graceMinutes * 60000
+          ) {
+            // Caso distinto del "esperando jugadores" normal: acá ya pasó
+            // el tiempo reglamentario y NINGUNO de los dos entró. No se
+            // resuelve solo (ver checkDoubleNoShowBoards_), así que se
+            // marca fuerte para que el árbitro lo vea de un vistazo en la
+            // lista, no solo en el toast que ya recibió cuando pasó.
+            statusCls = "no-show";
+            statusText = "🔴 Nadie se presentó";
           } else if (game && game.clock && !bothJoined) {
             statusCls = "waiting";
             statusText = "🟡 Esperando jugadores";
@@ -7252,6 +8143,222 @@
         }
       }
 
+      function publicScreenGameKey_(p) {
+        return p.round + "-" + p.board;
+      }
+
+      // Busca el documento en vivo (con el FEN actual) de una mesa, en la
+      // lista que ya mantiene subscribeRoundGames. Puede no estar todavía
+      // (por ejemplo, el primer instante antes de que llegue el primer
+      // snapshot de "games"), así que quien llama debe tener un fallback.
+      function publicScreenLiveGameFor_(p) {
+        return lastRoundGames.find((g) => g.round === p.round && g.board === p.board) || null;
+      }
+
+      const PUBLIC_SCREEN_START_FEN_ = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+      // Pinta un tablero (mini o de zoom) de la pantalla pública a partir de
+      // un FEN. A diferencia de renderBoardGrid (pensado para los diagramas
+      // de puzzles/análisis, con su propio esquema de color fijo), acá
+      // usamos las mismas clases "white-piece"/"black-piece" + data-piece
+      // que arma el tablero principal (ver render(), línea ~1149): así el
+      // tablerito respeta el estilo de fichas que el usuario tenga elegido
+      // (pstyle-bold, pstyle-neon, etc. -ver applyPieceStyle-, aplicado
+      // como clase en <body>) en vez de mostrar siempre los mismos colores
+      // fijos sin importar el tema.
+      function renderPublicScreenBoardInto_(boardEl, fen) {
+        const matrix = fenBoardToMatrix(fen);
+        boardEl.innerHTML = "";
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const sqName = FILES[c] + (8 - r);
+            const sq = document.createElement("div");
+            sq.className = "square " + ((r + c) % 2 ? "dark" : "light");
+            sq.dataset.square = sqName;
+            const p = matrix[r][c];
+            if (p) {
+              const piece = document.createElement("div");
+              piece.className = "piece " + (p.color === "w" ? "white-piece" : "black-piece");
+              piece.textContent = PIECES[p.color + p.type.toUpperCase()];
+              piece.dataset.piece = p.type.toUpperCase();
+              sq.appendChild(piece);
+            }
+            boardEl.appendChild(sq);
+          }
+        }
+      }
+
+      function stopPublicScreenCycle_() {
+        if (publicScreenCycleTimer_) {
+          clearInterval(publicScreenCycleTimer_);
+          publicScreenCycleTimer_ = null;
+        }
+      }
+
+      function startPublicScreenCycleIfNeeded_() {
+        if (publicScreenCycleTimer_) return;
+        publicScreenCycleTimer_ = setInterval(advancePublicScreenCycle_, 10000);
+      }
+
+      function advancePublicScreenCycle_() {
+        if (publicScreenActiveGames_.length <= 1) return;
+        publicScreenCycleIndex_ = (publicScreenCycleIndex_ + 1) % publicScreenActiveGames_.length;
+        renderPublicScreenActiveCard_();
+      }
+
+      // Dibuja SOLO la mesa que le toca al índice actual del carrusel (o el
+      // estado vacío si no hay ninguna en juego). Separado del resto de
+      // renderPublicScreen para poder llamarse también desde el ticker de
+      // 10s del carrusel, sin depender de que haya llegado un snapshot
+      // nuevo de Firestore.
+      function renderPublicScreenActiveCard_() {
+        const activeEl = document.getElementById("public-screen-active-tables");
+        if (!activeEl) return;
+        const games = publicScreenActiveGames_;
+        if (!games.length) {
+          activeEl.innerHTML = '<p class="public-screen-empty-note">No hay mesas en juego en este momento.</p>';
+          return;
+        }
+        if (publicScreenCycleIndex_ >= games.length) publicScreenCycleIndex_ = 0;
+        const p = games[publicScreenCycleIndex_];
+        const counterNote =
+          games.length > 1
+            ? ` <span class="public-screen-cycle-counter">(${publicScreenCycleIndex_ + 1}/${games.length})</span>`
+            : "";
+        // El <div> se regenera entero en cada llamada (nuevo nodo), así que
+        // la animación CSS de la barra de progreso arranca sola de nuevo
+        // cada vez, sin necesidad de reiniciarla a mano desde JS.
+        activeEl.innerHTML = `
+          <div class="public-screen-active-row public-screen-active-row-cycle">
+            <span class="public-screen-board-badge">Mesa ${p.board}${counterNote}</span>
+            <span class="public-screen-vs">${escapePublicScreenHtml_(p.whiteName)} vs ${escapePublicScreenHtml_(p.blackName)}</span>
+          </div>
+          <div class="public-screen-mini-board-wrap" id="public-screen-mini-board-wrap" title="Tocá para ver esta mesa en grande">
+            <div class="board public-screen-mini-board" id="public-screen-mini-board"></div>
+          </div>
+          <p class="public-screen-zoom-hint">🔍 Tocá el tablero para verlo en grande</p>
+          ${games.length > 1 ? '<div class="public-screen-cycle-progress"><div class="public-screen-cycle-progress-bar"></div></div>' : ""}
+        `;
+        // El tablero en miniatura se arma con el mismo FEN "en vivo" que ya
+        // llega por subscribeRoundGames (ver publicScreenLiveGameFor_): no
+        // hace falta ninguna suscripción nueva ni pedir nada extra al
+        // servidor. Si por algún motivo ese FEN todavía no llegó, se
+        // muestra la posición inicial en vez de dejar el tablero vacío.
+        const liveGame = publicScreenLiveGameFor_(p);
+        const fen = (liveGame && liveGame.fen) || PUBLIC_SCREEN_START_FEN_;
+        const miniBoardEl = document.getElementById("public-screen-mini-board");
+        if (miniBoardEl) renderPublicScreenBoardInto_(miniBoardEl, fen);
+        const wrapEl = document.getElementById("public-screen-mini-board-wrap");
+        if (wrapEl) wrapEl.addEventListener("click", () => openPublicScreenZoom_(p));
+      }
+
+      // Repinta SOLO las piezas del tablerito ya presente en pantalla, sin
+      // reconstruir el resto de la tarjeta (badge, nombres, barra de
+      // progreso del carrusel). Antes, el tablerito solo se actualizaba
+      // cuando el carrusel cambiaba de mesa cada 10s -y si había una sola
+      // mesa en juego, ni eso: advancePublicScreenCycle_ no hace nada con
+      // una sola mesa, así que el tablero quedaba congelado en la posición
+      // del momento en que se abrió la pantalla pública. Esto se llama
+      // en cada jugada nueva (ver el listener de subscribeRoundGames) para
+      // que se vea la partida EN VIVO, jugada a jugada, sin esperar al
+      // próximo tick del carrusel.
+      function refreshPublicScreenActiveMiniBoard_() {
+        const games = publicScreenActiveGames_;
+        if (!games.length || publicScreenCycleIndex_ >= games.length) return;
+        const p = games[publicScreenCycleIndex_];
+        const miniBoardEl = document.getElementById("public-screen-mini-board");
+        if (!miniBoardEl) return;
+        const liveGame = publicScreenLiveGameFor_(p);
+        const fen = (liveGame && liveGame.fen) || PUBLIC_SCREEN_START_FEN_;
+        renderPublicScreenBoardInto_(miniBoardEl, fen);
+      }
+
+      // Arma (una sola vez) y muestra el modal de "zoom" con el tablero de
+      // una mesa puntual en grande. Pausa el carrusel automático mientras
+      // está abierto -si no, la mesa cambiaría sola cada 10s debajo del
+      // modal, que quedaría desactualizado sin que nadie lo note- y lo
+      // retoma al cerrar (ver closePublicScreenZoom_).
+      function openPublicScreenZoom_(p) {
+        publicScreenZoomKey_ = publicScreenGameKey_(p);
+        stopPublicScreenCycle_();
+        let backdrop = document.getElementById("public-screen-zoom-backdrop");
+        if (!backdrop) {
+          backdrop = document.createElement("div");
+          backdrop.id = "public-screen-zoom-backdrop";
+          backdrop.innerHTML = `
+            <div id="public-screen-zoom-box">
+              <p class="public-screen-zoom-vs" id="public-screen-zoom-vs"></p>
+              <div class="public-screen-zoom-board-wrap">
+                <div class="board public-screen-zoom-board" id="public-screen-zoom-board"></div>
+              </div>
+              <div class="public-screen-zoom-actions">
+                <button class="btn" id="public-screen-zoom-fullscreen-btn">⛶ Pantalla completa</button>
+                <button class="btn" id="public-screen-zoom-close">Cerrar</button>
+              </div>
+            </div>`;
+          document.body.appendChild(backdrop);
+          backdrop.addEventListener("click", (e) => {
+            if (e.target === backdrop) closePublicScreenZoom_();
+          });
+          document.getElementById("public-screen-zoom-close").addEventListener("click", closePublicScreenZoom_);
+          // Pantalla completa SOLO del modal (tablero + nombres), no de
+          // toda la pestaña: útil para dejarlo proyectado en un momento
+          // puntual de una mesa sin tener que salir antes de la pantalla
+          // pública general (ver public-screen-fullscreen-btn más abajo,
+          // mismo patrón con la Fullscreen API nativa).
+          document.getElementById("public-screen-zoom-fullscreen-btn").addEventListener("click", () => {
+            if (document.fullscreenElement) {
+              document.exitFullscreen();
+            } else if (backdrop.requestFullscreen) {
+              backdrop.requestFullscreen();
+            }
+          });
+        }
+        backdrop.style.display = "flex";
+        renderPublicScreenZoomBoard_();
+      }
+
+      function closePublicScreenZoom_() {
+        publicScreenZoomKey_ = null;
+        const backdrop = document.getElementById("public-screen-zoom-backdrop");
+        if (backdrop) {
+          // Si el modal quedó en pantalla completa, salimos de ese modo
+          // antes de ocultarlo: si no, el navegador queda "atascado" en
+          // fullscreen mostrando un elemento con display:none.
+          if (document.fullscreenElement === backdrop) {
+            document.exitFullscreen().catch(() => {});
+          }
+          backdrop.style.display = "none";
+        }
+        // Al cerrar, retomamos el carrusel automático (si hay más de una
+        // mesa en juego; con una sola no hace falta ciclar nada).
+        if (publicScreenActiveGames_.length > 1) startPublicScreenCycleIfNeeded_();
+      }
+
+      // Redibuja el tablero del modal de zoom con el FEN más reciente.
+      // Se llama tanto al abrirlo como cada vez que llega una jugada nueva
+      // (desde subscribeRoundGames) o cambia la lista de mesas activas
+      // (desde renderPublicScreen), para que se vea la partida EN VIVO en
+      // vez de una foto fija del momento en que se abrió.
+      function renderPublicScreenZoomBoard_() {
+        if (!publicScreenZoomKey_) return;
+        const backdrop = document.getElementById("public-screen-zoom-backdrop");
+        const p = publicScreenActiveGames_.find((g) => publicScreenGameKey_(g) === publicScreenZoomKey_);
+        if (!p || !backdrop) {
+          // La mesa que se estaba mirando ya no está en juego (terminó la
+          // partida, cambió la ronda, o se reinició el torneo): se cierra
+          // sola en vez de quedar mostrando algo que ya no corresponde.
+          closePublicScreenZoom_();
+          return;
+        }
+        const vsEl = document.getElementById("public-screen-zoom-vs");
+        if (vsEl) vsEl.textContent = `Mesa ${p.board} — ${p.whiteName} vs ${p.blackName}`;
+        const liveGame = publicScreenLiveGameFor_(p);
+        const fen = (liveGame && liveGame.fen) || PUBLIC_SCREEN_START_FEN_;
+        const boardEl = document.getElementById("public-screen-zoom-board");
+        if (boardEl) renderPublicScreenBoardInto_(boardEl, fen);
+      }
+
       function renderPublicScreen(state) {
         const emptyEl = document.getElementById("public-screen-empty");
         const contentEl = document.getElementById("public-screen-content");
@@ -7260,7 +8367,14 @@
         const hasTournament = !!(state && (state.meta.status === "active" || state.meta.status === "finished"));
         emptyEl.style.display = hasTournament ? "none" : "";
         contentEl.style.display = hasTournament ? "" : "none";
-        if (!hasTournament) return;
+        if (!hasTournament) {
+          stopPublicScreenCycle_();
+          publicScreenZoomKey_ = null;
+          const zoomBackdrop = document.getElementById("public-screen-zoom-backdrop");
+          if (zoomBackdrop) zoomBackdrop.style.display = "none";
+          publicScreenActiveGames_ = [];
+          return;
+        }
 
         const isFinished = state.meta.status === "finished";
         const roundsNote = state.meta.totalRounds ? ` de ${state.meta.totalRounds}` : "";
@@ -7323,22 +8437,26 @@
 
         // Mesas activas: emparejamientos de la ronda actual que todavía no
         // tienen resultado cargado (no incluye byes, que quedan resueltos
-        // apenas se genera la ronda).
+        // apenas se genera la ronda). Se muestran de a una en un carrusel
+        // (ver renderPublicScreenActiveCard_/advancePublicScreenCycle_) en
+        // vez de listadas todas juntas, para que se lean bien en un
+        // proyector aunque haya muchas mesas.
         const currentRoundPairings = state.pairings.filter((p) => p.round === state.meta.round);
         const activePairings = currentRoundPairings.filter((p) => p.blackId !== "" && !p.result).sort((a, b) => a.board - b.board);
-        const activeEl = document.getElementById("public-screen-active-tables");
-        if (!activePairings.length) {
-          activeEl.innerHTML = '<p class="public-screen-empty-note">No hay mesas en juego en este momento.</p>';
-        } else {
-          activeEl.innerHTML = activePairings
-            .map(
-              (p) => `
-                <div class="public-screen-active-row">
-                  <span class="public-screen-board-badge">Mesa ${p.board}</span>
-                  <span class="public-screen-vs">${escapePublicScreenHtml_(p.whiteName)} vs ${escapePublicScreenHtml_(p.blackName)}</span>
-                </div>`
-            )
-            .join("");
+        // Si la mesa que se estaba mostrando sigue en juego (por ejemplo,
+        // acaba de cargarse el resultado de OTRA mesa), mantenemos la
+        // posición del carrusel en vez de saltar siempre a la primera.
+        const previousGame = publicScreenActiveGames_[publicScreenCycleIndex_];
+        const previousKey = previousGame ? publicScreenGameKey_(previousGame) : null;
+        publicScreenActiveGames_ = activePairings;
+        const keptIndex = previousKey ? activePairings.findIndex((p) => publicScreenGameKey_(p) === previousKey) : -1;
+        publicScreenCycleIndex_ = keptIndex !== -1 ? keptIndex : 0;
+        renderPublicScreenActiveCard_();
+        renderPublicScreenZoomBoard_();
+        if (activePairings.length > 1 && !publicScreenZoomKey_) {
+          startPublicScreenCycleIfNeeded_();
+        } else if (!publicScreenZoomKey_) {
+          stopPublicScreenCycle_();
         }
 
         // Resultados recientes: partidas con resultado cargado, empezando
@@ -7403,6 +8521,146 @@
         });
       }
 
+      // Antes, cada vez que se reconstruía la lista de jugadores se volvían a
+      // enganchar listeners nuevos con listEl.querySelectorAll(...).forEach(...),
+      // uno por cada botón (editar/cancelar/guardar/eliminar/aprobar/
+      // rechazar/retirar/reincorporar/descalificar) de cada jugador. Con
+      // varias inscripciones o aprobaciones en simultáneo (torneo online
+      // arrancando) eso significaba des-enganchar y re-enganchar decenas de
+      // listeners muchas veces por segundo. Ahora se engancha UNA sola vez
+      // (delegación de eventos sobre el contenedor), igual que ya se hacía
+      // para la lista de mesas (ver setupPairingsListDelegation_ arriba).
+      let playersDelegationSetup_ = false;
+      function setupPlayersListDelegation_(listEl) {
+        if (playersDelegationSetup_) return;
+        playersDelegationSetup_ = true;
+
+        listEl.addEventListener("click", (e) => {
+          const editBtn = e.target.closest("button[data-edit-player]");
+          if (editBtn) {
+            tournamentEditingPlayerId = editBtn.dataset.editPlayer;
+            renderPlayersPanel(lastTournamentState, true);
+            return;
+          }
+
+          const cancelBtn = e.target.closest("button[data-cancel-edit-player]");
+          if (cancelBtn) {
+            tournamentEditingPlayerId = null;
+            renderPlayersPanel(lastTournamentState, true);
+            return;
+          }
+
+          const saveBtn = e.target.closest("button[data-save-player]");
+          if (saveBtn) {
+            (async () => {
+              const playerId = saveBtn.dataset.savePlayer;
+              const row = listEl.querySelector(`[data-player-row="${playerId}"]`);
+              const name = row.querySelector(".player-edit-name").value;
+              const email = row.querySelector(".player-edit-email").value;
+              try {
+                await fbEditPlayer(playerId, name, email);
+                tournamentEditingPlayerId = null;
+                toast("✓ Jugador actualizado");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+            return;
+          }
+
+          const deleteBtn = e.target.closest("button[data-delete-player]");
+          if (deleteBtn) {
+            (async () => {
+              const playerId = deleteBtn.dataset.deletePlayer;
+              const player = (lastTournamentState ? lastTournamentState.players : []).find((p) => p.id === playerId);
+              if (!confirm(`¿Eliminar a ${player ? player.name : "este jugador"}? Se recalculará el torneo.`)) return;
+              try {
+                await fbDeletePlayer(playerId);
+                toast("✓ Jugador eliminado");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+            return;
+          }
+
+          const approveBtn = e.target.closest("button[data-approve-registration]");
+          if (approveBtn) {
+            (async () => {
+              const playerId = approveBtn.dataset.approveRegistration;
+              try {
+                await fbApproveRegistration(playerId);
+                toast("✅ Inscripción autorizada");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+            return;
+          }
+
+          const rejectBtn = e.target.closest("button[data-reject-registration]");
+          if (rejectBtn) {
+            (async () => {
+              const playerId = rejectBtn.dataset.rejectRegistration;
+              const player = (lastTournamentState ? lastTournamentState.players : []).find((p) => p.id === playerId);
+              if (!confirm(`¿Rechazar la inscripción de ${player ? player.name : "esta persona"}?`)) return;
+              try {
+                await fbRejectRegistration(playerId);
+                toast("🚫 Inscripción rechazada");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+            return;
+          }
+
+          const withdrawBtn = e.target.closest("button[data-withdraw-player]");
+          if (withdrawBtn) {
+            (async () => {
+              const playerId = withdrawBtn.dataset.withdrawPlayer;
+              const player = (lastTournamentState ? lastTournamentState.players : []).find((p) => p.id === playerId);
+              if (!confirm(`¿Retirar a ${player ? player.name : "este jugador"} del torneo? Conserva su historial, pero no se lo volverá a emparejar.`)) return;
+              try {
+                await fbWithdrawPlayer(playerId);
+                toast("🚪 Jugador retirado");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+            return;
+          }
+
+          const reactivateBtn = e.target.closest("button[data-reactivate-player]");
+          if (reactivateBtn) {
+            (async () => {
+              const playerId = reactivateBtn.dataset.reactivatePlayer;
+              try {
+                await fbReactivatePlayer(playerId);
+                toast("↩️ Jugador reincorporado");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+            return;
+          }
+
+          const disqualifyBtn = e.target.closest("button[data-disqualify-player]");
+          if (disqualifyBtn) {
+            (async () => {
+              const playerId = disqualifyBtn.dataset.disqualifyPlayer;
+              const player = (lastTournamentState ? lastTournamentState.players : []).find((p) => p.id === playerId);
+              if (!confirm(`¿Descalificar a ${player ? player.name : "este jugador"}? Esta acción no tiene vuelta atrás.`)) return;
+              try {
+                await fbDisqualifyPlayer(playerId);
+                toast("⛔ Jugador descalificado");
+              } catch (err) {
+                showError(err);
+              }
+            })();
+          }
+        });
+      }
+
       // Panel de administración de jugadores (alta, edición de nombre/email,
       // baja y acciones de estado: retirar/reincorporar/descalificar).
       // Visible para el árbitro del torneo y también para el administrador
@@ -7420,6 +8678,7 @@
         }
         card.style.display = "";
         const listEl = document.getElementById("tournament-players-list");
+        setupPlayersListDelegation_(listEl);
 
         if (tournamentEditingPlayerId && !state.players.some((p) => p.id === tournamentEditingPlayerId)) {
           tournamentEditingPlayerId = null;
@@ -7533,108 +8792,10 @@
               </div>`;
           })
           .join("");
-
-        listEl.querySelectorAll("button[data-edit-player]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            tournamentEditingPlayerId = btn.dataset.editPlayer;
-            renderPlayersPanel(lastTournamentState, true);
-          });
-        });
-        listEl.querySelectorAll("button[data-cancel-edit-player]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            tournamentEditingPlayerId = null;
-            renderPlayersPanel(lastTournamentState, true);
-          });
-        });
-        listEl.querySelectorAll("button[data-save-player]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.savePlayer;
-            const row = listEl.querySelector(`[data-player-row="${playerId}"]`);
-            const name = row.querySelector(".player-edit-name").value;
-            const email = row.querySelector(".player-edit-email").value;
-            try {
-              await fbEditPlayer(playerId, name, email);
-              tournamentEditingPlayerId = null;
-              toast("✓ Jugador actualizado");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
-        listEl.querySelectorAll("button[data-delete-player]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.deletePlayer;
-            const player = state.players.find((p) => p.id === playerId);
-            if (!confirm(`¿Eliminar a ${player ? player.name : "este jugador"}? Se recalculará el torneo.`)) return;
-            try {
-              await fbDeletePlayer(playerId);
-              toast("✓ Jugador eliminado");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
-        listEl.querySelectorAll("button[data-approve-registration]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.approveRegistration;
-            try {
-              await fbApproveRegistration(playerId);
-              toast("✅ Inscripción autorizada");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
-        listEl.querySelectorAll("button[data-reject-registration]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.rejectRegistration;
-            const player = state.players.find((p) => p.id === playerId);
-            if (!confirm(`¿Rechazar la inscripción de ${player ? player.name : "esta persona"}?`)) return;
-            try {
-              await fbRejectRegistration(playerId);
-              toast("🚫 Inscripción rechazada");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
-        listEl.querySelectorAll("button[data-withdraw-player]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.withdrawPlayer;
-            const player = state.players.find((p) => p.id === playerId);
-            if (!confirm(`¿Retirar a ${player ? player.name : "este jugador"} del torneo? Conserva su historial, pero no se lo volverá a emparejar.`)) return;
-            try {
-              await fbWithdrawPlayer(playerId);
-              toast("🚪 Jugador retirado");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
-        listEl.querySelectorAll("button[data-reactivate-player]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.reactivatePlayer;
-            try {
-              await fbReactivatePlayer(playerId);
-              toast("↩️ Jugador reincorporado");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
-        listEl.querySelectorAll("button[data-disqualify-player]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const playerId = btn.dataset.disqualifyPlayer;
-            const player = state.players.find((p) => p.id === playerId);
-            if (!confirm(`¿Descalificar a ${player ? player.name : "este jugador"}? Esta acción no tiene vuelta atrás.`)) return;
-            try {
-              await fbDisqualifyPlayer(playerId);
-              toast("⛔ Jugador descalificado");
-            } catch (err) {
-              showError(err);
-            }
-          });
-        });
+        // Los clicks de editar/cancelar/guardar/eliminar/aprobar/rechazar/
+        // retirar/reincorporar/descalificar los maneja el listener delegado
+        // enganchado una sola vez en setupPlayersListDelegation_ (arriba):
+        // no hace falta volver a buscarlos ni re-engancharlos acá.
       }
 
       async function refreshTournament() {
@@ -7861,7 +9022,11 @@
             tournamentMatchCtx.board,
             game.fen(),
             game.history().slice(-1)[0] || "",
-            result
+            result,
+            undefined,
+            undefined,
+            undefined,
+            /* isTimeoutClaim */ true
           );
           const gameRow = state.gameRow;
           if (!tournamentResultShown) {
@@ -7879,6 +9044,15 @@
       }
 
       async function enterTournamentMatch(round, board, whiteName, blackName, whiteEmail, blackEmail) {
+        // Pantalla completa real automática al entrar a una mesa de torneo
+        // (antes solo se activaba si el jugador tocaba el botón "Pantalla
+        // completa" a mano). Se hace ACÁ, antes de cualquier await, para
+        // que el navegador todavía la reconozca como resultado directo del
+        // toque/click que abrió la mesa (si no, Safari/iOS la rechaza).
+        document.body.classList.add("fullscreen-game");
+        const fsBtn_ = document.getElementById("game-fullscreen");
+        if (fsBtn_) fsBtn_.textContent = fsBtn_.dataset.exitText || "❎ Salir";
+        document.documentElement.requestFullscreen().catch(() => {});
         try {
           // Se lee directo el documento de esa mesa (ver gamesCollectionRef)
           // en vez de buscarlo dentro de un state.games que ya no existe;
@@ -7913,6 +9087,13 @@
           tournamentResultShown = false;
 
           showPage("jugar");
+
+          // El tablero de una partida de torneo siempre se muestra lo más
+          // grande posible (mismo layout ya probado del modo "Pantalla
+          // completa" real, pero sin forzar la Fullscreen API del navegador).
+          // Si el jugador además toca "Pantalla completa", se suma la clase
+          // fullscreen-game encima de esta sin pisarla (ver setupFullscreenToggle).
+          document.body.classList.add("tournament-board-max");
 
           document.getElementById("tournament-match-bar").style.display = "";
           document.getElementById("tournament-match-title").textContent =
@@ -7975,7 +9156,7 @@
           }
 
           subscribeMatchChat(round, board);
-          subscribeCallSignaling(round, board);
+          if (tournamentMyColor()) subscribeCallSignaling(round, board);
           renderCallUI();
 
           render();
@@ -7998,6 +9179,30 @@
         unsubscribeCallSignaling();
 
         document.getElementById("tournament-match-bar").style.display = "none";
+
+        // Se apaga el modo de tablero maximizado y se limpia cualquier
+        // tamaño en px que haya calculado sizeFullscreenBoard(), para que
+        // el layout normal (con el panel de ajustes/jugadas) vuelva a
+        // controlar el tamaño del tablero fuera del torneo.
+        document.body.classList.remove("tournament-board-max");
+        resetBoardFrameSize();
+        // Si además había Fullscreen real del navegador activa, se sale
+        // también (el listener de "fullscreenchange" ya se encarga de
+        // sacar la clase fullscreen-game y actualizar el botón).
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+
+        // Mientras la mesa estuvo abierta, el panel de emparejamientos y la
+        // pantalla pública no se actualizaron (ver el guard en
+        // subscribeRoundGames/subscribeTournament): al volver a la
+        // pantalla del torneo hace falta este refresco explícito para que
+        // se vean el resultado y el estado reales de todas las mesas.
+        if (lastTournamentState) {
+          renderTournamentState(lastTournamentState);
+          if (typeof renderPublicScreen === "function") renderPublicScreen(lastTournamentState);
+        }
+
         ["new-game", "undo", "resign", "copy-game"].forEach((id) => {
           const el = document.getElementById(id);
           if (el) el.style.display = "";
@@ -8202,6 +9407,18 @@
         }
       });
 
+      const configSignoutBtn = document.getElementById("config-signout-btn");
+      if (configSignoutBtn) {
+        configSignoutBtn.addEventListener("click", async () => {
+          try {
+            await firebase.auth().signOut();
+            toast("🚪 Sesión cerrada");
+          } catch (err) {
+            toast("❌ No se pudo cerrar sesión: " + err.message);
+          }
+        });
+      }
+
       document.getElementById("tournament-create-btn").addEventListener("click", async () => {
         const name = document.getElementById("tournament-name-input").value.trim() || "Torneo";
         const playerEntries = parsePlayersInput(document.getElementById("tournament-players-input").value);
@@ -8265,6 +9482,53 @@
       document.getElementById("tournament-reopen-btn").addEventListener("click", async () => {
         try {
           await fbReopenTournament();
+        } catch (err) {
+          showError(err);
+        }
+      });
+
+      document.getElementById("tournament-announcement-send-btn").addEventListener("click", async () => {
+        const inputEl = document.getElementById("tournament-announcement-input");
+        try {
+          await sendTournamentAnnouncement(inputEl.value);
+          inputEl.value = "";
+          toast("📢 Anuncio enviado");
+        } catch (err) {
+          showError(err);
+        }
+      });
+
+      document.getElementById("tournament-announcement-history-toggle").addEventListener("click", () => {
+        const listEl = document.getElementById("tournament-announcement-history-list");
+        listEl.style.display = listEl.style.display === "none" ? "" : "none";
+      });
+
+      document.querySelectorAll("#tournament-round-countdown-composer [data-countdown-minutes]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          try {
+            await fbSetRoundCountdown(Number(btn.dataset.countdownMinutes));
+            toast("⏳ Countdown iniciado");
+          } catch (err) {
+            showError(err);
+          }
+        });
+      });
+
+      document.getElementById("tournament-round-countdown-start-btn").addEventListener("click", async () => {
+        const inputEl = document.getElementById("tournament-round-countdown-custom-minutes");
+        try {
+          await fbSetRoundCountdown(Number(inputEl.value));
+          inputEl.value = "";
+          toast("⏳ Countdown iniciado");
+        } catch (err) {
+          showError(err);
+        }
+      });
+
+      document.getElementById("tournament-round-countdown-cancel-btn").addEventListener("click", async () => {
+        try {
+          await fbCancelRoundCountdown();
+          toast("⏳ Countdown cancelado");
         } catch (err) {
           showError(err);
         }
@@ -8470,3 +9734,783 @@
       // Ya no hace falta un temporizador de sondeo: la página del torneo y
       // la partida en vivo se actualizan solas gracias al listener en tiempo
       // real de Firestore (subscribeTournament / onSnapshot).
+
+      // =========================
+      // TORNEO LAN — Red local (WebRTC P2P, SIN internet ni servidor)
+      // =========================
+      // Arquitectura: un dispositivo hace de "árbitro" (host) y sostiene el
+      // estado del torneo (jugadores, emparejamientos, resultados) en
+      // memoria, igual que hacía el documento de Firestore en el modo
+      // online. Cada jugador se conecta directo al árbitro con una conexión
+      // WebRTC punto a punto (RTCPeerConnection + DataChannel). No hay
+      // servidor de señalización: la oferta/respuesta SDP se intercambia a
+      // mano (texto para copiar y pegar) porque los dispositivos están
+      // físicamente en la misma sala. Una vez conectados, todo viaja por la
+      // red local (Wi-Fi del router del aula, sin necesidad de que ese
+      // router tenga salida a internet).
+      //
+      // El árbitro reenvía ("relay") las jugadas entre los dos jugadores de
+      // cada mesa y valida cada jugada con su propia instancia de chess.js,
+      // así ningún jugador puede hacer trampa editando su propio cliente.
+      // Como cada mesa tiene su propio par de conexiones (canales de datos
+      // independientes), varias partidas corren en simultáneo sin pisarse.
+      //
+      // Alcance de esta primera versión (a diferencia del modo Internet):
+      // no incluye chat de mesa, llamada de audio, ni anuncios del árbitro.
+      // El desempate es simplemente por puntos (sin Buchholz). El reloj se
+      // sincroniza cada pocos segundos, no jugada a jugada.
+
+      const LAN_ICE_CONFIG = { iceServers: [] }; // sin STUN: no depende de internet, solo candidatos locales
+      const LAN_STATE_KEY = "chessSchoolLanTournamentState";
+      const LAN_NAME_KEY = "chessSchoolLanPlayerName";
+
+      let lanIsHost = false;
+      let lanMyId = null; // asignado por el árbitro al conectarse (solo jugador)
+      let lanMyName = "";
+      let lanState = null; // estado completo del torneo LAN (autoridad: el árbitro)
+      let lanHostPeers = {}; // (árbitro) playerId -> { pc, channel }
+      let lanPlayerPc = null; // (jugador) conexión al árbitro
+      let lanPlayerChannel = null;
+      let lanChessByMatch = {}; // (árbitro) "ronda_mesa" -> instancia Chess.js autoridad
+      let lanActiveMatch = null; // { round, board } de la mesa abierta en pantalla
+      let lanBoardCtx = null;
+      let lanClockTicker = null;
+      let lanLastBroadcastAt = 0;
+
+      function lanMatchKey(round, board) {
+        return round + "_" + board;
+      }
+
+      function lanNewId() {
+        return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+      }
+
+      function lanEncode(obj) {
+        return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+      }
+
+      function lanDecode(text) {
+        return JSON.parse(decodeURIComponent(escape(atob(text.trim()))));
+      }
+
+      async function lanWaitIceComplete(pc) {
+        if (pc.iceGatheringState === "complete") return;
+        await new Promise((resolve) => {
+          function check() {
+            if (pc.iceGatheringState === "complete") {
+              pc.removeEventListener("icegatheringstatechange", check);
+              resolve();
+            }
+          }
+          pc.addEventListener("icegatheringstatechange", check);
+          // Salvavidas: si por lo que sea nunca llega a "complete" (algunos
+          // navegadores viejos), no dejamos la pantalla trabada para
+          // siempre — seguimos con los candidatos que ya se juntaron.
+          setTimeout(resolve, 4000);
+        });
+      }
+
+      function lanSaveState() {
+        try {
+          if (lanState) localStorage.setItem(LAN_STATE_KEY, JSON.stringify(lanState));
+        } catch (err) {
+          /* localStorage puede fallar (privado/lleno); no es crítico */
+        }
+      }
+
+      // ---------- Lado JUGADOR: genera oferta, se conecta con la respuesta ----------
+      async function lanPlayerGenerateOffer() {
+        const pc = new RTCPeerConnection(LAN_ICE_CONFIG);
+        const channel = pc.createDataChannel("torneo");
+        lanPlayerPc = pc;
+        lanPlayerChannel = channel;
+        lanSetupPlayerChannel(channel);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await lanWaitIceComplete(pc);
+        return lanEncode(pc.localDescription);
+      }
+
+      async function lanPlayerConnect(answerCodeText) {
+        if (!lanPlayerPc) throw new Error("Primero generá tu código de conexión");
+        const answerObj = lanDecode(answerCodeText);
+        await lanPlayerPc.setRemoteDescription(answerObj);
+      }
+
+      function lanSetupPlayerChannel(channel) {
+        channel.onopen = () => {
+          channel.send(JSON.stringify({ type: "hello", name: lanMyName }));
+          const statusEl = document.getElementById("lan-player-connect-status");
+          if (statusEl) statusEl.textContent = "✅ Conectado con el árbitro";
+        };
+        channel.onmessage = (ev) => {
+          let msg;
+          try {
+            msg = JSON.parse(ev.data);
+          } catch (err) {
+            return;
+          }
+          lanPlayerHandleMessage(msg);
+        };
+        channel.onclose = () => {
+          toast("📡 Se perdió la conexión con el árbitro");
+        };
+      }
+
+      function lanPlayerHandleMessage(msg) {
+        if (msg.type === "welcome") {
+          lanMyId = msg.id;
+          const statusEl = document.getElementById("lan-player-connect-status");
+          if (statusEl) statusEl.textContent = "⏳ Conectado — esperando que el árbitro te apruebe…";
+          return;
+        }
+        if (msg.type === "approved") {
+          toast("✅ El árbitro te aprobó — ya sos parte del torneo");
+          const statusEl = document.getElementById("lan-player-connect-status");
+          if (statusEl) statusEl.textContent = "✅ Aprobado — ya formás parte del torneo";
+          return;
+        }
+        if (msg.type === "rejected") {
+          toast("❌ El árbitro no te aprobó para este torneo");
+          const statusEl = document.getElementById("lan-player-connect-status");
+          if (statusEl) statusEl.textContent = "❌ El árbitro no aprobó tu ingreso";
+          return;
+        }
+        if (msg.type === "state") {
+          lanState = msg.payload;
+          lanRenderUI();
+          return;
+        }
+        if (msg.type === "draw_offer") {
+          showAlert("🤝 Tu rival te ofrece tablas. ¿Aceptás?", "info");
+          const yesBtn = document.getElementById("alert-analyze-btn");
+          // Reutilizamos el cuadro de alerta genérico solo para avisar; la
+          // decisión se toma con un confirm simple para no complicar el
+          // flujo de esta primera versión.
+          setTimeout(() => {
+            if (confirm("Tu rival ofrece tablas. ¿Aceptás?")) {
+              lanPlayerChannel.send(JSON.stringify({ type: "drawaccept", matchKey: msg.matchKey }));
+            }
+          }, 50);
+          return;
+        }
+      }
+
+      // ---------- Lado ÁRBITRO: recibe la oferta, genera la respuesta ----------
+      async function lanHostGenerateAnswer(offerCodeText) {
+        const offerObj = lanDecode(offerCodeText);
+        const pc = new RTCPeerConnection(LAN_ICE_CONFIG);
+        const tempId = lanNewId();
+        lanHostPeers[tempId] = { pc, channel: null };
+        pc.ondatachannel = (ev) => {
+          lanHostPeers[tempId].channel = ev.channel;
+          lanSetupHostChannel(tempId, ev.channel);
+        };
+        await pc.setRemoteDescription(offerObj);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await lanWaitIceComplete(pc);
+        return lanEncode(pc.localDescription);
+      }
+
+      function lanSetupHostChannel(playerId, channel) {
+        channel.onmessage = (ev) => {
+          let msg;
+          try {
+            msg = JSON.parse(ev.data);
+          } catch (err) {
+            return;
+          }
+          lanHostHandleMessage(playerId, msg);
+        };
+        channel.onclose = () => {
+          const p = lanState && lanState.players.find((pl) => pl.id === playerId);
+          if (p) {
+            p.connected = false;
+            lanBroadcastState();
+            lanRenderUI();
+          }
+        };
+      }
+
+      function lanSendTo(playerId, obj) {
+        const peer = lanHostPeers[playerId];
+        if (peer && peer.channel && peer.channel.readyState === "open") {
+          peer.channel.send(JSON.stringify(obj));
+        }
+      }
+
+      function lanBroadcastState() {
+        lanLastBroadcastAt = Date.now();
+        Object.keys(lanHostPeers).forEach((id) => lanSendTo(id, { type: "state", payload: lanState }));
+        lanSaveState();
+      }
+
+      function lanHostHandleMessage(fromId, msg) {
+        if (msg.type === "hello") return lanHostRegisterPlayer(fromId, msg.name);
+        if (msg.type === "move") return lanHostApplyMove(fromId, msg.matchKey, msg.from, msg.to, msg.promotion);
+        if (msg.type === "resign") return lanHostResign(fromId, msg.matchKey);
+        if (msg.type === "drawoffer") return lanHostRelayDrawOffer(fromId, msg.matchKey);
+        if (msg.type === "drawaccept") return lanHostFinishDraw(msg.matchKey);
+      }
+
+      // Un jugador que se conecta por primera vez entra como "pendiente"
+      // (approved: false) y NO participa de los emparejamientos hasta que
+      // el árbitro lo apruebe a mano — mismo criterio que las inscripciones
+      // pendientes del modo Internet, para que no entre cualquiera que
+      // llegue a intercambiar el código.
+      function lanHostRegisterPlayer(id, name) {
+        if (!lanState) return;
+        let p = lanState.players.find((pl) => pl.id === id);
+        if (!p) {
+          p = { id, name: (name || "Jugador").slice(0, 40), points: 0, active: false, approved: false, connected: true };
+          lanState.players.push(p);
+          toast("🔔 " + p.name + " pide unirse al torneo LAN — aprobalo en el panel del árbitro");
+        } else {
+          p.connected = true;
+          if (name) p.name = name.slice(0, 40);
+        }
+        lanSendTo(id, { type: "welcome", id });
+        lanBroadcastState();
+        lanRenderUI();
+      }
+
+      function lanApprovePlayer(id) {
+        if (!lanState) return;
+        const p = lanState.players.find((pl) => pl.id === id);
+        if (!p) return;
+        p.approved = true;
+        p.active = true;
+        lanSendTo(id, { type: "approved" });
+        lanBroadcastState();
+        lanRenderUI();
+      }
+
+      function lanRejectPlayer(id) {
+        if (!lanState) return;
+        lanSendTo(id, { type: "rejected" });
+        lanState.players = lanState.players.filter((pl) => pl.id !== id);
+        const peer = lanHostPeers[id];
+        if (peer) {
+          try {
+            peer.channel && peer.channel.close();
+            peer.pc && peer.pc.close();
+          } catch (err) {
+            /* no importa si ya estaba cerrado */
+          }
+          delete lanHostPeers[id];
+        }
+        lanBroadcastState();
+        lanRenderUI();
+      }
+
+      // ---------- Emparejamientos ----------
+      function lanPlayedPairsSet() {
+        const set = new Set();
+        (lanState.rounds || []).forEach((r) => {
+          r.pairings.forEach((p) => {
+            if (p.blackId) {
+              set.add(p.whiteId + "|" + p.blackId);
+              set.add(p.blackId + "|" + p.whiteId);
+            }
+          });
+        });
+        return set;
+      }
+
+      function lanGenerateRound() {
+        if (!lanState) return;
+        const active = lanState.players.filter((p) => p.active);
+        if (active.length < 2) {
+          toast("Hacen falta al menos 2 jugadores conectados y activos");
+          return;
+        }
+        const playedPairs = lanPlayedPairsSet();
+        const queue = [...active].sort((a, b) => b.points - a.points || Math.random() - 0.5);
+        const pairings = [];
+        let board = 1;
+        while (queue.length) {
+          const a = queue.shift();
+          let idx = queue.findIndex((b) => !playedPairs.has(a.id + "|" + b.id));
+          if (idx === -1) idx = queue.length ? 0 : -1;
+          if (idx === -1) {
+            pairings.push({
+              board: board++,
+              whiteId: a.id,
+              blackId: null,
+              result: "bye",
+              fen: START_FEN_TOURNEY,
+              history: [],
+              status: "done",
+              clock: null,
+            });
+            a.points += 1;
+            continue;
+          }
+          const b = queue.splice(idx, 1)[0];
+          pairings.push({
+            board: board++,
+            whiteId: a.id,
+            blackId: b.id,
+            result: null,
+            fen: START_FEN_TOURNEY,
+            history: [],
+            status: "playing",
+            clock: lanState.timeControlMinutes ? { w: lanState.timeControlMinutes * 60, b: lanState.timeControlMinutes * 60 } : null,
+          });
+        }
+        const roundNum = (lanState.rounds || []).length + 1;
+        lanState.rounds = lanState.rounds || [];
+        lanState.rounds.push({ round: roundNum, pairings });
+        lanState.currentRound = roundNum;
+        lanState.status = "playing";
+        lanChessByMatch = {}; // nueva ronda, nuevas partidas: se limpian las instancias viejas
+        lanBroadcastState();
+        lanStartClockTicker();
+        lanRenderUI();
+        toast("🔔 Ronda " + roundNum + " generada — " + pairings.length + " mesas");
+      }
+
+      function lanFindPairing(matchKey) {
+        if (!lanState) return null;
+        for (const r of lanState.rounds || []) {
+          for (const p of r.pairings) {
+            if (lanMatchKey(r.round, p.board) === matchKey) return p;
+          }
+        }
+        return null;
+      }
+
+      function lanCurrentRoundObj() {
+        if (!lanState) return null;
+        return (lanState.rounds || []).find((r) => r.round === lanState.currentRound) || null;
+      }
+
+      function lanApplyResultPoints(pairing) {
+        const w = lanState.players.find((p) => p.id === pairing.whiteId);
+        const b = lanState.players.find((p) => p.id === pairing.blackId);
+        if (pairing.result === "1-0") {
+          if (w) w.points += 1;
+        } else if (pairing.result === "0-1") {
+          if (b) b.points += 1;
+        } else if (pairing.result === "1/2-1/2") {
+          if (w) w.points += 0.5;
+          if (b) b.points += 0.5;
+        }
+      }
+
+      function lanHostApplyMove(fromId, matchKey, from, to, promotion) {
+        const pairing = lanFindPairing(matchKey);
+        if (!pairing || pairing.status !== "playing") return;
+        const isWhite = pairing.whiteId === fromId;
+        const isBlack = pairing.blackId === fromId;
+        if (!isWhite && !isBlack) return;
+        let chess = lanChessByMatch[matchKey];
+        if (!chess) {
+          chess = new Chess(pairing.fen);
+          lanChessByMatch[matchKey] = chess;
+        }
+        const turnColor = chess.turn();
+        if ((turnColor === "w" && !isWhite) || (turnColor === "b" && !isBlack)) return;
+        const move = chess.move({ from, to, promotion: promotion || "q" });
+        if (!move) return; // jugada ilegal: se ignora, el estado no cambia
+        pairing.fen = chess.fen();
+        pairing.history = chess.history();
+        pairing.lastFrom = from;
+        pairing.lastTo = to;
+        if (chess.game_over()) {
+          pairing.status = "done";
+          if (chess.in_checkmate()) {
+            pairing.result = turnColor === "w" ? "0-1" : "1-0";
+          } else {
+            pairing.result = "1/2-1/2";
+          }
+          lanApplyResultPoints(pairing);
+        }
+        lanBroadcastState();
+        if (lanIsHost) lanRenderUI();
+      }
+
+      function lanHostResign(fromId, matchKey) {
+        const pairing = lanFindPairing(matchKey);
+        if (!pairing || pairing.status !== "playing") return;
+        if (pairing.whiteId === fromId) pairing.result = "0-1";
+        else if (pairing.blackId === fromId) pairing.result = "1-0";
+        else return;
+        pairing.status = "done";
+        lanApplyResultPoints(pairing);
+        lanBroadcastState();
+        lanRenderUI();
+      }
+
+      function lanHostRelayDrawOffer(fromId, matchKey) {
+        const pairing = lanFindPairing(matchKey);
+        if (!pairing) return;
+        const opponentId = pairing.whiteId === fromId ? pairing.blackId : pairing.whiteId;
+        if (opponentId) lanSendTo(opponentId, { type: "draw_offer", matchKey });
+      }
+
+      function lanHostFinishDraw(matchKey) {
+        const pairing = lanFindPairing(matchKey);
+        if (!pairing || pairing.status !== "playing") return;
+        pairing.result = "1/2-1/2";
+        pairing.status = "done";
+        lanApplyResultPoints(pairing);
+        lanBroadcastState();
+        lanRenderUI();
+      }
+
+      // Reloj: solo el árbitro lo hace correr. Cada segundo descuenta al
+      // jugador que tiene el turno en cada mesa activa; si llega a 0, se
+      // declara la partida perdida por tiempo. Para no saturar la red local
+      // con un mensaje por segundo, el estado completo solo se retransmite
+      // cada 5 segundos (los clientes hacen la cuenta regresiva visual
+      // solos entre medio, ver lanRenderMatchClock).
+      function lanStartClockTicker() {
+        if (lanClockTicker) clearInterval(lanClockTicker);
+        lanClockTicker = setInterval(() => {
+          if (!lanIsHost || !lanState) return;
+          const round = lanCurrentRoundObj();
+          if (!round) return;
+          let changed = false;
+          round.pairings.forEach((p) => {
+            if (p.status !== "playing" || !p.clock) return;
+            const chess = lanChessByMatch[lanMatchKey(round.round, p.board)];
+            const turnColor = chess ? chess.turn() : "w";
+            p.clock[turnColor] = Math.max(0, p.clock[turnColor] - 1);
+            if (p.clock[turnColor] <= 0) {
+              p.status = "done";
+              p.result = turnColor === "w" ? "0-1" : "1-0";
+              lanApplyResultPoints(p);
+              changed = true;
+            }
+          });
+          if (changed || Date.now() - lanLastBroadcastAt > 5000) {
+            lanBroadcastState();
+            if (changed) lanRenderUI();
+          }
+        }, 1000);
+      }
+
+      // ---------- Interfaz ----------
+      function lanShowRole(role) {
+        lanIsHost = role === "host";
+        document.getElementById("lan-host-box").style.display = lanIsHost ? "" : "none";
+        document.getElementById("lan-player-box").style.display = lanIsHost ? "none" : "";
+        document.getElementById("lan-role-status").textContent = lanIsHost
+          ? "Modo árbitro: creá el torneo y conectá jugadores."
+          : "Modo jugador: generá tu código y esperá a que el árbitro lo confirme.";
+      }
+
+      function lanRenderUI() {
+        const statusBox = document.getElementById("lan-tournament-status-box");
+        if (!lanState) {
+          statusBox.style.display = "none";
+          return;
+        }
+        statusBox.style.display = "";
+        document.getElementById("lan-status-title").textContent = "🏆 " + (lanState.name || "Torneo LAN");
+        const roundTxt = lanState.currentRound ? "Ronda " + lanState.currentRound + (lanState.totalRounds ? " / " + lanState.totalRounds : "") : "Todavía no arrancó";
+        document.getElementById("lan-status-sub").textContent =
+          roundTxt + " · " + lanState.players.length + " jugador(es)" + (lanState.status === "finished" ? " · 🏁 Finalizado" : "");
+
+        // Emparejamientos de la ronda actual
+        const round = lanCurrentRoundObj();
+        const pairingsEl = document.getElementById("lan-pairings-list");
+        if (!round) {
+          pairingsEl.innerHTML = '<p class="muted">Todavía no se generó ninguna ronda.</p>';
+        } else {
+          pairingsEl.innerHTML = round.pairings
+            .map((p) => {
+              const wName = lanState.players.find((x) => x.id === p.whiteId)?.name || "?";
+              const bName = p.blackId ? lanState.players.find((x) => x.id === p.blackId)?.name || "?" : null;
+              const resultTxt = p.result === "bye" ? "🆓 BYE" : p.result ? p.result : p.status === "playing" ? "🔴 en juego" : "";
+              const isMine = !lanIsHost && (p.whiteId === lanMyId || p.blackId === lanMyId) && p.status === "playing";
+              const playBtn = isMine
+                ? `<button class="btn primary lan-play-btn" data-round="${round.round}" data-board="${p.board}" style="margin-left:8px">▶️ Jugar</button>`
+                : "";
+              return `<div class="toggle" style="align-items:center">
+                <div>Mesa ${p.board}: <b>${wName}</b> (blancas) vs <b>${bName || "—"}</b> (negras)<small>${resultTxt}</small></div>
+                ${playBtn}
+              </div>`;
+            })
+            .join("");
+          pairingsEl.querySelectorAll(".lan-play-btn").forEach((btn) => {
+            btn.addEventListener("click", () => lanOpenMatch(parseInt(btn.dataset.round, 10), parseInt(btn.dataset.board, 10)));
+          });
+        }
+
+        // Posiciones
+        const standingsEl = document.getElementById("lan-standings-list");
+        const sorted = [...lanState.players].sort((a, b) => b.points - a.points);
+        standingsEl.innerHTML = sorted
+          .map(
+            (p, i) =>
+              `<div class="toggle" style="align-items:center"><div>${i + 1}. <b>${p.name}</b>${p.connected === false ? " (desconectado)" : ""}</div><div><b>${p.points}</b> pts</div></div>`
+          )
+          .join("");
+
+        // Panel del árbitro: lista de conexiones (pendientes de aprobar primero)
+        if (lanIsHost) {
+          document.getElementById("lan-host-manage-box").style.display = "";
+          document.getElementById("lan-host-create-box").style.display = "none";
+          const listEl = document.getElementById("lan-host-players-list");
+          const pending = lanState.players.filter((p) => !p.approved);
+          const approved = lanState.players.filter((p) => p.approved);
+          let html = "";
+          if (pending.length) {
+            html +=
+              `<div class="panel-title">🔔 Pendientes de aprobación (${pending.length})</div>` +
+              pending
+                .map(
+                  (p) => `<div class="toggle" style="align-items:center">
+                    <div>${p.connected === false ? "🔴" : "🟢"} ${p.name}</div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn primary lan-approve-btn" data-id="${p.id}">✅ Aprobar</button>
+                      <button class="btn danger lan-reject-btn" data-id="${p.id}">✖ Rechazar</button>
+                    </div>
+                  </div>`
+                )
+                .join("");
+          }
+          html += "<div class='panel-title'>👥 Jugadores aprobados</div>";
+          html += approved.length
+            ? approved.map((p) => `<div class="toggle" style="align-items:center"><div>${p.connected === false ? "🔴" : "🟢"} ${p.name} — ${p.points} pts</div></div>`).join("")
+            : '<p class="muted">Todavía no aprobaste a nadie.</p>';
+          listEl.innerHTML = html;
+          listEl.querySelectorAll(".lan-approve-btn").forEach((btn) => btn.addEventListener("click", () => lanApprovePlayer(btn.dataset.id)));
+          listEl.querySelectorAll(".lan-reject-btn").forEach((btn) => btn.addEventListener("click", () => lanRejectPlayer(btn.dataset.id)));
+        }
+
+        // Si tengo una mesa abierta, la vuelvo a dibujar con el estado nuevo
+        if (lanActiveMatch) lanRenderMatchBoard();
+      }
+
+      function lanOpenMatch(round, board) {
+        lanActiveMatch = { round, board };
+        document.getElementById("lan-tournament-status-box").style.display = "none";
+        document.getElementById("lan-match-box").style.display = "";
+        lanRenderMatchBoard();
+      }
+
+      function lanCloseMatchView() {
+        lanActiveMatch = null;
+        document.getElementById("lan-match-box").style.display = "none";
+        document.getElementById("lan-tournament-status-box").style.display = "";
+      }
+
+      function lanFmtClock(seconds) {
+        if (seconds == null) return "";
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return m + ":" + String(s).padStart(2, "0");
+      }
+
+      function lanRenderMatchBoard() {
+        if (!lanActiveMatch) return;
+        const key = lanMatchKey(lanActiveMatch.round, lanActiveMatch.board);
+        const pairing = lanFindPairing(key);
+        if (!pairing) return;
+        const wName = lanState.players.find((x) => x.id === pairing.whiteId)?.name || "?";
+        const bName = pairing.blackId ? lanState.players.find((x) => x.id === pairing.blackId)?.name || "?" : "?";
+        document.getElementById("lan-match-title").textContent = `Mesa ${pairing.board}: ${wName} vs ${bName}`;
+
+        const chess = new Chess(pairing.fen);
+        lanBoardCtx = lanBoardCtx && lanBoardCtx.matchKey === key ? lanBoardCtx : { matchKey: key, selected: null };
+        lanBoardCtx.chess = chess;
+        lanBoardCtx.myColor = pairing.whiteId === lanMyId ? "w" : "b";
+
+        const boardEl = document.getElementById("lan-match-board");
+        renderBoardGrid(boardEl, chess.board(), {
+          selected: lanBoardCtx.selected,
+          highlight: pairing.lastFrom && pairing.lastTo ? [pairing.lastFrom, pairing.lastTo] : [],
+          onClick: lanOnSquareClick,
+        });
+
+        const clockEl = document.getElementById("lan-match-clock");
+        if (pairing.clock) {
+          clockEl.innerHTML = `<div>⚪ ${lanFmtClock(pairing.clock.w)}</div><div>⚫ ${lanFmtClock(pairing.clock.b)}</div>`;
+        } else {
+          clockEl.innerHTML = "";
+        }
+
+        const statusEl = document.getElementById("lan-match-status-text");
+        if (pairing.status === "done") {
+          statusEl.textContent = "🏁 Partida terminada — resultado: " + pairing.result;
+        } else if (pairing.whiteId !== lanMyId && pairing.blackId !== lanMyId) {
+          statusEl.textContent = "👀 Estás mirando esta mesa.";
+        } else {
+          statusEl.textContent = chess.turn() === lanBoardCtx.myColor ? "✅ Tu turno" : "⏳ Turno del rival";
+        }
+      }
+
+      async function lanOnSquareClick(sqName) {
+        const ctx = lanBoardCtx;
+        if (!ctx || !lanActiveMatch) return;
+        const pairing = lanFindPairing(ctx.matchKey);
+        if (!pairing || pairing.status !== "playing") return;
+        if (pairing.whiteId !== lanMyId && pairing.blackId !== lanMyId) return; // solo mira
+        if (ctx.chess.turn() !== ctx.myColor) {
+          toast("⏳ Esperá tu turno");
+          return;
+        }
+        const piece = ctx.chess.get(sqName);
+        if (ctx.selected === sqName) {
+          ctx.selected = null;
+          lanRenderMatchBoard();
+          return;
+        }
+        if (ctx.selected) {
+          const from = ctx.selected;
+          let promotion = "q";
+          if (isPromotionMove(ctx.chess, from, sqName)) {
+            ctx.selected = null;
+            lanRenderMatchBoard();
+            promotion = await askPromotion(ctx.myColor);
+          }
+          const clone = new Chess(ctx.chess.fen());
+          const testMove = clone.move({ from, to: sqName, promotion });
+          ctx.selected = null;
+          if (testMove) {
+            lanPlayerChannel.send(JSON.stringify({ type: "move", matchKey: ctx.matchKey, from, to: sqName, promotion }));
+          } else {
+            lanRenderMatchBoard();
+          }
+          return;
+        }
+        if (piece && piece.color === ctx.myColor) {
+          ctx.selected = sqName;
+          lanRenderMatchBoard();
+        }
+      }
+
+      // ---------- Cableado de botones del modo LAN ----------
+      (function initLanTournamentUI() {
+        const onlineRadio = document.getElementById("tournament-connmode-online");
+        const lanRadio = document.getElementById("tournament-connmode-lan");
+        const onlineBox = document.getElementById("tournament-online-mode");
+        const lanBox = document.getElementById("tournament-lan-mode");
+        function applyConnMode(mode) {
+          onlineBox.style.display = mode === "lan" ? "none" : "";
+          lanBox.style.display = mode === "lan" ? "" : "none";
+          localStorage.setItem("chessSchoolTournamentConnMode", mode);
+        }
+        onlineRadio.addEventListener("change", () => applyConnMode("online"));
+        lanRadio.addEventListener("change", () => applyConnMode("lan"));
+        const savedMode = localStorage.getItem("chessSchoolTournamentConnMode");
+        if (savedMode === "lan") {
+          lanRadio.checked = true;
+          applyConnMode("lan");
+        }
+
+        const savedName = localStorage.getItem(LAN_NAME_KEY);
+        if (savedName) document.getElementById("lan-player-name").value = savedName;
+
+        document.getElementById("lan-be-host-btn").addEventListener("click", () => lanShowRole("host"));
+        document.getElementById("lan-be-player-btn").addEventListener("click", () => lanShowRole("player"));
+
+        document.getElementById("lan-player-gen-offer-btn").addEventListener("click", async () => {
+          const nameInput = document.getElementById("lan-player-name");
+          lanMyName = nameInput.value.trim();
+          if (!lanMyName) {
+            toast("❌ Escribí tu nombre primero");
+            return;
+          }
+          localStorage.setItem(LAN_NAME_KEY, lanMyName);
+          try {
+            const code = await lanPlayerGenerateOffer();
+            document.getElementById("lan-player-offer-code").value = code;
+            document.getElementById("lan-player-offer-wrap").style.display = "";
+          } catch (err) {
+            toast("❌ No se pudo generar el código: " + err.message);
+          }
+        });
+
+        document.getElementById("lan-player-copy-offer-btn").addEventListener("click", () => {
+          const el = document.getElementById("lan-player-offer-code");
+          el.select();
+          navigator.clipboard?.writeText(el.value).catch(() => {});
+          toast("📋 Código copiado");
+        });
+
+        document.getElementById("lan-player-connect-btn").addEventListener("click", async () => {
+          const text = document.getElementById("lan-player-answer-input").value;
+          const statusEl = document.getElementById("lan-player-connect-status");
+          try {
+            await lanPlayerConnect(text);
+            statusEl.textContent = "⏳ Conectando…";
+          } catch (err) {
+            statusEl.textContent = "❌ " + err.message;
+          }
+        });
+
+        document.getElementById("lan-create-tournament-btn").addEventListener("click", () => {
+          const name = document.getElementById("lan-tournament-name").value.trim() || "Torneo LAN";
+          const roundsRaw = document.getElementById("lan-tournament-rounds").value;
+          const totalRounds = roundsRaw ? parseInt(roundsRaw, 10) : null;
+          const timeMode = document.getElementById("lan-tournament-time-mode").value;
+          const timeControlMinutes = timeMode === "none" ? null : parseInt(timeMode, 10);
+          lanIsHost = true;
+          lanState = {
+            name,
+            status: "lobby",
+            totalRounds,
+            timeControlMinutes,
+            currentRound: 0,
+            players: [],
+            rounds: [],
+          };
+          lanHostPeers = {};
+          lanSaveState();
+          document.getElementById("lan-host-create-box").style.display = "none";
+          document.getElementById("lan-host-manage-box").style.display = "";
+          lanRenderUI();
+          toast("🏆 Torneo LAN creado — ya podés conectar jugadores");
+        });
+
+        document.getElementById("lan-host-gen-answer-btn").addEventListener("click", async () => {
+          const text = document.getElementById("lan-host-offer-input").value;
+          if (!text.trim()) {
+            toast("❌ Pegá primero el código A del jugador");
+            return;
+          }
+          try {
+            const code = await lanHostGenerateAnswer(text);
+            document.getElementById("lan-host-answer-code").value = code;
+            document.getElementById("lan-host-answer-wrap").style.display = "";
+          } catch (err) {
+            toast("❌ No se pudo generar el código: " + err.message);
+          }
+        });
+
+        document.getElementById("lan-host-copy-answer-btn").addEventListener("click", () => {
+          const el = document.getElementById("lan-host-answer-code");
+          el.select();
+          navigator.clipboard?.writeText(el.value).catch(() => {});
+          toast("📋 Código copiado");
+        });
+
+        document.getElementById("lan-generate-round-btn").addEventListener("click", () => lanGenerateRound());
+
+        document.getElementById("lan-finish-tournament-btn").addEventListener("click", () => {
+          if (!lanState) return;
+          if (!confirm("¿Finalizar el torneo LAN?")) return;
+          lanState.status = "finished";
+          lanBroadcastState();
+          lanRenderUI();
+        });
+
+        document.getElementById("lan-match-exit-btn").addEventListener("click", () => lanCloseMatchView());
+
+        document.getElementById("lan-match-resign-btn").addEventListener("click", () => {
+          if (!lanActiveMatch || lanIsHost) return;
+          if (!confirm("¿Seguro que te querés rendir?")) return;
+          lanPlayerChannel.send(JSON.stringify({ type: "resign", matchKey: lanMatchKey(lanActiveMatch.round, lanActiveMatch.board) }));
+        });
+
+        document.getElementById("lan-match-draw-btn").addEventListener("click", () => {
+          if (!lanActiveMatch || lanIsHost) return;
+          lanPlayerChannel.send(JSON.stringify({ type: "drawoffer", matchKey: lanMatchKey(lanActiveMatch.round, lanActiveMatch.board) }));
+          toast("🤝 Oferta de tablas enviada");
+        });
+      })();
