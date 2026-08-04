@@ -5540,6 +5540,15 @@
         subscribedRound_ = undefined;
         lastRoundGames = [];
         document.getElementById("tournament-auth-box").style.display = "";
+        // Igual que en connectLan(): una vez que efectivamente estamos
+        // conectados (a Firebase, en este caso), hay que ocultar la
+        // pantalla "¿Cómo querés jugar?" — si no, quedaba visible para
+        // siempre encima de la de login (bug: nunca se ocultaba en modo
+        // online, ni al cargar la página ni al tocar "Torneo Online").
+        const modeSelectEl_ = document.getElementById("tournament-mode-select");
+        if (modeSelectEl_) modeSelectEl_.style.display = "none";
+        const lanBoxEl_ = document.getElementById("tournament-lan-box");
+        if (lanBoxEl_) lanBoxEl_.style.display = "none";
         if (!authListenerAttached) {
           authListenerAttached = true;
           firebase.auth().onAuthStateChanged((user) => {
@@ -9544,15 +9553,21 @@
         modeOnlineBtn.addEventListener("click", () => {
           const lanBox = document.getElementById("tournament-lan-box");
           if (lanBox) lanBox.style.display = "none";
-          if (connectionMode === "lan") {
-            if (lanClient_) {
-              lanClient_.close();
-              lanClient_ = null;
-            }
-            currentUser = null;
-            connectionMode = "online";
-            connectFirebase(getFirebaseConfig(), getTournamentRoom());
+          // Antes esto solo reconectaba si connectionMode === "lan" en ese
+          // instante. Pero disconnectLan_() (usado por "Cerrar sesión" en
+          // modo LAN) ya deja connectionMode en "online" antes de volver a
+          // mostrar esta pantalla, así que ese chequeo quedaba en false y
+          // tocar "Torneo Online" no hacía nada: fbDb/fbRoomRef seguían
+          // apuntando al cliente LAN ya cerrado. Se saca el chequeo y se
+          // reconecta siempre (connectFirebase() es seguro de llamar de
+          // nuevo: no reinicializa la app de Firebase si ya existe).
+          if (lanClient_) {
+            lanClient_.close();
+            lanClient_ = null;
           }
+          currentUser = null;
+          connectionMode = "online";
+          connectFirebase(getFirebaseConfig(), getTournamentRoom());
         });
       }
       if (modeLanBtn) {
