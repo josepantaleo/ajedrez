@@ -5543,6 +5543,16 @@
         if (!authListenerAttached) {
           authListenerAttached = true;
           firebase.auth().onAuthStateChanged((user) => {
+            // Si estamos conectados en modo LAN, currentUser lo maneja
+            // connectLan()/disconnectLan_(), no este listener: la
+            // resolución de la sesión de Google es asíncrona y, sin este
+            // chequeo, podía llegar DESPUÉS de conectarse a la sala LAN y
+            // pisar el currentUser recién asignado con el de Firebase
+            // (típicamente null), ocultando de golpe toda la pantalla del
+            // torneo (botón "Inscribirme", panel de administrador,
+            // "Generar próxima ronda", etc.) tanto para jugadores como
+            // para el anfitrión.
+            if (connectionMode === "lan") return;
             currentUser = user ? { email: (user.email || "").toLowerCase(), displayName: user.displayName || user.email } : null;
             updateAuthUI();
             renderTournamentState(lastTournamentState);
