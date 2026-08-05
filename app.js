@@ -52,6 +52,10 @@
       // Internet (ver syncInternetClock_ más abajo), no contra turnStartAt
       // ni contra el reloj propio de la máquina.
       let internetClockOffsetMs = 0;
+      let internetClockAnchorUtcMs_ = 0;
+      let internetClockAnchorPerfMs_ = 0;
+      let internetClockIsSynced_ = false;
+      let internetClockSyncPromise_ = null;
       const TOURNAMENT_ADMIN_EMAIL = "ipem146centenario@gmail.com";
 
       // =========================
@@ -5378,7 +5382,20 @@
       // ejemplo jugando en modo LAN sin Internet), se sigue usando el
       // reloj del dispositivo tal cual (offset 0): nunca rompe el
       // cronómetro, en el peor caso deja de corregir el desfasaje.
+      function setInternetClockAnchor_(utcAtReceive, perfAtReceive, localDateAtReceive) {
+        if (!Number.isFinite(utcAtReceive) || !Number.isFinite(perfAtReceive)) return false;
+        const previousNow = internetClockIsSynced_ ? syncedNow_() : 0;
+        internetClockAnchorUtcMs_ =
+          previousNow > 0 ? Math.max(previousNow, utcAtReceive) : utcAtReceive;
+        internetClockAnchorPerfMs_ = perfAtReceive;
+        internetClockOffsetMs = internetClockAnchorUtcMs_ - localDateAtReceive;
+        internetClockIsSynced_ = true;
+        return true;
+      }
+
       async function syncInternetClock_() {
+        if (internetClockSyncPromise_) return internetClockSyncPromise_;
+        internetClockSyncPromise_ = (async () => {
         // OJO: worldtimeapi.org (el endpoint que estaba acá antes) cerró
         // definitivamente ("This service has now been sunset", según su
         // propia página) y ya no responde nunca. Eso hacía que el primer
@@ -5389,8 +5406,14 @@
         // reemplazo directo (mismo formato de respuesta, con "unixtime")
         // pensado justamente para sustituir a worldtimeapi.org.
         const endpoints = [
-          { url: "https://gateway.timeapi.world/timezone/Etc/UTC", parse: (d) => d.unixtime * 1000 },
-          { url: "https://timeapi.io/api/Time/current/zone?timeZone=UTC", parse: (d) => new Date(d.dateTime + "Z").getTime() },
+          {
+            url: "https://timeapi.io/api/Time/current/zone?timeZone=UTC",
+            parse: (d) => Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(d.dateTime || "") ? d.dateTime : d.dateTime + "Z"),
+          },
+          {
+            url: "https://gateway.timeapi.world/timezone/Etc/UTC",
+            parse: (d) => d.utc_datetime ? Date.parse(d.utc_datetime) : Number(d.unixtime) * 1000,
+          },
         ];
         for (const { url, parse } of endpoints) {
           try {
@@ -5400,9 +5423,15 @@
             // cortamos a los 4s y pasamos al que sigue.
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 4000);
-            const t0 = Date.now();
-            const res = await fetch(url, { cache: "no-store", signal: controller.signal });
-            const t1 = Date.now();
+            const t0Date = Date.now();
+            const t0Perf = performance.now();
+            const separator = url.includes("?") ? "&" : "?";
+            const res = await fetch(url + separator + "_=" + t0Date, {
+              cache: "no-store",
+              signal: controller.signal,
+            });
+            const t1Date = Date.now();
+            const t1Perf = performance.now();
             clearTimeout(timeoutId);
             if (!res.ok) continue;
             const data = await res.json();
@@ -5413,8 +5442,9 @@
             // la mitad del viaje de ida y vuelta como estimación (mismo
             // principio que usa NTP) para no cargarle toda la latencia de
             // red al offset.
-            const roundTrip = t1 - t0;
-            internetClockOffsetMs = serverMs + roundTrip / 2 - t1;
+            const roundTrip = Math.max(0, t1Perf - t0Perf);
+            const utcAtReceive = serverMs + roundTrip / 2;
+            setInternetClockAnchor_(utcAtReceive, t1Perf, t1Date);
             return true;
           } catch (err) {
             // Ese servidor de hora no respondió (sin conexión, CORS,
@@ -5422,6 +5452,12 @@
           }
         }
         return false;
+        })();
+        try {
+          return await internetClockSyncPromise_;
+        } finally {
+          internetClockSyncPromise_ = null;
+        }
       }
 
       // "Ahora" corregido: úsese SIEMPRE en vez de Date.now() a secas para
@@ -5429,6 +5465,9 @@
       // que coincidir (cronómetros de blancas/negras, descuento de tiempo
       // al mover).
       function syncedNow_() {
+        if (internetClockIsSynced_) {
+          return internetClockAnchorUtcMs_ + (performance.now() - internetClockAnchorPerfMs_);
+        }
         return Date.now() + internetClockOffsetMs;
       }
 
@@ -7017,7 +7056,7 @@
         // relojes distintos (o mal configurados) ya no afectan cuánto
         // tiempo se descuenta.
         const tournamentServerNowMs_ = syncedNow_();
-        const effectiveMoveAt = Math.min((clientMoveAt || Date.now()) + internetClockOffsetMs, tournamentServerNowMs_);
+        const effectiveMoveAt = Math.min(clientMoveAt || tournamentServerNowMs_, tournamentServerNowMs_);
         const gameDocRef = gamesCollectionRef.doc(gameDocId_(round, board));
 
         // ATAJO para todo lo que NO sea un reclamo de tiempo agotado
@@ -9370,7 +9409,7 @@
             // visual nunca se congele. El tiempo agotado se sigue
             // validando con syncedNow_() en claimTournamentTimeout.
             syncInternetClock_();
-            now = Date.now();
+            now = turnStartAtMs;
           }
           return Math.max(0, Math.floor((now - turnStartAtMs) / 1000));
         })();
@@ -9460,7 +9499,10 @@
           // sincronización con el reloj de Internet para partir con el
           // offset más actualizado posible (evita que el primer tick
           // calcule mal si el reloj local cambió desde que cargó la app).
-          syncInternetClock_();
+          const internetClockReady = await syncInternetClock_();
+          if (gameRow.clock && !internetClockReady && !internetClockIsSynced_) {
+            toast("No se pudo consultar la hora de Internet. Revisa la conexion.", 5000);
+          }
 
           tournamentMatchCtx = { round, board, whiteName, blackName, whiteEmail: whiteEmail || "", blackEmail: blackEmail || "" };
           tournamentMatchActive = true;
@@ -9650,8 +9692,8 @@
         // Se toma acá, antes de cualquier ida y vuelta con Firestore: es el
         // instante real en que el jugador movió, y es lo que fbMakeMove usa
         // para descontar el reloj (ver el comentario en esa función).
-        const clientMoveAt = Date.now();
-        const clientMoveAtSynced = clientMoveAt + internetClockOffsetMs;
+        const clientMoveAt = syncedNow_();
+        const clientMoveAtSynced = clientMoveAt;
         const previousGameRow = tournamentCurrentGameRow;
         if (previousGameRow && previousGameRow.clock) {
           const nextTurn = game.turn();
