@@ -11,7 +11,20 @@
       // romper en navegadores viejos sin soporte, o si se abre el
       // archivo directo desde disco (file://) en vez de servido por http.
       if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-        window.addEventListener("load", () => {
+        window.addEventListener("load", async () => {
+          if (location.hostname.endsWith(".github.io")) {
+            try {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(registrations.map((registration) => registration.unregister()));
+              if ("caches" in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map((name) => caches.delete(name)));
+              }
+            } catch (err) {
+              console.warn("No se pudo limpiar la cache anterior de GitHub Pages:", err);
+            }
+            return;
+          }
           navigator.serviceWorker.register("./sw.js").catch(() => {
             // Silencioso: si falla el registro (por ejemplo, servidor sin
             // HTTPS en un dominio que no sea localhost), la app sigue
@@ -5561,6 +5574,7 @@
       // borrar o alterar el torneo aunque esta pantalla no le muestre los
       // botones para hacerlo.
       let authListenerAttached = false;
+      let authRedirectChecked_ = false;
 
       // Modo árbitro: una cuenta aparte del admin del torneo, exclusiva para
       // las acciones "de reglamento" (retirar/reincorporar/descalificar
@@ -5668,12 +5682,34 @@
         };
       }
 
+      function firebaseAuthErrorMessage_(err) {
+        const code = err && err.code ? err.code : "";
+        if (code === "auth/unauthorized-domain") {
+          return `Dominio no autorizado. Agrega ${location.hostname} en Firebase Authentication > Settings > Authorized domains.`;
+        }
+        if (code === "auth/popup-blocked") {
+          return "El navegador bloqueo la ventana de Google. Se intentara iniciar mediante redireccion.";
+        }
+        return err && err.message ? err.message : "No se pudo iniciar sesion con Google";
+      }
+
+      function shouldUseAuthRedirect_() {
+        if (location.hostname.endsWith(".github.io")) return false;
+        return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      }
+
       function connectFirebase(config, room) {
         try {
           if (!firebase.apps.length) {
             firebase.initializeApp(config);
           }
           fbDb = firebase.firestore();
+          if (!authRedirectChecked_) {
+            authRedirectChecked_ = true;
+            firebase.auth().getRedirectResult().catch((err) => {
+              toast("No se pudo completar el acceso: " + firebaseAuthErrorMessage_(err), 7000);
+            });
+          }
         } catch (err) {
           throw new Error("Configuración de Firebase inválida: " + err.message);
         }
@@ -9880,9 +9916,26 @@
       document.getElementById("tournament-google-signin-btn").addEventListener("click", async () => {
         try {
           const provider = new firebase.auth.GoogleAuthProvider();
-          await firebase.auth().signInWithPopup(provider);
+          provider.setCustomParameters({ prompt: "select_account" });
+          if (shouldUseAuthRedirect_()) {
+            await firebase.auth().signInWithRedirect(provider);
+            return;
+          }
+          try {
+            await firebase.auth().signInWithPopup(provider);
+          } catch (err) {
+            if (
+              err &&
+              err.code === "auth/popup-blocked" &&
+              !location.hostname.endsWith(".github.io")
+            ) {
+              await firebase.auth().signInWithRedirect(provider);
+              return;
+            }
+            throw err;
+          }
         } catch (err) {
-          toast("❌ No se pudo iniciar sesión: " + err.message);
+          toast("No se pudo iniciar sesion: " + firebaseAuthErrorMessage_(err), 7000);
         }
       });
 
