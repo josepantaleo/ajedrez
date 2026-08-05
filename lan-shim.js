@@ -1,364 +1,451 @@
-"use strict";
+/**
+ * lan-shim.js
+ * Cliente/shim para conectar la app del torneo al servidor LAN.
+ * Expone window.LAN con una API compatible con Firebase Firestore.
+ *
+ * Incluir en index.html ANTES de app.js:
+ *   <script src="lan-shim.js"></script>
+ */
 
-// =====================================================================
-// LAN SHIM
-// -----------------------------------------------------------------
-// Reproduce el subconjunto de la API de Firestore (SDK "compat") que
-// usa app.js: collection/doc, get/set/update/delete/add, onSnapshot,
-// where(campo,"==",valor), batch(), runTransaction(). Por debajo habla
-// con lan-server.js por WebSocket en vez de ir a Firebase.
-//
-// Se expone como window.LAN = { connect(url), serverTimestamp() },
-// pensado para usarse desde app.js así:
-//
-//   const { db } = await LAN.connect("ws://192.168.0.15:8080");
-//   fbDb = db;  // mismo objeto que firebase.firestore(), para el
-//               // resto del código de la app.
-// =====================================================================
+(function () {
+  "use strict";
 
-(function (global) {
-  function isPlainObject(v) {
-    return v && typeof v === "object" && !Array.isArray(v);
+  const MSG_SERVER_TIMESTAMP = { __serverTimestamp: true };
+
+  function isServerTimestamp(v) {
+    return v && typeof v === "object" && v.__serverTimestamp === true;
   }
 
-  // Convierte los {__ts:true, ms:...} planos que manda el servidor en
-  // objetos con .toMillis()/.toDate(), igual que un Timestamp real de
-  // Firestore.
-  function reviveTimestamps(value) {
-    if (Array.isArray(value)) return value.map(reviveTimestamps);
-    if (isPlainObject(value)) {
-      if (value.__ts) {
-        const ms = value.ms;
-        return {
-          __ts: true,
-          ms,
-          toMillis: function () {
-            return ms;
-          },
-          toDate: function () {
-            return new Date(ms);
-          },
-        };
-      }
+  function replaceServerTimestamps(obj, ts) {
+    if (obj == null) return obj;
+    if (isServerTimestamp(obj)) {
+      return {
+        toMillis: () => ts,
+        seconds: Math.floor(ts / 1000),
+        nanoseconds: (ts % 1000) * 1e6,
+        isEqual: (other) => other && typeof other.toMillis === "function" && other.toMillis() === ts,
+      };
+    }
+    if (Array.isArray(obj)) return obj.map((v) => replaceServerTimestamps(v, ts));
+    if (typeof obj === "object") {
       const out = {};
-      for (const k of Object.keys(value)) out[k] = reviveTimestamps(value[k]);
+      for (const k of Object.keys(obj)) out[k] = replaceServerTimestamps(obj[k], ts);
       return out;
     }
-    return value;
+    return obj;
   }
 
-  const SERVER_TIMESTAMP_MARKER = { __serverTimestamp: true };
-
-  function isServerTimestampMarker(v) {
-    return isPlainObject(v) && v.__serverTimestamp === true;
+  // Los objetos Timestamp de Firestore se serializan por WebSocket como
+  // { seconds, nanoseconds } perdiendo los métodos (toMillis, isEqual).
+  // Esta función reconstruye esos objetos al recibirlos del servidor.
+  function reviveTimestamps(obj) {
+    if (obj == null) return obj;
+    if (typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(reviveTimestamps);
+    if (
+      typeof obj.seconds === "number" &&
+      typeof obj.nanoseconds === "number" &&
+      typeof obj.toMillis !== "function"
+    ) {
+      const ms = obj.seconds * 1000 + Math.round(obj.nanoseconds / 1e6);
+      return {
+        toMillis: () => ms,
+        seconds: obj.seconds,
+        nanoseconds: obj.nanoseconds,
+        isEqual: (other) => other && typeof other.toMillis === "function" && other.toMillis() === ms,
+      };
+    }
+    const out = {};
+    for (const k of Object.keys(obj)) out[k] = reviveTimestamps(obj[k]);
+    return out;
   }
 
-  class LanClient {
-    constructor(url) {
-      this.url = url;
-      this.ws = null;
-      this._nextMsgId = 1;
-      this._pending = new Map();
-      this._subs = new Map();
-      this._nextSubId = 1;
-    }
+  let ws;
+  let reqId = 0;
+  const pending = new Map(); // id → { resolve, reject }
+  const docSubs = new Map(); // "colPath/docId" → Set<callback>
+  const querySubs = new Map(); // subId → { colPath, conditions, callback }
+  let subIdCounter = 0;
 
-    connect() {
-      return new Promise((resolve, reject) => {
-        let settled = false;
-        let ws;
-        try {
-          ws = new WebSocket(this.url);
-        } catch (err) {
-          reject(new Error("Dirección de servidor LAN inválida: " + this.url));
-          return;
-        }
-        this.ws = ws;
-        ws.addEventListener("open", () => {
-          settled = true;
-          resolve();
-        });
-        ws.addEventListener("error", () => {
-          if (!settled) {
-            settled = true;
-            reject(new Error("No se pudo conectar a " + this.url + ". Revisá que el servidor LAN esté corriendo y que estés en la misma red."));
-          }
-        });
-        ws.addEventListener("close", () => {
-          const err = new Error("Se perdió la conexión con el servidor LAN.");
-          this._pending.forEach((p) => p.reject(err));
-          this._pending.clear();
-          if (!settled) {
-            settled = true;
-            reject(err);
-          }
-        });
-        ws.addEventListener("message", (ev) => this._onMessage(ev));
-      });
-    }
-
-    close() {
-      try {
-        if (this.ws) this.ws.close();
-      } catch (err) {
-        /* noop */
-      }
-    }
-
-    _onMessage(ev) {
-      let msg;
-      try {
-        msg = JSON.parse(ev.data);
-      } catch (err) {
+  function send(msg) {
+    return new Promise((resolve, reject) => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        reject(new Error("No conectado al servidor LAN"));
         return;
       }
-      if (msg.re) {
-        const pending = this._pending.get(msg.id);
-        if (!pending) return;
-        this._pending.delete(msg.id);
-        if (msg.ok) pending.resolve(msg.result);
-        else pending.reject(new Error(msg.error || "Error del servidor LAN"));
-        return;
-      }
-      if (msg.ev === "snapshot" || msg.ev === "querySnapshot") {
-        const sub = this._subs.get(msg.subId);
-        if (sub) sub(msg);
-      }
-    }
+      const id = ++reqId;
+      msg.id = id;
+      pending.set(id, { resolve, reject });
+      ws.send(JSON.stringify(msg));
+    });
+  }
 
-    send(payload) {
-      return new Promise((resolve, reject) => {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-          reject(new Error("No hay conexión con el servidor LAN"));
+  function connect_(url, room, displayName) {
+    return new Promise((resolve, reject) => {
+      const fullUrl = `${url}?room=${encodeURIComponent(room)}&name=${encodeURIComponent(displayName)}`;
+      ws = new WebSocket(fullUrl);
+
+      ws.onopen = () => {
+        // Devolvemos la API pública
+        const client = {
+          close() {
+            if (ws) {
+              ws.close();
+              ws = null;
+            }
+            pending.forEach((p) => p.reject(new Error("Desconectado")));
+            pending.clear();
+          },
+        };
+        resolve({ client, db: new LanDatabase() });
+      };
+
+      ws.onerror = (err) => {
+        reject(new Error("No se pudo conectar al servidor LAN"));
+      };
+
+      ws.onmessage = (evt) => {
+        let msg;
+        try {
+          msg = JSON.parse(evt.data);
+        } catch (e) {
           return;
         }
-        const id = this._nextMsgId++;
-        this._pending.set(id, { resolve, reject });
-        try {
-          this.ws.send(JSON.stringify(Object.assign({}, payload, { id })));
-        } catch (err) {
-          this._pending.delete(id);
-          reject(err);
+
+        if (msg.type === "docChange") {
+          const key = `${msg.colPath}/${msg.docId}`;
+          const cbs = docSubs.get(key);
+          if (cbs) {
+            const snap = new LanDocumentSnapshot(msg.docId, reviveTimestamps(msg.data), msg.exists, null);
+            cbs.forEach((cb) => {
+              try { cb(snap); } catch (e) {}
+            });
+          }
+          // También notificamos queries que escuchen esta colección
+          querySubs.forEach((sub) => {
+            if (sub.colPath === msg.colPath) {
+              // Re-evaluamos la query y notificamos
+              send({ op: "query", colPath: sub.colPath, conditions: sub.conditions }).then((res) => {
+                const snap = buildQuerySnapshot(reviveTimestamps(res.docs), sub.colPath);
+                try { sub.callback(snap); } catch (e) {}
+              });
+            }
+          });
+          return;
         }
+
+        if (msg.type === "queryChange") {
+          // Re-evaluar todas las queries de esta colección
+          querySubs.forEach((sub) => {
+            if (sub.colPath === msg.colPath) {
+              send({ op: "query", colPath: sub.colPath, conditions: sub.conditions }).then((res) => {
+                const snap = buildQuerySnapshot(reviveTimestamps(res.docs), sub.colPath);
+                try { sub.callback(snap); } catch (e) {}
+              });
+            }
+          });
+          return;
+        }
+
+        if (msg.id != null && pending.has(msg.id)) {
+          const p = pending.get(msg.id);
+          pending.delete(msg.id);
+          if (msg.ok) p.resolve(msg);
+          else p.reject(new Error(msg.error || "Error del servidor LAN"));
+        }
+      };
+
+      ws.onclose = () => {
+        pending.forEach((p) => p.reject(new Error("Conexión cerrada")));
+        pending.clear();
+      };
+    });
+  }
+
+  /* ======================================================================
+     DocumentSnapshot
+     ====================================================================== */
+  class LanDocumentSnapshot {
+    constructor(id, data, exists, ref) {
+      this._id = id;
+      this._data = data;
+      this._exists = exists;
+      this._ref = ref;
+      this.metadata = { hasPendingWrites: false, fromCache: false };
+    }
+    get exists() { return this._exists; }
+    get id() { return this._id; }
+    get ref() { return this._ref; }
+    data() { return this._exists ? deepCopy(this._data) : undefined; }
+    toMillis() {
+      // Si el documento tiene un campo timestamp numérico, lo usamos;
+      // de lo contrario 0.
+      return typeof this._data === "object" && this._data != null && typeof this._data._ts === "number"
+        ? this._data._ts
+        : 0;
+    }
+  }
+
+  /* ======================================================================
+     QuerySnapshot
+     ====================================================================== */
+  function buildQuerySnapshot(docs, colPath) {
+    const docSnaps = (docs || []).map((d) => {
+      const ref = new LanDocumentReference(colPath, d.id);
+      return new LanDocumentSnapshot(d.id, d.data, true, ref);
+    });
+    return {
+      docs: docSnaps,
+      get empty() { return docSnaps.length === 0; },
+      get size() { return docSnaps.length; },
+      forEach(fn) { docSnaps.forEach(fn); },
+      docChanges() {
+        return docSnaps.map((snap) => ({ type: "added", doc: snap }));
+      },
+    };
+  }
+
+  /* ======================================================================
+     DocumentReference
+     ====================================================================== */
+  class LanDocumentReference {
+    constructor(colPath, docId) {
+      this._colPath = colPath;
+      this._docId = docId;
+    }
+    get id() { return this._docId; }
+    get parent() { return new LanCollectionReference(this._colPath); }
+    collection(name) {
+      return new LanCollectionReference(`${this._colPath}/${this._docId}/${name}`);
+    }
+    set(data, options) {
+      const clean = replaceServerTimestamps(deepCopy(data), Date.now());
+      return send({ op: "set", colPath: this._colPath, docId: this._docId, data: clean, merge: !!(options && options.merge) });
+    }
+    update(data) {
+      const clean = replaceServerTimestamps(deepCopy(data), Date.now());
+      return send({ op: "update", colPath: this._colPath, docId: this._docId, data: clean });
+    }
+    get() {
+      return send({ op: "get", colPath: this._colPath, docId: this._docId }).then((res) => {
+        return new LanDocumentSnapshot(res.docId, reviveTimestamps(res.data), res.exists, this);
       });
     }
-
-    subscribe(kind, path, where, cb) {
-      const subId = this._nextSubId++;
-      this._subs.set(subId, cb);
-      const op = kind === "doc" ? "subDoc" : "subQuery";
-      this.send({ op, subId, path, where }).catch(() => {
-        /* si falla la suscripción inicial, el callback de error del
-           .onSnapshot() del caller ya se encarga por su lado */
+    onSnapshot(callback) {
+      const key = `${this._colPath}/${this._docId}`;
+      if (!docSubs.has(key)) docSubs.set(key, new Set());
+      docSubs.get(key).add(callback);
+      // Pedimos suscripción al servidor y notificamos estado inicial
+      send({ op: "subscribeDoc", colPath: this._colPath, docId: this._docId, subId: key }).then((res) => {
+        const snap = new LanDocumentSnapshot(res.docId, reviveTimestamps(res.data), res.exists, this);
+        try { callback(snap); } catch (e) {}
       });
       return () => {
-        this._subs.delete(subId);
-        this.send({ op: "unsub", subId }).catch(() => {});
+        const cbs = docSubs.get(key);
+        if (cbs) {
+          cbs.delete(callback);
+          if (cbs.size === 0) docSubs.delete(key);
+        }
+      };
+    }
+    delete() {
+      return send({ op: "delete", colPath: this._colPath, docId: this._docId });
+    }
+  }
+
+  /* ======================================================================
+     Query
+     ====================================================================== */
+  class LanQuery {
+    constructor(colPath, conditions, orderBys, limitN) {
+      this._colPath = colPath;
+      this._conditions = conditions ? [...conditions] : [];
+      this._orderBys = orderBys ? [...orderBys] : [];
+      this._limit = limitN || null;
+      this._limitToLast = null;
+    }
+    where(field, op, value) {
+      const q = new LanQuery(this._colPath, this._conditions, this._orderBys, this._limit);
+      q._limitToLast = this._limitToLast;
+      q._conditions.push({ field, op, value });
+      return q;
+    }
+    orderBy(field, direction) {
+      const q = new LanQuery(this._colPath, this._conditions, this._orderBys, this._limit);
+      q._limitToLast = this._limitToLast;
+      q._orderBys.push({ field, dir: direction === "desc" ? "desc" : "asc" });
+      return q;
+    }
+    limit(n) {
+      const q = new LanQuery(this._colPath, this._conditions, this._orderBys, n);
+      q._limitToLast = this._limitToLast;
+      return q;
+    }
+    limitToLast(n) {
+      const q = new LanQuery(this._colPath, this._conditions, this._orderBys, this._limit);
+      q._limitToLast = n;
+      return q;
+    }
+    get() {
+      return send({ op: "query", colPath: this._colPath, conditions: this._conditions, orderBys: this._orderBys, limit: this._limit, limitToLast: this._limitToLast }).then((res) => {
+        return buildQuerySnapshot(reviveTimestamps(res.docs), this._colPath);
+      });
+    }
+    onSnapshot(callback) {
+      const subId = `q_${++subIdCounter}`;
+      querySubs.set(subId, { colPath: this._colPath, conditions: this._conditions, orderBys: this._orderBys, limit: this._limit, limitToLast: this._limitToLast, callback });
+      send({ op: "subscribeQuery", colPath: this._colPath, conditions: this._conditions, orderBys: this._orderBys, limit: this._limit, limitToLast: this._limitToLast, subId }).then((res) => {
+        const snap = buildQuerySnapshot(reviveTimestamps(res.docs), this._colPath);
+        try { callback(snap); } catch (e) {}
+      });
+      return () => {
+        querySubs.delete(subId);
+        send({ op: "unsubscribe", subId }).catch(() => {});
       };
     }
   }
 
-  function encodeSentinels(data) {
-    // Los marcadores de serverTimestamp ya son JSON-seguros tal cual
-    // (son objetos planos {__serverTimestamp:true}); esta función
-    // existe como punto único por si en el futuro hace falta codificar
-    // algo más antes de mandarlo por la red.
-    return data;
-  }
-
-  function docSnapFromGet(client, pathArr, raw) {
-    const data = raw.exists ? reviveTimestamps(raw.data) : undefined;
-    return {
-      exists: !!raw.exists,
-      id: pathArr[pathArr.length - 1],
-      data: () => data,
-      ref: new LanDocRef(client, pathArr),
-      metadata: { hasPendingWrites: false },
-    };
-  }
-
-  class LanDocRef {
-    constructor(client, pathArr) {
-      this.client = client;
-      this.path = pathArr;
-      this.id = pathArr[pathArr.length - 1];
+  /* ======================================================================
+     CollectionReference
+     ====================================================================== */
+  class LanCollectionReference extends LanQuery {
+    constructor(colPath) {
+      super(colPath, [], [], null);
     }
-    collection(name) {
-      return new LanCollectionRef(this.client, this.path.concat([name]));
-    }
-    get() {
-      return this.client.send({ op: "get", path: this.path }).then((r) => docSnapFromGet(this.client, this.path, r));
-    }
-    set(data, opts) {
-      return this.client
-        .send({ op: "set", path: this.path, data: encodeSentinels(data), merge: !!(opts && opts.merge) })
-        .then(() => undefined);
-    }
-    update(data) {
-      return this.client.send({ op: "update", path: this.path, data: encodeSentinels(data) }).then(() => undefined);
-    }
-    delete() {
-      return this.client.send({ op: "delete", path: this.path }).then(() => undefined);
-    }
-    onSnapshot(onNext, onError) {
-      return this.client.subscribe("doc", this.path, null, (msg) => {
-        const data = msg.exists ? reviveTimestamps(msg.data) : undefined;
-        onNext({
-          exists: !!msg.exists,
-          id: this.id,
-          data: () => data,
-          ref: this,
-          metadata: { hasPendingWrites: false },
-        });
-      });
-    }
-  }
-
-  class LanQuery {
-    constructor(client, pathArr, where) {
-      this.client = client;
-      this.path = pathArr;
-      this.where = where || null;
-    }
-    get() {
-      return this.client.send({ op: "getQuery", path: this.path, where: this.where }).then((r) => {
-        const docs = r.docs.map((d) => docFromRow(this.client, this.path, d));
-        return { docs, docChanges: () => [] };
-      });
-    }
-    onSnapshot(onNext, onError) {
-      return this.client.subscribe("query", this.path, this.where, (msg) => {
-        const docs = msg.docs.map((d) => docFromRow(this.client, this.path, d));
-        const byId = new Map(docs.map((d) => [d.id, d]));
-        const changes = msg.changes.map((c) => ({
-          type: c.type,
-          doc: byId.get(c.id) || {
-            id: c.id,
-            exists: false,
-            data: () => undefined,
-            ref: new LanDocRef(this.client, this.path.concat([c.id])),
-          },
-        }));
-        onNext({ docs, docChanges: () => changes });
-      });
-    }
-  }
-
-  function docFromRow(client, collPathArr, row) {
-    const data = reviveTimestamps(row.data);
-    return {
-      exists: true,
-      id: row.id,
-      data: () => data,
-      ref: new LanDocRef(client, collPathArr.concat([row.id])),
-      metadata: { hasPendingWrites: false },
-    };
-  }
-
-  class LanCollectionRef extends LanQuery {
-    constructor(client, pathArr) {
-      super(client, pathArr, null);
-    }
-    doc(id) {
-      const docId = id || genId();
-      return new LanDocRef(this.client, this.path.concat([docId]));
-    }
-    where(field, op, value) {
-      if (op !== "==") {
-        throw new Error('El modo LAN solo soporta consultas con "==" (alcanza para esta app).');
-      }
-      return new LanQuery(this.client, this.path, { field, value });
+    doc(docId) {
+      return new LanDocumentReference(this._colPath, docId);
     }
     add(data) {
-      return this.client.send({ op: "add", path: this.path, data: encodeSentinels(data) }).then((r) => this.doc(r.id));
+      const clean = replaceServerTimestamps(deepCopy(data), Date.now());
+      return send({ op: "add", colPath: this._colPath, data: clean }).then((res) => {
+        return new LanDocumentReference(this._colPath, res.docId);
+      });
     }
   }
 
-  function genId() {
-    return "id_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
-
-  class LanBatch {
-    constructor(client) {
-      this.client = client;
-      this.ops = [];
+  /* ======================================================================
+     WriteBatch
+     ====================================================================== */
+  class LanWriteBatch {
+    constructor() {
+      this._writes = [];
     }
-    set(ref, data, opts) {
-      this.ops.push({ type: "set", path: ref.path, data: encodeSentinels(data), merge: !!(opts && opts.merge) });
+    set(docRef, data, options) {
+      this._writes.push({
+        op: "set",
+        colPath: docRef._colPath,
+        docId: docRef._docId,
+        data: replaceServerTimestamps(deepCopy(data), Date.now()),
+        merge: !!(options && options.merge),
+      });
       return this;
     }
-    update(ref, data) {
-      this.ops.push({ type: "update", path: ref.path, data: encodeSentinels(data) });
+    update(docRef, data) {
+      this._writes.push({
+        op: "update",
+        colPath: docRef._colPath,
+        docId: docRef._docId,
+        data: replaceServerTimestamps(deepCopy(data), Date.now()),
+      });
       return this;
     }
-    delete(ref) {
-      this.ops.push({ type: "delete", path: ref.path });
+    delete(docRef) {
+      this._writes.push({ op: "delete", colPath: docRef._colPath, docId: docRef._docId });
       return this;
     }
     commit() {
-      return this.client.send({ op: "batch", ops: this.ops }).then(() => undefined);
+      return send({ op: "batch", writes: this._writes });
     }
   }
 
-  class LanFirestore {
-    constructor(client) {
-      this.client = client;
+  /* ======================================================================
+     Transaction shim
+     ====================================================================== */
+  class LanTransaction {
+    constructor() {
+      this._reads = []; // { colPath, docId, version }
+      this._writes = []; // { op, colPath, docId, data, merge? }
     }
+    async get(docRef) {
+      const res = await send({ op: "get", colPath: docRef._colPath, docId: docRef._docId });
+      const snap = new LanDocumentSnapshot(res.docId, reviveTimestamps(res.data), res.exists, docRef);
+      this._reads.push({ colPath: docRef._colPath, docId: docRef._docId, version: res.version || 0 });
+      return snap;
+    }
+    set(docRef, data) {
+      this._writes.push({
+        op: "set",
+        colPath: docRef._colPath,
+        docId: docRef._docId,
+        data: replaceServerTimestamps(deepCopy(data), Date.now()),
+      });
+    }
+    update(docRef, data) {
+      this._writes.push({
+        op: "update",
+        colPath: docRef._colPath,
+        docId: docRef._docId,
+        data: replaceServerTimestamps(deepCopy(data), Date.now()),
+      });
+    }
+    delete(docRef) {
+      this._writes.push({ op: "delete", colPath: docRef._colPath, docId: docRef._docId });
+    }
+  }
+
+  /* ======================================================================
+     Database
+     ====================================================================== */
+  class LanDatabase {
     collection(name) {
-      return new LanCollectionRef(this.client, [name]);
+      return new LanCollectionReference(name);
+    }
+    async runTransaction(updateFn) {
+      const MAX_RETRIES = 5;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const tx = new LanTransaction();
+        try {
+          await updateFn(tx);
+        } catch (e) {
+          throw e; // Error lógico de la app
+        }
+        try {
+          await send({ op: "transaction", reads: tx._reads, writes: tx._writes });
+          return; // Éxito
+        } catch (e) {
+          if (e.message === "conflict" && attempt < MAX_RETRIES - 1) {
+            await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
+            continue;
+          }
+          throw e;
+        }
+      }
     }
     batch() {
-      return new LanBatch(this.client);
-    }
-    runTransaction(updateFn) {
-      const client = this.client;
-      const txId = "tx_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-      const writes = [];
-      const tx = {
-        get(ref) {
-          return client.send({ op: "txGet", txId, path: ref.path }).then((r) => docSnapFromGet(client, ref.path, r));
-        },
-        set(ref, data, opts) {
-          writes.push({ type: "set", path: ref.path, data: encodeSentinels(data), merge: !!(opts && opts.merge) });
-          return tx;
-        },
-        update(ref, data) {
-          writes.push({ type: "update", path: ref.path, data: encodeSentinels(data) });
-          return tx;
-        },
-        delete(ref) {
-          writes.push({ type: "delete", path: ref.path });
-          return tx;
-        },
-      };
-      return client
-        .send({ op: "txBegin", txId })
-        .then(() => Promise.resolve().then(() => updateFn(tx)))
-        .then(
-          (result) => client.send({ op: "txCommit", txId, writes }).then(() => result),
-          (err) => client.send({ op: "txAbort", txId }).catch(() => {}).then(() => Promise.reject(err))
-        );
+      return new LanWriteBatch();
     }
   }
 
-  global.LAN = {
-    serverTimestamp: function () {
-      return SERVER_TIMESTAMP_MARKER;
-    },
-    isServerTimestampMarker,
-    connect: function (url, room, displayName) {
-      const client = new LanClient(url);
-      return client.connect().then(
-        () =>
-          client.send({ op: "join", room: room || "main", displayName: displayName || "" }).then((joinInfo) => ({
-            client,
-            db: new LanFirestore(client),
-            isFirst: !!(joinInfo && joinInfo.isFirst),
-          })),
-        (err) => {
-          throw err;
-        }
-      );
+  /* ======================================================================
+     Helpers
+     ====================================================================== */
+  function deepCopy(obj) {
+    if (obj == null) return obj;
+    if (typeof obj !== "object") return obj;
+    if (obj instanceof Date) return new Date(obj.getTime());
+    if (Array.isArray(obj)) return obj.map(deepCopy);
+    const out = {};
+    for (const k of Object.keys(obj)) out[k] = deepCopy(obj[k]);
+    return out;
+  }
+
+  /* ======================================================================
+     API pública
+     ====================================================================== */
+  window.LAN = {
+    connect: connect_,
+    serverTimestamp() {
+      return MSG_SERVER_TIMESTAMP;
     },
   };
-})(window);
+})();

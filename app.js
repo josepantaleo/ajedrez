@@ -31,6 +31,20 @@
       // producción; para reactivarla al depurar, poner esto en true.
       const PERF_DEBUG = false;
 
+      // Forward declarations para variables globales usadas en
+      // funciones definidas antes de su inicialización.
+      let state;
+      let matchChatPanelOpen;
+      let gameStarted;
+      let tournamentMatchActive;
+      let opponentMoveHighlight;
+      let explainMode;
+      let lastTournamentState;
+      let currentUser;
+      let tournamentClockOffsetMs = 0;
+      let lastTurnStartAtMs = 0;
+      const TOURNAMENT_ADMIN_EMAIL = "ipem146centenario@gmail.com";
+
       // =========================
       // FEEDBACK TÁCTIL (sin el flash gris de Android/Chrome)
       // =========================
@@ -287,7 +301,7 @@
         avatar: "knight",
       };
 
-      let state = loadState();
+      state = loadState();
       let toastTimer = null;
       // Callback opcional que se ejecuta al cerrar el popup de alerta (#alert),
       // sea por el botón de acción o por tocar afuera del cuadro. Se usa para
@@ -788,13 +802,13 @@
         if (pvpFlipLabel) pvpFlipLabel.style.display = isBot ? "none" : "";
       }
 
-      let gameStarted = false;
+      gameStarted = false;
 
       // -------- Partida de torneo jugada en el tablero grande de "Jugar" --------
       // (declaradas acá arriba, junto con el resto del estado, porque
       // render() ya las usa y se llama mucho antes de llegar a donde
       // estaban originalmente declaradas más abajo en el archivo)
-      let tournamentMatchActive = false;
+      tournamentMatchActive = false;
       let tournamentMatchCtx = null; // {round, board, whiteName, blackName, whiteEmail, blackEmail}
       let tournamentMatchBusy = false;
       let tournamentResultShown = false; // evita mostrar el popup de fin de partida más de una vez
@@ -810,7 +824,7 @@
       // gamesCollectionRef más arriba).
       let matchChatUnsub = null;
       let matchChatMessages = [];
-      let matchChatPanelOpen = false;
+      matchChatPanelOpen = false;
       let matchChatUnreadCount = 0;
       // true mientras no llegó todavía el primer snapshot de la mesa actual:
       // sirve para no sonar ni mostrar popup por todo el historial que ya
@@ -836,8 +850,6 @@
       let callCandidatesUnsub = [];
       let callState = "idle"; // idle | outgoing | incoming | active
       let callIsMuted = false;
-      let callRound = null;
-      let callBoard = null;
       let callPendingOffer = null; // oferta SDP del rival mientras suena una llamada entrante, hasta que se acepta o rechaza
       let tournamentTimeoutClaimBusy = false; // evita reclamar la bandera caída más de una vez a la vez
 
@@ -999,7 +1011,7 @@
       // Declarada acá arriba, antes de render(), porque render() se llama
       // muy temprano al cargar la página (antes de que existiera esta
       // variable si se declaraba más abajo, lo que rompía toda la carga).
-      let opponentMoveHighlight = null; // { from, to }
+      opponentMoveHighlight = null; // { from, to }
       let opponentMoveHighlightTimer = null;
 
       function clearOpponentMoveHighlight() {
@@ -3193,7 +3205,7 @@
       // EXPLICACIONES (panel "Modo educativo"): explica cada jugada apenas se
       // juega, actualizando en vivo la tarjeta "Ayuda educativa".
       // =========================
-      let explainMode = localStorage.getItem("chessExplainMode") !== "off";
+      explainMode = localStorage.getItem("chessExplainMode") !== "off";
       const explainToggleEl = document.getElementById("toggle-explain");
       const explainToggleElCfg = document.getElementById("toggle-explain-cfg");
       const EDU_DEFAULT_TITLE = "Pensá antes de mover";
@@ -5250,8 +5262,6 @@
       // cuelga/cancela/rechaza del otro lado.
       function subscribeCallSignaling(round, board) {
         unsubscribeCallSignaling();
-        callRound = round;
-        callBoard = board;
         callDocUnsub = callDocRef_(round, board).onSnapshot(
           (docSnap) => {
             const data = docSnap.exists ? docSnap.data() : null;
@@ -5291,8 +5301,6 @@
           callDocUnsub = null;
         }
         teardownCallLocal_();
-        callRound = null;
-        callBoard = null;
       }
 
       // Últimas partidas de la ronda actual (alimentado por
@@ -5302,7 +5310,7 @@
       let subscribedRound_ = undefined;
       let tournamentUnsub = null;
       let tournamentBusy = false;
-      let lastTournamentState = null;
+      lastTournamentState = null;
       // Último meta.status conocido (antes de procesar el snapshot actual).
       // Sirve para detectar la TRANSICIÓN a "finished" (se finalizó el
       // torneo) o "setup" (se reinició), y en ese momento sacar a cualquier
@@ -5313,7 +5321,7 @@
       // con el que se encontró al entrar).
       let lastKnownTournamentStatus_ = null;
       let tournamentEditingPlayerId = null; // id del jugador cuya fila está en modo edición en el panel de árbitro
-      let currentUser = null; // { email, displayName } una vez logueado con Google (o "logueado" localmente en modo LAN)
+      currentUser = null; // { email, displayName } una vez logueado con Google (o "logueado" localmente en modo LAN)
 
       // "online" (Firebase/Internet, comportamiento de siempre) o "lan"
       // (servidor local vía lan-server.js + lan-shim.js, sin internet).
@@ -5327,6 +5335,12 @@
       // evita tener que ramificar cada lugar que lo usa.
       function srvTimestamp() {
         return connectionMode === "lan" ? window.LAN.serverTimestamp() : firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      function getTimestampMs(ts) {
+        if (ts && typeof ts.toMillis === "function") return ts.toMillis();
+        if (typeof ts === "number") return ts;
+        return 0;
       }
 
       // Genera un "email" sintético a partir del nombre para identificar a
@@ -5411,7 +5425,6 @@
       // permisivas ("allow write: if true"), cualquier visitante puede
       // borrar o alterar el torneo aunque esta pantalla no le muestre los
       // botones para hacerlo.
-      const TOURNAMENT_ADMIN_EMAIL = "ipem146centenario@gmail.com";
       let authListenerAttached = false;
 
       // Modo árbitro: una cuenta aparte del admin del torneo, exclusiva para
@@ -6528,7 +6541,7 @@
           // Al reanudar, reiniciamos el "reloj de arranque" del turno actual
           // para no cobrarle a quien tiene el turno el tiempo que la partida
           // estuvo parada (ver updateTournamentClockDisplay).
-          if (!suspended && g.clock && g.turnStartAt) g.turnStartAt = Date.now();
+          if (!suspended && g.clock && g.turnStartAt) g.turnStartAt = srvTimestamp();
           tx.update(gameDocRef, g);
         });
         return getTournamentStateOnce();
@@ -6851,14 +6864,14 @@
           if (isRealMove) {
             const moverColor = new Chess(cachedGame.fen).turn();
             const elapsed = cachedGame.turnStartAt
-              ? Math.max(0, Math.round((effectiveMoveAt - cachedGame.turnStartAt) / 1000))
+              ? Math.max(0, Math.round((effectiveMoveAt - getTimestampMs(cachedGame.turnStartAt)) / 1000))
               : 0;
             const newClock = { ...cachedGame.clock, [moverColor]: Math.max(0, cachedGame.clock[moverColor] - elapsed) };
             if (!gameOverResult && cachedGame.increment) {
               newClock[moverColor] += cachedGame.increment;
             }
             patch.clock = newClock;
-            patch.turnStartAt = effectiveMoveAt;
+            patch.turnStartAt = srvTimestamp();
           }
           if (gameOverResult) {
             patch.status = "finished";
@@ -6866,6 +6879,10 @@
           }
           await gameDocRef.update(patch);
           const writtenGame = { ...cachedGame, ...patch };
+          // Reemplazar el placeholder de serverTimestamp por un timestamp
+          // local para que el cronómetro del cliente pueda calcular elapsed
+          // correctamente mientras espera el snapshot de Firestore.
+          if (isRealMove) writtenGame.turnStartAt = effectiveMoveAt;
           if (!gameOverResult) {
             return { gameRow: writtenGame };
           }
@@ -6904,12 +6921,12 @@
           // recién empieza a correr a partir de esta jugada.
           if (g.clock && fen !== g.fen) {
             const moverColor = new Chess(g.fen).turn();
-            const elapsed = g.turnStartAt ? Math.max(0, Math.round((effectiveMoveAt - g.turnStartAt) / 1000)) : 0;
+            const elapsed = g.turnStartAt ? Math.max(0, Math.round((effectiveMoveAt - getTimestampMs(g.turnStartAt)) / 1000)) : 0;
             g.clock = { ...g.clock, [moverColor]: Math.max(0, g.clock[moverColor] - elapsed) };
             if (!gameOverResult && g.increment) {
               g.clock = { ...g.clock, [moverColor]: g.clock[moverColor] + g.increment };
             }
-            g.turnStartAt = effectiveMoveAt;
+            g.turnStartAt = srvTimestamp();
           }
 
           g.fen = fen;
@@ -6939,6 +6956,10 @@
           }
           tx.update(gameDocRef, g);
           writtenGame = g;
+          // Reemplazar el placeholder de serverTimestamp por un timestamp
+          // local para que el cronómetro del cliente pueda calcular elapsed
+          // correctamente mientras espera el snapshot de Firestore.
+          if (g.clock && fen !== g.fen) writtenGame.turnStartAt = effectiveMoveAt;
         });
         // ANTES: acá se hacían dos lecturas de red MÁS, en serie, después de
         // que la transacción ya había confirmado la jugada: getTournamentStateOnce()
@@ -9087,8 +9108,16 @@
         const turn = game.turn();
         const finished = gameRow.status === "finished";
         const suspended = gameRow.status === "suspended";
+        const turnStartAtMs = getTimestampMs(gameRow.turnStartAt);
+        if (turnStartAtMs && turnStartAtMs !== lastTurnStartAtMs) {
+          lastTurnStartAtMs = turnStartAtMs;
+          tournamentClockOffsetMs = turnStartAtMs - Date.now();
+        }
+        const serverNow = Date.now() + tournamentClockOffsetMs;
         const elapsed =
-          finished || suspended ? 0 : Math.max(0, Math.round((Date.now() - (gameRow.turnStartAt || Date.now())) / 1000));
+          finished || suspended || !turnStartAtMs
+            ? 0
+            : Math.max(0, Math.round((serverNow - turnStartAtMs) / 1000));
         const remaining = {
           w: gameRow.clock.w - (turn === "w" && !finished && !suspended ? elapsed : 0),
           b: gameRow.clock.b - (turn === "b" && !finished && !suspended ? elapsed : 0),
@@ -9276,6 +9305,8 @@
         clearInterval(tournamentClockTimer);
         tournamentClockTimer = null;
         tournamentCurrentGameRow = null;
+        tournamentClockOffsetMs = 0;
+        lastTurnStartAtMs = 0;
         unsubscribeMatchChat();
         unsubscribeCallSignaling();
 

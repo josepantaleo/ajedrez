@@ -1876,82 +1876,6 @@
               </div>
             </div>
 
-            <div id="tournament-mode-select" class="card">
-              <h3>¿Cómo querés jugar?</h3>
-              <p class="muted" style="font-size: 13px">
-                <strong>Online</strong> usa internet y cuenta de Gmail (modo de siempre).
-                <strong>LAN</strong> funciona sin internet, solo con todos conectados a la
-                misma red Wi-Fi.
-              </p>
-              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px">
-                <button class="btn primary" id="tournament-mode-online-btn">🌐 Torneo Online</button>
-                <button class="btn" id="tournament-mode-lan-btn">📶 Torneo por red local (LAN)</button>
-              </div>
-            </div>
-
-            <div id="tournament-lan-box" class="card" style="display: none">
-              <h3>📶 Torneo por red local (LAN)</h3>
-              <p class="muted" style="font-size: 13px">
-                No hace falta internet ni Gmail: alcanza con que todos los
-                dispositivos estén conectados a la misma red Wi-Fi/LAN. Una
-                sola persona (el anfitrión) corre un servidor chiquito en su
-                compu — ver <code>lan-server.js</code> y
-                <code>README-LAN.md</code> — y el resto se conecta desde el
-                navegador a la dirección que ese servidor muestre en pantalla.
-              </p>
-
-              <label style="display: block; margin: 12px 0 6px; font-weight: 600">Tu nombre</label>
-              <input
-                type="text"
-                id="lan-name-input"
-                placeholder="Nombre y apellido"
-                style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)"
-              />
-
-              <label style="display: block; margin: 12px 0 6px; font-weight: 600">Sala (opcional)</label>
-              <input
-                type="text"
-                id="lan-room-input"
-                placeholder="main"
-                style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)"
-              />
-
-              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px">
-                <div style="flex: 1; min-width: 240px; padding: 12px; border-radius: 10px; border: 1px solid var(--surface2)">
-                  <strong>🖥️ Soy el anfitrión</strong>
-                  <p class="muted" style="font-size: 13px; margin: 6px 0">
-                    Ya corriste <code>node lan-server.js</code> en esta misma compu.
-                  </p>
-                  <label style="display: block; margin: 6px 0; font-weight: 600; font-size: 13px">Dirección del servidor</label>
-                  <input
-                    type="text"
-                    id="lan-host-address-input"
-                    value="localhost:8080"
-                    style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)"
-                  />
-                  <button class="btn primary" id="lan-host-btn" style="margin-top: 10px; width: 100%">Conectarme como anfitrión</button>
-                </div>
-
-                <div style="flex: 1; min-width: 240px; padding: 12px; border-radius: 10px; border: 1px solid var(--surface2)">
-                  <strong>📲 Me sumo a una sala</strong>
-                  <p class="muted" style="font-size: 13px; margin: 6px 0">
-                    Pedile al anfitrión la dirección que le muestra la terminal.
-                  </p>
-                  <label style="display: block; margin: 6px 0; font-weight: 600; font-size: 13px">Dirección del anfitrión</label>
-                  <input
-                    type="text"
-                    id="lan-host-input"
-                    placeholder="192.168.0.15:8080"
-                    style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--surface2); background: var(--surface); color: var(--text)"
-                  />
-                  <button class="btn" id="lan-join-btn" style="margin-top: 10px; width: 100%">Unirme</button>
-                </div>
-              </div>
-
-              <p class="lesson-gate-note" id="lan-connect-status"></p>
-              <button class="btn" id="lan-back-btn" style="margin-top: 6px">← Volver</button>
-            </div>
-
             <div id="tournament-auth-box" class="card" style="display: none">
               <h3>Iniciar sesión</h3>
               <p class="muted" id="tournament-auth-status">No iniciaste sesión todavía.</p>
@@ -3379,8 +3303,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-    <!-- Torneo LAN: shim que imita la API de Firestore hablando con lan-server.js -->
-    <script src="./lan-shim.js"></script>
 
     <script type="module" src="app.js"></script>
   </body>
