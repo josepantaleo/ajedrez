@@ -33,24 +33,6 @@
         });
       }
 
-      // Instrumentación temporal de rendimiento (mediciones con
-      // performance.now/JSON.stringify y sus console.log asociados), usada
-      // en su momento para diagnosticar cuellos de botella en el torneo.
-      // Queda apagada por defecto para no gastar CPU en la ruta crítica en
-      // producción; para reactivarla al depurar, poner esto en true.
-      const PERF_DEBUG = false;
-
-      // Instrumentación temporal para diagnosticar el bug reportado de
-      // "los cronómetros de la partida de torneo no cuentan hacia atrás".
-      // Loguea, como máximo una vez por segundo, el estado exacto que usa
-      // updateTournamentClockDisplay() para decidir si mueve el número o
-      // no, más el momento en que se marca "joined" y el momento en que se
-      // escribe turnStartAt en cada jugada. Poner en false para apagarlo
-      // (o borrar este bloque y los bloques marcados "CLOCK_DEBUG" más
-      // abajo una vez encontrada la causa).
-      const CLOCK_DEBUG = false;
-      let _clockDebugLastLog = 0;
-
       // Forward declarations para variables globales usadas en
       // funciones definidas antes de su inicialización.
       let state;
@@ -5904,13 +5886,6 @@
               // simplemente se trata como "ya confirmado" (mismo
               // comportamiento que había antes de este cambio).
               const pending = !!(d.metadata && d.metadata.hasPendingWrites);
-              if (CLOCK_DEBUG) {
-                console.log("[CLOCK_DEBUG] doc snapshot", {
-                  id: d.id,
-                  hasMetadata: !!d.metadata,
-                  hasPendingWrites: pending,
-                });
-              }
               const nextGame = d.data({ serverTimestamps: pending ? "none" : "estimate" });
               const activeGameId =
                 tournamentMatchCtx &&
@@ -5998,17 +5973,6 @@
           (snap) => {
             statusEl.textContent = "✓ Conectado.";
             statusEl.classList.add("correct");
-            // --- INSTRUMENTACIÓN TEMPORAL: tamaño del doc raíz del torneo ---
-            // Detrás de PERF_DEBUG: el JSON.stringify sobre el doc completo
-            // (que puede ser grande, con cientos de pairings) solo corre si
-            // se activa el flag a mano para depurar.
-            if (PERF_DEBUG && snap.exists) {
-              const __raw = snap.data();
-              const __bytes = JSON.stringify(__raw).length;
-              console.log(
-                `[perf] room snapshot ~${(__bytes / 1024).toFixed(1)}KB | pairings=${(__raw.pairings || []).length} players=${(__raw.players || []).length}`
-              );
-            }
             const state = normalizeTournamentState(snap.exists ? snap.data({ serverTimestamps: "estimate" }) : null);
             const previousStatus = lastKnownTournamentStatus_;
             lastKnownTournamentStatus_ = state.meta.status;
@@ -7149,16 +7113,6 @@
             patch.status = "finished";
             patch.result = gameOverResult;
           }
-          if (CLOCK_DEBUG) {
-            console.log("[CLOCK_DEBUG] fbMakeMove fast-path", {
-              isRealMove,
-              hasClockOnCachedGame: !!cachedGame.clock,
-              cachedGameTurnStartAt: cachedGame.turnStartAt,
-              joined: cachedGame.joined,
-              patchHasTurnStartAt: "turnStartAt" in patch,
-              patchClock: patch.clock,
-            });
-          }
           await gameDocRef.update(patch);
           const writtenGame = { ...cachedGame, ...patch };
           // Reemplazar el placeholder de serverTimestamp por un timestamp
@@ -7291,10 +7245,8 @@
             ) {
               tx.update(gameDocRef, { turnStartAt: srvTimestamp() });
             }
-            if (CLOCK_DEBUG) console.log("[CLOCK_DEBUG] fbMarkJoined: ya estaba marcado", { round, board, color, joined });
             return; // ya estaba marcado: no hace falta escribir de nuevo
           }
-          if (CLOCK_DEBUG) console.log("[CLOCK_DEBUG] fbMarkJoined: marcando presencia", { round, board, color, joinedAntes: joined });
           const nextJoined = { ...joined, [color]: true };
           const patch = { joined: nextJoined };
           if (
@@ -8481,19 +8433,8 @@
       let standingsSignature_ = null;
       function renderStandingsAndPlayers_(state, isAdmin, isReferee) {
         const standingsEl = document.getElementById("tournament-standings-list");
-        // --- INSTRUMENTACIÓN TEMPORAL: costo de rankPlayers_ + stringify ---
-        // Detrás de PERF_DEBUG: en producción no se llama a performance.now()
-        // ni se arma el string de log en cada render.
-        const __t0 = PERF_DEBUG ? performance.now() : 0;
         const ranked2 = rankPlayers_(state.players, state.pairings);
-        const __t1 = PERF_DEBUG ? performance.now() : 0;
         const newStandingsSignature = JSON.stringify([ranked2, isReferee]);
-        if (PERF_DEBUG) {
-          const __t2 = performance.now();
-          console.log(
-            `[perf] standings rank=${(__t1 - __t0).toFixed(2)}ms stringify=${(__t2 - __t1).toFixed(2)}ms | pairings=${state.pairings.length}`
-          );
-        }
         if (standingsSignature_ !== newStandingsSignature) {
           standingsSignature_ = newStandingsSignature;
           let rows = ranked2
@@ -8812,17 +8753,7 @@
         // listener solo se activa cuando termina una partida o cambia la
         // ronda. Igual dejamos la comparación por firma para no rehacer el
         // HTML si nada de lo que se muestra acá cambió realmente.
-        // --- INSTRUMENTACIÓN TEMPORAL: costo del stringify sobre el historial completo ---
-        // Detrás de PERF_DEBUG: en producción no se llama a performance.now()
-        // ni se arma el string de log en cada render.
-        const __t0 = PERF_DEBUG ? performance.now() : 0;
         const publicSignature = JSON.stringify([state.players, state.pairings, state.meta]);
-        if (PERF_DEBUG) {
-          const __t1 = performance.now();
-          console.log(
-            `[perf] renderPublicScreen stringify=${(__t1 - __t0).toFixed(2)}ms | pairings=${state.pairings.length} players=${state.players.length}`
-          );
-        }
         if (contentEl.dataset.sig === publicSignature) return;
         contentEl.dataset.sig = publicSignature;
 
@@ -9408,22 +9339,6 @@
         const gameRow = tournamentCurrentGameRow;
         const wEl = document.getElementById("clock-w");
         const bEl = document.getElementById("clock-b");
-        if (CLOCK_DEBUG && Date.now() - _clockDebugLastLog > 1000) {
-          _clockDebugLastLog = Date.now();
-          console.log("[CLOCK_DEBUG] tick", {
-            hasGameRow: !!gameRow,
-            hasClock: !!(gameRow && gameRow.clock),
-            hasWEl: !!wEl,
-            hasBEl: !!bEl,
-            status: gameRow && gameRow.status,
-            joined: gameRow && gameRow.joined,
-            turnStartAtRaw: gameRow && gameRow.turnStartAt,
-            turnStartAtType: gameRow && gameRow.turnStartAt && typeof gameRow.turnStartAt,
-            turnStartAtHasToMillis: !!(gameRow && gameRow.turnStartAt && typeof gameRow.turnStartAt.toMillis === "function"),
-            tournamentMatchBusy,
-            clockRaw: gameRow && gameRow.clock,
-          });
-        }
         if (!gameRow || !gameRow.clock || !wEl || !bEl) return;
         // Mientras nuestra propia jugada se está sincronizando con Firestore
         // (tournamentMatchBusy), game.turn() ya cambió en el cliente pero
@@ -9602,15 +9517,6 @@
           tournamentCurrentGameRow = gameRow;
           clearInterval(tournamentClockTimer);
           const clockEl = document.querySelector("#page-jugar .clock");
-          if (CLOCK_DEBUG) {
-            console.log("[CLOCK_DEBUG] enterTournamentMatch", {
-              hasClockEl: !!clockEl,
-              gameRowClock: gameRow.clock,
-              gameRowJoined: gameRow.joined,
-              gameRowTurnStartAt: gameRow.turnStartAt,
-              gameRowStatus: gameRow.status,
-            });
-          }
           if (gameRow.clock) {
             if (clockEl) clockEl.style.display = "";
             updateTournamentClockDisplay();
