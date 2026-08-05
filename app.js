@@ -6935,7 +6935,7 @@
           // Solo el administrador, el árbitro, o alguno de los dos jugadores
           // de esta partida puede cargar/cambiar su resultado (evita que
           // cualquier usuario cargue resultados de partidas ajenas).
-          const myEmail = currentUser ? currentUser.email : "";
+          const myEmail = currentUser && currentUser.email ? currentUser.email.toLowerCase() : "";
           const isParticipant =
             myEmail && ((target.whiteEmail || "").toLowerCase() === myEmail || (target.blackEmail || "").toLowerCase() === myEmail);
           if (!isCurrentUserAdmin(lastTournamentState) && !isCurrentUserReferee() && !isParticipant) {
@@ -8238,7 +8238,7 @@
           bannerEl.style.display = "none";
         }
 
-        const myEmail = currentUser.email;
+        const myEmail = currentUser && currentUser.email ? currentUser.email.toLowerCase() : "";
         const isReferee = isCurrentUserReferee();
         const currentRoundPairings = state.pairings.filter((p) => p.round === state.meta.round);
         const listEl = document.getElementById("tournament-pairings-list");
@@ -9297,8 +9297,18 @@
       }
 
       function tournamentMyColor() {
-        if (!tournamentMatchCtx || !currentUser) return "";
-        const email = currentUser.email;
+        if (!tournamentMatchCtx || !currentUser || !currentUser.email) return "";
+        // OJO: whiteEmail/blackEmail se comparan en minúsculas, así que
+        // currentUser.email TAMBIÉN tiene que pasar por toLowerCase() acá.
+        // Si no (como estaba antes), un jugador cuya cuenta de Google
+        // guarda el email con alguna mayúscula (algo fuera de su control)
+        // nunca matchea ni como blancas ni como negras: tournamentMyColor()
+        // devuelve "" (lo trata como espectador), controlsEl queda oculto,
+        // fbMarkJoined() nunca se llama para ese jugador y "joined" se
+        // queda en false para siempre → turnStartAt nunca se escribe →
+        // el cronómetro de esa mesa se queda congelado en el tiempo
+        // inicial en las dos pantallas conectadas (nunca arranca).
+        const email = currentUser.email.toLowerCase();
         if (tournamentMatchCtx.whiteEmail && tournamentMatchCtx.whiteEmail.toLowerCase() === email) return "w";
         if (tournamentMatchCtx.blackEmail && tournamentMatchCtx.blackEmail.toLowerCase() === email) return "b";
         return "";
