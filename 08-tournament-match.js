@@ -1,4 +1,76 @@
 /* Live tournament match lifecycle and event bindings. Generated from the verified legacy bundle. */
+let roundCountdownActionBusy_ = !1;
+function setRoundCountdownActionBusy_(e) {
+  roundCountdownActionBusy_ = e;
+  const t = document.getElementById("tournament-round-countdown-composer"),
+    a = document.getElementById("tournament-round-countdown-control-status");
+  (t &&
+    t.querySelectorAll("button, input").forEach((t) => {
+      t.disabled = e;
+    }),
+    a && e && (a.textContent = "Sincronizando con Firebase…"));
+}
+async function runRoundCountdownAction_(e, t) {
+  if (roundCountdownActionBusy_) return;
+  setRoundCountdownActionBusy_(!0);
+  const a = document.getElementById(
+    "tournament-round-countdown-control-status",
+  );
+  try {
+    (await e(), a && (a.textContent = t), toast(t));
+    return !0;
+  } catch (e) {
+    (a && (a.textContent = "No se pudo actualizar el countdown."), showError(e));
+    return !1;
+  } finally {
+    setRoundCountdownActionBusy_(!1);
+  }
+}
+function confirmRoundCountdownReplacement_() {
+  return (
+    !lastTournamentState ||
+    !hasRoundCountdown_(lastTournamentState) ||
+    confirm("Ya hay un countdown configurado. ¿Querés reemplazarlo?")
+  );
+}
+function setupRoundCountdownControls_() {
+  const e = document.getElementById("tournament-round-countdown-composer"),
+    t = document.getElementById("tournament-round-countdown-custom-minutes"),
+    a = document.getElementById("tournament-round-countdown-start-btn"),
+    n = document.getElementById("tournament-round-countdown-cancel-btn");
+  if (!e || !t || !a || !n) return;
+  const o = async (e) =>
+    confirmRoundCountdownReplacement_()
+      ? runRoundCountdownAction_(
+          () => fbSetRoundCountdown(e),
+          "⏳ Countdown iniciado y sincronizado",
+        )
+      : !1;
+  (e.querySelectorAll("[data-countdown-minutes]").forEach((e) => {
+    e.addEventListener("click", () => o(Number(e.dataset.countdownMinutes)));
+  }),
+    a.addEventListener("click", async () => {
+      const e = Number(t.value);
+      (await o(e)) && (t.value = "");
+    }),
+    t.addEventListener("keydown", (e) => {
+      "Enter" === e.key && (e.preventDefault(), a.click());
+    }),
+    e.querySelectorAll("[data-countdown-adjust-ms]").forEach((e) => {
+      e.addEventListener("click", () => {
+        const t = Number(e.dataset.countdownAdjustMs),
+          a = t > 0 ? "⏳ Se añadió 1 minuto" : "⏳ Se restó 1 minuto";
+        runRoundCountdownAction_(() => fbAdjustRoundCountdown(t), a);
+      });
+    }),
+    n.addEventListener("click", () => {
+      confirm("¿Cancelar el countdown para todos los participantes?") &&
+        runRoundCountdownAction_(
+          fbCancelRoundCountdown,
+          "⏳ Countdown cancelado",
+        );
+    }));
+}
 async function enterTournamentMatch(e, t, a, n, o, r) {
   document.body.classList.add("fullscreen-game");
   const s = document.getElementById("game-fullscreen");
@@ -474,43 +546,7 @@ configSignoutBtn &&
       const e = document.getElementById("tournament-announcement-history-list");
       e.style.display = "none" === e.style.display ? "" : "none";
     }),
-  document
-    .querySelectorAll(
-      "#tournament-round-countdown-composer [data-countdown-minutes]",
-    )
-    .forEach((e) => {
-      e.addEventListener("click", async () => {
-        try {
-          (await fbSetRoundCountdown(Number(e.dataset.countdownMinutes)),
-            toast("⏳ Countdown iniciado"));
-        } catch (e) {
-          showError(e);
-        }
-      });
-    }),
-  document
-    .getElementById("tournament-round-countdown-start-btn")
-    .addEventListener("click", async () => {
-      const e = document.getElementById(
-        "tournament-round-countdown-custom-minutes",
-      );
-      try {
-        (await fbSetRoundCountdown(Number(e.value)),
-          (e.value = ""),
-          toast("⏳ Countdown iniciado"));
-      } catch (e) {
-        showError(e);
-      }
-    }),
-  document
-    .getElementById("tournament-round-countdown-cancel-btn")
-    .addEventListener("click", async () => {
-      try {
-        (await fbCancelRoundCountdown(), toast("⏳ Countdown cancelado"));
-      } catch (e) {
-        showError(e);
-      }
-    }),
+  setupRoundCountdownControls_(),
   document
     .getElementById("tournament-settings-btn")
     .addEventListener("click", () => {

@@ -8,7 +8,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260805-6" />
+    <link rel="stylesheet" href="styles.css?v=20260806-1" />
   </head>
 
   <body>
@@ -2123,11 +2123,21 @@
                 </p>
               </div>
 
-              <div id="tournament-round-countdown-banner" class="card round-countdown-banner" style="display: none">
+              <div
+                id="tournament-round-countdown-banner"
+                class="card round-countdown-banner"
+                role="timer"
+                aria-live="polite"
+                style="display: none"
+              >
                 <p style="margin: 0; font-weight: 600">
                   ⏳ <span id="tournament-round-countdown-label"></span>
                   <span id="tournament-round-countdown-time" class="round-countdown-time"></span>
                 </p>
+                <p id="tournament-round-countdown-detail" class="round-countdown-detail"></p>
+                <div class="round-countdown-progress-track" aria-hidden="true">
+                  <div id="tournament-round-countdown-progress" class="round-countdown-progress"></div>
+                </div>
               </div>
 
               <button
@@ -2178,15 +2188,19 @@
                   ronda arranca en 10 minutos".
                 </p>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+                  <button class="btn" type="button" data-countdown-minutes="0.5">30 seg</button>
+                  <button class="btn" type="button" data-countdown-minutes="1">1 min</button>
+                  <button class="btn" type="button" data-countdown-minutes="3">3 min</button>
                   <button class="btn" type="button" data-countdown-minutes="5">5 min</button>
                   <button class="btn" type="button" data-countdown-minutes="10">10 min</button>
                   <button class="btn" type="button" data-countdown-minutes="15">15 min</button>
                   <input
                     type="number"
                     id="tournament-round-countdown-custom-minutes"
-                    placeholder="Otro (min)"
+                    placeholder="Minutos"
                     min="1"
                     max="180"
+                    step="1"
                     style="
                       width: 100px;
                       padding: 8px 10px;
@@ -2199,6 +2213,22 @@
                   <button class="btn primary" id="tournament-round-countdown-start-btn" type="button">Arrancar</button>
                   <button
                     class="btn"
+                    type="button"
+                    data-countdown-adjust-ms="-60000"
+                    style="display: none"
+                  >
+                    −1 min
+                  </button>
+                  <button
+                    class="btn"
+                    type="button"
+                    data-countdown-adjust-ms="60000"
+                    style="display: none"
+                  >
+                    +1 min
+                  </button>
+                  <button
+                    class="btn"
                     id="tournament-round-countdown-cancel-btn"
                     type="button"
                     style="display: none"
@@ -2206,6 +2236,11 @@
                     Cancelar countdown
                   </button>
                 </div>
+                <p
+                  id="tournament-round-countdown-control-status"
+                  class="muted"
+                  style="font-size: 12px; margin: 8px 0 0"
+                ></p>
               </div>
 
               <div class="card">
@@ -3315,6 +3350,6 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260806-11"></script>
+    <script defer src="app.js?v=20260806-12"></script>
   </body>
 </html>

@@ -89,37 +89,129 @@ function stopRoundCountdownTimer_() {
   roundCountdownTimer_ &&
     (clearInterval(roundCountdownTimer_), (roundCountdownTimer_ = null));
 }
+function getRoundCountdownEndMs_(e) {
+  const t = Number(e && e.roundCountdownEndsAtMs);
+  if (Number.isFinite(t) && t > 0) return t;
+  const a = getTimestampMs(e && e.roundCountdownSetAt),
+    n = Number(e && e.roundCountdownMs);
+  return a && Number.isFinite(n) && n > 0 ? a + n : 0;
+}
+function getRoundCountdownTargetRound_(e) {
+  const t = Number(e && e.roundCountdownRound);
+  return Number.isInteger(t) && t > 0
+    ? t
+    : Math.max(1, Number(e && e.round) || 0);
+}
+function hasRoundCountdown_(e) {
+  return !!getRoundCountdownEndMs_(e && e.meta ? e.meta : e);
+}
 function renderRoundCountdown_(e) {
   const t = document.getElementById("tournament-round-countdown-banner"),
     a = document.getElementById("tournament-round-countdown-label"),
     n = document.getElementById("tournament-round-countdown-time"),
-    o = document.getElementById("tournament-round-countdown-cancel-btn");
+    o = document.getElementById("tournament-round-countdown-cancel-btn"),
+    r = document.getElementById("tournament-round-countdown-detail"),
+    s = document.getElementById("tournament-round-countdown-progress"),
+    l = document.querySelectorAll(
+      "#tournament-round-countdown-composer [data-countdown-adjust-ms]",
+    );
   if (!t || !a || !n) return;
   stopRoundCountdownTimer_();
-  const r = e.meta.roundCountdownSetAt,
-    s = e.meta.roundCountdownMs,
-    l = r && "function" == typeof r.toMillis && s;
-  if ((o && (o.style.display = l ? "" : "none"), !l))
+  const i = getRoundCountdownEndMs_(e.meta),
+    c = getRoundCountdownTargetRound_(e.meta),
+    d = Number(e.meta.roundCountdownDurationMs) || Number(e.meta.roundCountdownMs);
+  if (
+    (o && (o.style.display = i ? "" : "none"),
+    l.forEach((e) => {
+      e.style.display = i ? "" : "none";
+    }),
+    !i)
+  )
     return (
       (t.style.display = "none"),
-      void t.classList.remove("round-countdown-urgent")
+      void t.classList.remove(
+        "round-countdown-urgent",
+        "round-countdown-critical",
+        "round-countdown-finished",
+      )
     );
-  const i = r.toMillis() + s;
-  ((a.textContent = `Ronda ${e.meta.round + 1} arranca en`),
-    (t.style.display = ""));
-  const c = () => {
-    const e = i - syncedNow_();
-    if (e <= 0)
-      return (
-        (n.textContent = "¡ya!"),
-        t.classList.remove("round-countdown-urgent"),
-        void stopRoundCountdownTimer_()
-      );
-    const a = Math.ceil(e / 1e3);
-    ((n.textContent = formatTime(a)),
-      t.classList.toggle("round-countdown-urgent", a <= 60));
-  };
-  (c(), (roundCountdownTimer_ = setInterval(c, 250)));
+  t.style.display = "";
+  const u = new Date(i).toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    m = () => {
+      const e = i - syncedNow_(),
+        o = Math.max(0, Math.ceil(e / 1e3)),
+        l = Number.isFinite(d) && d > 0 ? d : Math.max(1e3, i - syncedNow_()),
+        m = Math.max(0, Math.min(100, (e / l) * 100));
+      if (
+        (s && (s.style.width = `${m}%`),
+        r &&
+          (r.textContent =
+            e > 0
+              ? `Hora prevista: ${u}`
+              : `La hora prevista era ${u}`),
+        e <= 0)
+      ) {
+        ((a.textContent = `Ronda ${c} lista para comenzar`),
+          (n.textContent = "¡Ahora!"),
+          t.classList.remove(
+            "round-countdown-urgent",
+            "round-countdown-critical",
+          ),
+          t.classList.add("round-countdown-finished"));
+        if (e <= -12e4)
+          return ((t.style.display = "none"), void stopRoundCountdownTimer_());
+        return;
+      }
+      ((a.textContent = `Ronda ${c} comienza en`),
+        (n.textContent = formatTime(o)),
+        n.setAttribute(
+          "aria-label",
+          `${Math.floor(o / 60)} minutos y ${o % 60} segundos`,
+        ),
+        t.classList.remove("round-countdown-finished"),
+        t.classList.toggle("round-countdown-urgent", o <= 60),
+        t.classList.toggle("round-countdown-critical", o <= 10));
+    };
+  (m(), (roundCountdownTimer_ = setInterval(m, 1e3)));
+}
+function roundCountdownTargetRoundForState_(e) {
+  const t = Number(e.meta.round) || 0;
+  return "playing" === e.meta.roundStatus && t > 0 ? t : Math.max(1, t + 1);
+}
+async function syncCountdownClock_() {
+  try {
+    await syncInternetClock_();
+  } catch (e) {}
+}
+async function fbAdjustRoundCountdown(e) {
+  assertAdminOrReferee();
+  const t = Number(e);
+  if (!Number.isFinite(t) || 0 === t)
+    throw new Error("El ajuste del countdown no es válido");
+  await syncCountdownClock_();
+  const a = syncedNow_();
+  await fbDb.runTransaction(async (e) => {
+    const n = await e.get(fbRoomRef);
+    if (!n.exists) throw new Error("Todavía no creaste un torneo");
+    const o = n.data(),
+      r = getRoundCountdownEndMs_(o.meta);
+    if (!r) throw new Error("No hay un countdown activo para ajustar");
+    const s = t > 0 && r <= a ? a + t : Math.max(a, r + t),
+      l = Math.max(0, s - a);
+    e.update(fbRoomRef, {
+      meta: {
+        ...o.meta,
+        roundCountdownSetAt: srvTimestamp(),
+        roundCountdownEndsAtMs: s,
+        roundCountdownMs: l,
+        roundCountdownDurationMs: Math.max(1e3, l),
+        roundCountdownAdjustedBy: currentUser ? currentUser.email : null,
+      },
+    });
+  });
 }
 function escapeAnnouncementHtml_(e) {
   return String(e || "").replace(
@@ -163,16 +255,26 @@ async function sendTournamentAnnouncement(e) {
 async function fbSetRoundCountdown(e) {
   assertAdminOrReferee();
   const t = Number(e);
-  if (!t || t <= 0) throw new Error("Elegí una cantidad de minutos válida");
+  if (!Number.isFinite(t) || t < 0.5 || t > 180)
+    throw new Error("Elegí una duración entre 30 segundos y 180 minutos");
+  await syncCountdownClock_();
+  const a = syncedNow_(),
+    n = Math.round(6e4 * t),
+    o = a + n;
   await fbDb.runTransaction(async (e) => {
-    const a = await e.get(fbRoomRef);
-    if (!a.exists) throw new Error("Todavía no creaste un torneo");
-    const n = a.data();
+    const t = await e.get(fbRoomRef);
+    if (!t.exists) throw new Error("Todavía no creaste un torneo");
+    const r = t.data();
     e.update(fbRoomRef, {
       meta: {
-        ...n.meta,
+        ...r.meta,
         roundCountdownSetAt: srvTimestamp(),
-        roundCountdownMs: Math.round(6e4 * t),
+        roundCountdownEndsAtMs: o,
+        roundCountdownMs: n,
+        roundCountdownDurationMs: n,
+        roundCountdownRound: roundCountdownTargetRoundForState_(r),
+        roundCountdownStartedBy: currentUser ? currentUser.email : null,
+        roundCountdownAdjustedBy: null,
       },
     });
   });
@@ -184,7 +286,16 @@ async function fbCancelRoundCountdown() {
       if (!t.exists) return;
       const a = t.data();
       e.update(fbRoomRef, {
-        meta: { ...a.meta, roundCountdownSetAt: null, roundCountdownMs: null },
+        meta: {
+          ...a.meta,
+          roundCountdownSetAt: null,
+          roundCountdownEndsAtMs: null,
+          roundCountdownMs: null,
+          roundCountdownDurationMs: null,
+          roundCountdownRound: null,
+          roundCountdownStartedBy: null,
+          roundCountdownAdjustedBy: null,
+        },
       });
     }));
 }
@@ -767,7 +878,12 @@ function normalizeTournamentState(e) {
     autoApprovalCancelled: !1,
     woGraceMinutes: 0,
     roundCountdownSetAt: null,
+    roundCountdownEndsAtMs: null,
     roundCountdownMs: null,
+    roundCountdownDurationMs: null,
+    roundCountdownRound: null,
+    roundCountdownStartedBy: null,
+    roundCountdownAdjustedBy: null,
   };
   return e
     ? {
