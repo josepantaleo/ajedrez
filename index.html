@@ -438,6 +438,15 @@
                   <button class="btn" id="copy-game" data-tooltip="Copiar la notación de la partida">📋 Copiar partida</button>
                   <button
                     class="btn secondary"
+                    id="quick-ai-help-btn"
+                    type="button"
+                    disabled
+                    data-tooltip="Muestra la mejor jugada sin moverla"
+                  >
+                    💡 Ayuda IA
+                  </button>
+                  <button
+                    class="btn secondary"
                     id="toggle-legal-btn"
                     type="button"
                     data-tooltip="Activar o desactivar las jugadas posibles resaltadas en el tablero"
@@ -3305,7 +3314,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script src="utils.js?v=20260805-6"></script>
-    <script src="lan-shim.js?v=20260805-6"></script>
-    <script src="app.js?v=20260806-1"></script>
+    <script src="app.js?v=20260806-4"></script>
   </body>
 </html>
