@@ -1102,18 +1102,23 @@ function handleLiveMatchUpdate(e) {
       e.round === tournamentMatchCtx.round &&
       e.board === tournamentMatchCtx.board,
   );
-  t &&
-    ((tournamentCurrentGameRow = t),
-    (t.fen !== game.fen() ||
-      (Array.isArray(t.moves) && t.moves.length !== game.history().length)) &&
-      (loadTournamentGame_(t),
+  if (!t) return;
+  tournamentCurrentGameRow = t;
+  const n = applyTournamentOpponentSelection_(t),
+    a =
+      t.fen !== game.fen() ||
+      (Array.isArray(t.moves) && t.moves.length !== game.history().length);
+  (a
+    ? (loadTournamentGame_(t),
       (selected = null),
       (validMoves = []),
+      (tournamentSelectionLastSent_ = null),
       t.lastFrom &&
         t.lastTo &&
         (clearTimeout(opponentMoveHighlightTimer),
         (opponentMoveHighlight = { from: t.lastFrom, to: t.lastTo })),
-      render()),
+      render())
+    : n && updateSelectionHighlights(),
     updateTournamentMatchBar(t),
     updateTournamentClockDisplay());
 }

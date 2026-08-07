@@ -145,6 +145,8 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
         blackEmail: r || "",
       }),
       (tournamentMatchActive = !0),
+      (tournamentSelectionLastSent_ = null),
+      (opponentSelectedSquare = tournamentOpponentSelectionFromRow_(s)),
       clearOpponentMoveHighlight(),
       clearInterval(clockTimer),
       (clockTimer = null),
@@ -169,6 +171,7 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
         t && (t.style.display = "none");
       }),
       (tournamentCurrentGameRow = s),
+      syncTournamentSelection_(null),
       clearInterval(tournamentClockTimer));
     const d = document.querySelector("#page-jugar .clock");
     (s.clock
@@ -211,9 +214,12 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
   }
 }
 function exitTournamentMatch() {
-  ((tournamentMatchActive = !1),
+  (syncTournamentSelection_(null),
+    (tournamentMatchActive = !1),
     (tournamentMatchCtx = null),
     (tournamentResultShown = !1),
+    (opponentSelectedSquare = null),
+    (tournamentSelectionLastSent_ = null),
     clearOpponentMoveHighlight(),
     clearInterval(tournamentClockTimer),
     (tournamentClockTimer = null),

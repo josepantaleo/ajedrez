@@ -719,7 +719,12 @@ async function fbSetGameSuspended(e, t, a) {
         const e = o.joined || { w: !1, b: !1 };
         o.turnStartAt = e.w && e.b ? syncedNow_() : null;
       }
-      ((o.status = a ? "suspended" : "ongoing"), e.update(n, o));
+      (a &&
+        ((o.selectedSquare = ""),
+        (o.selectedColor = ""),
+        (o.selectedAt = null)),
+        (o.status = a ? "suspended" : "ongoing"),
+        e.update(n, o));
     }),
     getTournamentStateOnce()
   );
@@ -956,7 +961,13 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, i) {
       if (!e.w || !e.b)
         throw new Error("Todavía no entraron los dos jugadores a la partida");
     }
-    const i = { fen: a, lastMoveSan: n || "" };
+    const i = {
+      fen: a,
+      lastMoveSan: n || "",
+      selectedSquare: "",
+      selectedColor: "",
+      selectedAt: null,
+    };
     l && n && (i.moves = (m.moves || []).concat(n));
     if ((r && (i.lastFrom = r), s && (i.lastTo = s), h)) {
       const e = new Chess(m.fen).turn(),
@@ -1003,6 +1014,9 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, i) {
       }
       ((i.fen = a),
         (i.lastMoveSan = n || ""),
+        (i.selectedSquare = ""),
+        (i.selectedColor = ""),
+        (i.selectedAt = null),
         l && n && (i.moves = (i.moves || []).concat(n)),
         r && (i.lastFrom = r),
         s && (i.lastTo = s),
@@ -1016,6 +1030,35 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, i) {
     return { gameRow: p };
   const g = await fbSubmitResult(e, t, o);
   return ((g.gameRow = p), g);
+}
+async function fbSetSelectedSquare(e, t, a, n) {
+  if (!gamesCollectionRef) return;
+  ((e = Number(e)), (t = Number(t)));
+  const o = /^[a-h][1-8]$/.test(a || "") ? a : "",
+    r = "w" === n || "b" === n ? n : "",
+    s = gamesCollectionRef.doc(gameDocId_(e, t));
+  if (!r) return;
+  await fbDb.runTransaction(async (e) => {
+    const t = await e.get(s);
+    if (!t.exists) return;
+    const a = t.data();
+    if ("ongoing" !== a.status) return;
+    if (o) {
+      if (new Chess(a.fen).turn() !== r) return;
+      e.update(s, {
+        selectedSquare: o,
+        selectedColor: r,
+        selectedAt: syncedNow_(),
+      });
+    } else {
+      if (a.selectedColor && a.selectedColor !== r) return;
+      e.update(s, {
+        selectedSquare: "",
+        selectedColor: "",
+        selectedAt: null,
+      });
+    }
+  });
 }
 async function fbMarkJoined(e, t, a) {
   ((e = Number(e)), (t = Number(t)));

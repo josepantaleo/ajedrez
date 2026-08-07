@@ -142,6 +142,9 @@ let tournamentMatchCtx = null,
   tournamentResultShown = !1,
   tournamentClockTimer = null,
   tournamentCurrentGameRow = null,
+  opponentSelectedSquare = null,
+  tournamentSelectionLastSent_ = null,
+  tournamentSelectionWriteChain_ = Promise.resolve(),
   matchChatUnsub = null,
   matchChatMessages = [];
 matchChatPanelOpen = !1;
@@ -354,6 +357,7 @@ function render() {
   for (const [e, t] of boardSquareEls_) {
     t.classList.remove(
       "selected",
+      "opponent-selected",
       "last",
       "opp-move",
       "check",
@@ -364,6 +368,7 @@ function render() {
     const r = t.querySelector(".piece:not(.piece-captured-ghost)");
     (r && r.remove(),
       selected === e && t.classList.add("selected"),
+      opponentSelectedSquare === e && t.classList.add("opponent-selected"),
       !g || (g.from !== e && g.to !== e) || t.classList.add("last"),
       !opponentMoveHighlight ||
         (opponentMoveHighlight.from !== e && opponentMoveHighlight.to !== e) ||
@@ -585,6 +590,9 @@ function updateSelectionHighlights() {
       e
         .querySelectorAll(".square.hint")
         .forEach((e) => e.classList.remove("hint")),
+      e
+        .querySelectorAll(".square.opponent-selected")
+        .forEach((e) => e.classList.remove("opponent-selected")),
       selected)
     ) {
       const t = e.querySelector(`.square[data-square="${selected}"]`);
@@ -595,7 +603,55 @@ function updateSelectionHighlights() {
         const a = e.querySelector(`.square[data-square="${t}"]`);
         a && a.classList.add("hint");
       }
+    if (opponentSelectedSquare) {
+      const t = e.querySelector(
+        `.square[data-square="${opponentSelectedSquare}"]`,
+      );
+      t && t.classList.add("opponent-selected");
+    }
   }
+}
+function tournamentOpponentSelectionFromRow_(e) {
+  const t = tournamentMyColor(),
+    a = e && /^[a-h][1-8]$/.test(e.selectedSquare || "") ? e.selectedSquare : "";
+  return a && e.selectedColor && e.selectedColor !== t ? a : null;
+}
+function applyTournamentOpponentSelection_(e) {
+  const t = tournamentOpponentSelectionFromRow_(e);
+  return t === opponentSelectedSquare
+    ? !1
+    : ((opponentSelectedSquare = t), !0);
+}
+function syncTournamentSelection_(e) {
+  if (!tournamentMatchActive || !tournamentMatchCtx) return;
+  const t = tournamentMyColor();
+  if (!t) return;
+  const a = /^[a-h][1-8]$/.test(e || "") ? e : "",
+    n = tournamentCurrentGameRow;
+  if (
+    !a &&
+    !tournamentSelectionLastSent_ &&
+    (!n || !n.selectedSquare || (n.selectedColor && n.selectedColor !== t))
+  )
+    return void (tournamentSelectionLastSent_ = "");
+  if (a === tournamentSelectionLastSent_) return;
+  const o = tournamentMatchCtx.round,
+    r = tournamentMatchCtx.board;
+  ((tournamentSelectionLastSent_ = a),
+    n &&
+      (tournamentCurrentGameRow = {
+        ...n,
+        selectedSquare: a,
+        selectedColor: a ? t : "",
+        selectedAt: a ? syncedNow_() : null,
+      }),
+    (tournamentSelectionWriteChain_ = tournamentSelectionWriteChain_
+      .catch(() => {})
+      .then(() => fbSetSelectedSquare(o, r, a, t))
+      .catch(() => {
+        tournamentSelectionLastSent_ === a &&
+          (tournamentSelectionLastSent_ = null);
+      })));
 }
 function onPieceDragMove(e) {
   if (!dragCtx) return;
@@ -607,7 +663,8 @@ function onPieceDragMove(e) {
     const e = game.moves({ square: dragCtx.from, verbose: !0 });
     ((validMoves = e.map((e) => e.to)),
       SoundFX.select(),
-      updateSelectionHighlights());
+      updateSelectionHighlights(),
+      syncTournamentSelection_(selected));
     const n = dragCtx.pieceEl.closest(".square");
     (dragCtx.pieceEl.classList.add("dragging"),
       (dragCtx.pieceEl.style.width = dragCtx.width + "px"),
@@ -695,6 +752,7 @@ async function onPieceDragUp(e) {
         (addIncrement(),
         (selected = null),
         (validMoves = []),
+        syncTournamentSelection_(null),
         markMoveForAnimation(n),
         playSoundForMove(n, game),
         showMoveExplanation(a, n),
@@ -708,6 +766,7 @@ async function onPieceDragUp(e) {
   }
   ((selected = null),
     (validMoves = []),
+    syncTournamentSelection_(null),
     o && o !== t.from && SoundFX.invalid(),
     render());
 }
@@ -728,6 +787,7 @@ async function clickSquare(e) {
     return (
       (selected = null),
       (validMoves = []),
+      syncTournamentSelection_(null),
       void updateSelectionHighlights()
     );
   if (selected) {
@@ -741,6 +801,7 @@ async function clickSquare(e) {
         addIncrement(),
         (selected = null),
         (validMoves = []),
+        syncTournamentSelection_(null),
         markMoveForAnimation(o),
         playSoundForMove(o, game),
         showMoveExplanation(n, o),
@@ -755,7 +816,7 @@ async function clickSquare(e) {
     const t = game.moves({ square: e, verbose: !0 });
     ((validMoves = t.map((e) => e.to)), SoundFX.select());
   } else (selected && SoundFX.invalid(), (selected = null), (validMoves = []));
-  updateSelectionHighlights();
+  (updateSelectionHighlights(), syncTournamentSelection_(selected));
 }
 function checkGameOver() {
   if (!tournamentMatchActive && game.game_over()) {
