@@ -71,6 +71,41 @@ function setupRoundCountdownControls_() {
         );
     }));
 }
+let tournamentMovesCardHome_ = null;
+function loadTournamentGame_(e) {
+  const t = e && Array.isArray(e.moves) ? e.moves.filter(Boolean) : [];
+  if (t.length) {
+    game.reset();
+    let a = 0;
+    for (const e of t) {
+      if (!game.move(e)) break;
+      a++;
+    }
+    if (a === t.length && (!e.fen || game.fen() === e.fen)) return !0;
+  }
+  return e && e.fen ? game.load(e.fen) : (game.reset(), !1);
+}
+function setTournamentMovesPopup_(e) {
+  const t = floatingMovesCard || document.querySelector(".floating-moves-card"),
+    a = document.getElementById("game-card");
+  if (!t || !a) return;
+  if (e) {
+    (tournamentMovesCardHome_ ||
+      (tournamentMovesCardHome_ = {
+        parent: t.parentNode,
+        next: t.nextSibling,
+      }),
+      a.appendChild(t),
+      t.classList.add("tournament-moves-popup"));
+  } else if (tournamentMovesCardHome_) {
+    const e = tournamentMovesCardHome_;
+    (e.next && e.next.parentNode === e.parent
+      ? e.parent.insertBefore(t, e.next)
+      : e.parent.appendChild(t),
+      t.classList.remove("tournament-moves-popup"),
+      (tournamentMovesCardHome_ = null));
+  }
+}
 async function enterTournamentMatch(e, t, a, n, o, r) {
   document.body.classList.add("fullscreen-game");
   const s = document.getElementById("game-fullscreen");
@@ -105,12 +140,13 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
       (clockTimer = null),
       (botEnabled = !1),
       (gameStarted = !0),
-      game.load(s.fen),
+      loadTournamentGame_(s),
       (selected = null),
       (validMoves = []),
       (tournamentResultShown = !1),
       showPage("jugar"),
       document.body.classList.add("tournament-board-max"),
+      setTournamentMovesPopup_(!0),
       (document.getElementById("tournament-match-bar").style.display = ""),
       (document.getElementById("tournament-match-title").textContent =
         `🏆 Torneo · Ronda ${e}, tablero #${t}: ${a} vs ${n}`));
@@ -175,6 +211,7 @@ function exitTournamentMatch() {
     unsubscribeMatchChat(),
     unsubscribeCallSignaling(),
     (document.getElementById("tournament-match-bar").style.display = "none"),
+    setTournamentMovesPopup_(!1),
     document.body.classList.remove("tournament-board-max"),
     resetBoardFrameSize(),
     document.fullscreenElement && document.exitFullscreen().catch(() => {}),
@@ -260,7 +297,7 @@ async function syncTournamentMove() {
   } catch (e) {
     (a &&
       ((tournamentCurrentGameRow = a),
-      game.load(a.fen),
+      loadTournamentGame_(a),
       (selected = null),
       (validMoves = []),
       render(),

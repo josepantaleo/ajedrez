@@ -1104,8 +1104,9 @@ function handleLiveMatchUpdate(e) {
   );
   t &&
     ((tournamentCurrentGameRow = t),
-    t.fen !== game.fen() &&
-      (game.load(t.fen),
+    (t.fen !== game.fen() ||
+      (Array.isArray(t.moves) && t.moves.length !== game.history().length)) &&
+      (loadTournamentGame_(t),
       (selected = null),
       (validMoves = []),
       t.lastFrom &&

@@ -949,15 +949,16 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, i) {
     if ("finished" === m.status) throw new Error("Esa partida ya terminó");
     if ("suspended" === m.status)
       throw new Error("Esta partida está suspendida por el árbitro");
-    const l = m.clock && a !== m.fen;
-    if (l) {
+    const l = a !== m.fen,
+      h = Boolean(m.clock && l);
+    if (h) {
       const e = m.joined || { w: !1, b: !1 };
       if (!e.w || !e.b)
         throw new Error("Todavía no entraron los dos jugadores a la partida");
     }
     const i = { fen: a, lastMoveSan: n || "" };
     l && n && (i.moves = (m.moves || []).concat(n));
-    if ((r && (i.lastFrom = r), s && (i.lastTo = s), l)) {
+    if ((r && (i.lastFrom = r), s && (i.lastTo = s), h)) {
       const e = new Chess(m.fen).turn(),
         t = m.turnStartAt
           ? Math.max(0, Math.floor((d - getTimestampMs(m.turnStartAt)) / 1e3))
@@ -969,26 +970,27 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, i) {
     }
     (o && ((i.status = "finished"), (i.result = o)), await u.update(i));
     const c = { ...m, ...i };
-    if ((l && (c.turnStartAt = d), !o)) return { gameRow: c };
+    if ((h && (c.turnStartAt = d), !o)) return { gameRow: c };
     const p = await fbSubmitResult(e, t, o);
     return ((p.gameRow = c), p);
   }
   let p = null;
   if (
     (await fbDb.runTransaction(async (e) => {
-      const t = await e.get(u),
-        l = t.exists && !(!t.data().clock || a === t.data().fen);
+      const t = await e.get(u);
       if (!t.exists) throw new Error("No se encontró esa partida");
-      const i = { ...t.data() };
+      const i = { ...t.data() },
+        l = a !== i.fen,
+        h = Boolean(i.clock && l);
       if ("finished" === i.status) throw new Error("Esa partida ya terminó");
       if ("suspended" === i.status)
         throw new Error("Esta partida está suspendida por el árbitro");
-      if (l) {
+      if (h) {
         const e = i.joined || { w: !1, b: !1 };
         if (!e.w || !e.b)
           throw new Error("Todavía no entraron los dos jugadores a la partida");
       }
-      if (l) {
+      if (h) {
         const e = new Chess(i.fen).turn(),
           t = i.turnStartAt
             ? Math.max(0, Math.floor((d - getTimestampMs(i.turnStartAt)) / 1e3))
@@ -1007,7 +1009,7 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, i) {
         o && ((i.status = "finished"), (i.result = o)),
         e.update(u, i),
         (p = i),
-        l && (p.turnStartAt = d));
+        h && (p.turnStartAt = d));
     }),
     !o)
   )

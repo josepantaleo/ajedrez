@@ -856,6 +856,41 @@
         display: none !important;
       }
 
+      /* Historial plegable dentro de la vista maximizada del torneo. */
+      body.tournament-board-max .floating-moves-card.tournament-moves-popup {
+        display: flex !important;
+        position: fixed !important;
+        top: 12px !important;
+        right: 12px !important;
+        width: min(320px, calc(100vw - 24px)) !important;
+        max-height: min(62dvh, 520px) !important;
+        margin: 0 !important;
+        padding: 12px !important;
+        z-index: 1200 !important;
+        background: color-mix(in srgb, var(--surface) 94%, transparent) !important;
+        border: 1px solid color-mix(in srgb, var(--accent2) 42%, transparent) !important;
+        box-shadow: 0 16px 44px rgba(0, 0, 0, 0.48) !important;
+      }
+
+      body.tournament-board-max .floating-moves-card.tournament-moves-popup.collapsed {
+        width: auto !important;
+        max-width: calc(100vw - 24px) !important;
+      }
+
+      body.tournament-board-max .floating-moves-card.tournament-moves-popup .moves {
+        max-height: min(48dvh, 390px);
+      }
+
+      @media (max-width: 700px), (max-height: 560px) {
+        body.tournament-board-max .floating-moves-card.tournament-moves-popup {
+          top: 8px !important;
+          right: 8px !important;
+          width: min(260px, calc(100vw - 16px)) !important;
+          max-height: 52dvh !important;
+          padding: 9px !important;
+        }
+      }
+
       /* IMPORTANTE: ".page.active" tiene "filter: blur(0)" de forma
          permanente (no solo durante la animación de transición). Un
          "filter" con cualquier valor —incluso blur(0)— crea un nuevo
@@ -1070,6 +1105,12 @@
         padding: 10px 12px;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         max-width: 120px;
+      }
+
+      /* En el torneo online el tablero usa todo el viewport. El panel
+         lateral de capturas se oculta para que nunca cubra casillas. */
+      body.fullscreen-game.tournament-board-max #captured-floating {
+        display: none !important;
       }
       .captured-floating-row {
         display: flex;
