@@ -1441,6 +1441,7 @@ function sizeFullscreenBoard() {
   const n = a.querySelector(".clock"),
     o = a.querySelector(".controls-panel"),
     r = document.getElementById("tournament-match-bar"),
+    v = a.querySelector(".tournament-moves-popup"),
     s = getComputedStyle(a),
     l = parseFloat(s.rowGap || s.gap || "12") || 12,
     i = (parseFloat(s.paddingTop) || 0) + (parseFloat(s.paddingBottom) || 0),
@@ -1463,7 +1464,14 @@ function sizeFullscreenBoard() {
   const p = n ? n.getBoundingClientRect().height : 0,
     g = o ? o.getBoundingClientRect().height : 0,
     f = r && null !== r.offsetParent ? r.getBoundingClientRect().height : 0,
-    h = (m.height || u) - p - g - f - 2 * l - i,
+    k =
+      v &&
+      null !== v.offsetParent &&
+      "static" === getComputedStyle(v).position
+        ? v.getBoundingClientRect().height
+        : 0,
+    x = [p, g, f, k].filter((e) => e > 0).length,
+    h = (m.height || u) - p - g - f - k - x * l - i,
     y = (m.width || d) - c,
     b = Math.max(140, Math.floor(Math.min(y, h)));
   ((t.style.width = b + "px"), (t.style.height = b + "px"));
@@ -1496,8 +1504,12 @@ function resetBoardFrameSize() {
       e.observe(a);
       const n = a.querySelector(".clock"),
         o = a.querySelector(".controls-panel"),
-        r = document.getElementById("tournament-match-bar");
-      (n && e.observe(n), o && e.observe(o), r && e.observe(r));
+        r = document.getElementById("tournament-match-bar"),
+        s = document.querySelector(".floating-moves-card");
+      (n && e.observe(n),
+        o && e.observe(o),
+        r && e.observe(r),
+        s && e.observe(s));
     }
   })());
 const THEMES = {

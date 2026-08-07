@@ -100,7 +100,7 @@ function setTournamentMovesPopup_(e) {
       t.classList.add("tournament-moves-popup"));
     if (
       window.matchMedia(
-        "(orientation: landscape) and (max-height: 600px) and (max-width: 1000px)",
+        "((orientation: landscape) and (max-height: 600px) and (max-width: 1000px)), ((orientation: portrait) and (max-width: 700px))",
       ).matches &&
       !t.classList.contains("collapsed")
     )
