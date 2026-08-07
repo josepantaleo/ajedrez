@@ -2,13 +2,17 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#07111f" />
     <title>Escuela de Ajedrez</title>
     <link rel="icon" href="data:," />
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260806-1" />
+    <link rel="stylesheet" href="styles.css?v=20260807-3" />
   </head>
 
   <body>
@@ -63,8 +67,18 @@
           </div>
 
           <div class="top-actions">
-           
-            
+            <button
+              class="btn theme-toggle-btn"
+              id="theme-toggle"
+              type="button"
+              aria-label="Activar modo claro"
+              aria-pressed="false"
+              title="Activar modo claro"
+            >
+              <span class="theme-toggle-icon" aria-hidden="true">&#9728;</span>
+              <span class="theme-toggle-label">Modo claro</span>
+            </button>
+
             <button class="btn primary" data-page-action="jugar">
               ▶️ Jugar ahora
             </button>
@@ -3351,5 +3365,6 @@
 
     <script defer src="utils.js?v=20260805-6"></script>
     <script defer src="app.js?v=20260806-12"></script>
+    <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

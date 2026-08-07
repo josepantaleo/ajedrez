@@ -4284,3 +4284,604 @@
   background: var(--danger);
   color: #fff;
 }
+
+/* =========================================================
+   RESPONSIVE FINAL
+   Optimizado para escritorio con zoom al 75%, tablets y moviles.
+   Esta capa queda al final para resolver medidas fijas anteriores.
+   ========================================================= */
+
+html {
+  min-width: 320px;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  color-scheme: dark;
+}
+
+body[data-theme="light"] {
+  color-scheme: light;
+}
+
+.theme-toggle-btn {
+  min-width: 138px;
+  white-space: nowrap;
+}
+
+.theme-toggle-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.theme-toggle-label {
+  line-height: 1;
+}
+
+body[data-theme="light"] .sidebar {
+  background: rgba(248, 250, 253, 0.96);
+  border-color: rgba(23, 34, 53, 0.12);
+}
+
+body[data-theme="light"] .brand {
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+  box-shadow:
+    0 12px 28px rgba(29, 48, 76, 0.12),
+    inset 0 1px rgba(255, 255, 255, 0.8);
+}
+
+body[data-theme="light"] .card,
+body[data-theme="light"] .controls-panel,
+body[data-theme="light"] .floating-moves-card {
+  border-color: rgba(23, 34, 53, 0.12);
+  box-shadow: 0 12px 30px rgba(29, 48, 76, 0.12);
+}
+
+body[data-theme="light"] .controls-panel,
+body[data-theme="light"] .floating-moves-card {
+  background: rgba(255, 255, 255, 0.94);
+}
+
+body[data-theme="light"] .btn {
+  border-color: rgba(23, 34, 53, 0.16);
+}
+
+body[data-theme="light"] .theme-toggle-btn {
+  background: #172235;
+  color: #f7f9fc;
+  border-color: #172235;
+}
+
+body[data-theme="light"] input,
+body[data-theme="light"] select {
+  border-color: rgba(23, 34, 53, 0.18);
+}
+
+@media (max-width: 800px) {
+  body[data-theme="light"] .sidebar,
+  body[data-theme="light"] .nav {
+    background: rgba(248, 250, 253, 0.97);
+  }
+
+  .theme-toggle-btn {
+    min-width: 0;
+  }
+}
+
+.app,
+.main,
+.page,
+.game-layout,
+.game-layout > *,
+.board-area,
+#game-card,
+.card,
+.grid > * {
+  min-width: 0;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+.table,
+.standings-table,
+.public-screen-table {
+  max-width: 100%;
+}
+
+/* Escritorio: el zoom del navegador al 75% crea mas espacio CSS.
+   Se aprovecha sin agrandar artificialmente las tipografias. */
+@media (min-width: 1440px) {
+  .app {
+    grid-template-columns: clamp(235px, 14vw, 285px) minmax(0, 1fr);
+  }
+
+  .sidebar {
+    padding: clamp(18px, 1.4vw, 28px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .main {
+    max-width: 2400px;
+    padding: clamp(24px, 2vw, 38px);
+  }
+
+  .game-layout {
+    grid-template-columns:
+      minmax(260px, 310px)
+      minmax(560px, 960px)
+      minmax(260px, 310px);
+    gap: clamp(16px, 1.4vw, 26px);
+    width: 100%;
+    max-width: 1632px;
+    margin-inline: auto;
+  }
+
+  .board-frame {
+    max-width: min(960px, calc(100dvh - 190px));
+    margin-inline: auto;
+  }
+}
+
+/* En monitores muy anchos, habituales al usar 75%, el contenido general
+   puede crecer, pero el area de partida permanece compacta y centrada. */
+@media (min-width: 2000px) {
+  .main {
+    padding-inline: clamp(32px, 3vw, 64px);
+  }
+
+  .game-layout {
+    grid-template-columns: 320px minmax(640px, 980px) 320px;
+    max-width: 1672px;
+  }
+
+  .dashboard-grid {
+    max-width: 1800px;
+    margin-inline: auto;
+  }
+}
+
+/* Portatiles y tablets horizontales: el tablero conserva prioridad y
+   los paneles auxiliares bajan sin generar desplazamiento horizontal. */
+@media (min-width: 801px) and (max-width: 1439px) {
+  .app {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .brand {
+    margin: -4px -4px 18px;
+    padding: 12px 10px;
+  }
+
+  .brand .logo {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+    font-size: 2.5rem;
+  }
+
+  .brand h1 {
+    font-size: 0.95rem;
+  }
+
+  .brand h5 {
+    margin-block: 7px;
+    font-size: 0.72rem;
+  }
+
+  .nav button {
+    padding: 11px 10px;
+    font-size: 0.9rem;
+  }
+
+  .main {
+    padding: 20px;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(220px, 0.72fr) minmax(420px, 1.5fr);
+    gap: 16px;
+  }
+
+  .game-layout .left {
+    grid-column: 1;
+  }
+
+  .game-layout .board-area {
+    grid-column: 2;
+  }
+
+  .game-layout .right {
+    grid-column: 1 / -1;
+  }
+
+  .board-frame {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 17px;
+  }
+}
+
+/* Mobile y tablet vertical. */
+@media (max-width: 800px) {
+  body {
+    min-height: 100dvh;
+  }
+
+  .app {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    height: auto;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      7px
+      max(10px, env(safe-area-inset-left));
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  .brand {
+    margin: 0 0 7px;
+    padding: 8px 10px;
+  }
+
+  .nav {
+    position: static;
+    margin: 0;
+    padding: 2px 0 3px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-inline: contain;
+  }
+
+  .nav button {
+    min-height: 42px;
+    padding: 9px 13px;
+    scroll-snap-align: start;
+    touch-action: manipulation;
+  }
+
+  .main {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding:
+      16px
+      max(12px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .topbar {
+    margin-bottom: 16px;
+  }
+
+  .topbar h2 {
+    line-height: 1.25;
+  }
+
+  .topbar p {
+    line-height: 1.45;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  #page-inicio > .grid[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+    margin-top: 14px !important;
+  }
+
+  .game-layout,
+  .game-layout .left,
+  .game-layout .board-area,
+  .game-layout .right {
+    display: block;
+    width: 100%;
+  }
+
+  .game-layout .left,
+  .game-layout .right {
+    margin-top: 14px;
+  }
+
+  .game-layout .board-area {
+    margin-top: 0;
+  }
+
+  /* En mobile el tablero aparece antes que las opciones educativas. */
+  .game-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .game-layout .board-area {
+    order: 1;
+  }
+
+  .game-layout .left {
+    order: 2;
+  }
+
+  .game-layout .right {
+    order: 3;
+  }
+
+  .card {
+    padding: 15px;
+    border-radius: 12px;
+  }
+
+  #game-card {
+    padding: 12px;
+  }
+
+  .board-frame {
+    width: 100%;
+    max-width: calc(100vw - 48px);
+    padding: clamp(5px, 1.8vw, 10px);
+    margin-inline: auto;
+    border-radius: 12px;
+  }
+
+  .clock {
+    gap: 7px;
+  }
+
+  .clock div {
+    min-width: 0;
+    padding: 9px 6px;
+    font-size: clamp(1.05rem, 5vw, 1.35rem);
+  }
+
+  .status {
+    margin: 9px 0;
+    padding: 10px;
+    font-size: 0.92rem;
+  }
+
+  .controls-panel {
+    margin-top: 12px;
+    padding: 10px;
+    gap: 8px;
+    border-radius: 14px;
+  }
+
+  .controls-panel .btn,
+  .top-actions .btn,
+  .exercise-action .btn,
+  .lesson-action .btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .theme-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .theme-meta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .theme-meta .btn {
+    width: 100%;
+  }
+
+  #history-card,
+  #tournament-standings-list,
+  .public-screen-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 520px;
+  }
+
+  .alert,
+  .promo {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .alert-box,
+  .promo-box,
+  .analysis-modal-content,
+  .exercise-modal-content {
+    max-width: 100%;
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+  }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .brand {
+    display: none;
+  }
+
+  .sidebar {
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+
+  .main {
+    padding-top: 12px;
+  }
+
+  .card {
+    padding: 13px;
+  }
+
+  #game-card {
+    padding: 9px;
+  }
+
+  .board-frame {
+    max-width: calc(100vw - 34px);
+  }
+
+  .controls-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controls-panel .btn {
+    padding: 10px 8px;
+    font-size: 0.84rem;
+    white-space: normal;
+  }
+
+  .toggle {
+    align-items: flex-start;
+  }
+
+  .switch {
+    flex: 0 0 auto;
+  }
+
+  .chat-input-row {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .chat-input-row input {
+    flex-basis: calc(100% - 52px);
+    min-height: 44px;
+  }
+
+  .chat-input-row .btn {
+    flex: 1 0 100%;
+  }
+
+  .analysis-board {
+    width: min(100%, calc(100vw - 54px));
+  }
+
+  .public-screen {
+    padding: 14px 10px;
+  }
+
+  .public-screen-fullscreen-btn {
+    position: static;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-grid,
+  .theme-grid,
+  .exercise-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .stat {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    grid-template-areas:
+      "icon value"
+      "icon label";
+    column-gap: 10px;
+    align-items: center;
+    text-align: left;
+  }
+
+  .stat .icon {
+    grid-area: icon;
+    margin: 0;
+  }
+
+  .stat b {
+    grid-area: value;
+    font-size: 1.5rem;
+  }
+
+  .stat span {
+    grid-area: label;
+  }
+
+  .clock-player-name {
+    font-size: 0.7rem;
+  }
+
+  .controls-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Celulares en horizontal: mantener controles compactos y dejar el
+   mayor alto posible al tablero. */
+@media (max-height: 520px) and (orientation: landscape) and (max-width: 800px) {
+  .brand,
+  .topbar {
+    display: none;
+  }
+
+  .sidebar {
+    padding-block: 4px;
+  }
+
+  .nav button {
+    min-height: 36px;
+    padding: 6px 11px;
+    font-size: 0.8rem;
+  }
+
+  .main {
+    padding-top: 8px;
+  }
+
+  .board-frame {
+    max-width: min(calc(100vw - 38px), calc(100dvh - 150px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
