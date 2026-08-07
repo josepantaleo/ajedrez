@@ -71,7 +71,8 @@ function setupRoundCountdownControls_() {
         );
     }));
 }
-let tournamentMovesCardHome_ = null;
+let tournamentMovesCardHome_ = null,
+  tournamentMovesAutoCollapsed_ = !1;
 function loadTournamentGame_(e) {
   const t = e && Array.isArray(e.moves) ? e.moves.filter(Boolean) : [];
   if (t.length) {
@@ -97,12 +98,21 @@ function setTournamentMovesPopup_(e) {
       }),
       a.appendChild(t),
       t.classList.add("tournament-moves-popup"));
+    if (
+      window.matchMedia(
+        "(orientation: landscape) and (max-height: 600px) and (max-width: 1000px)",
+      ).matches &&
+      !t.classList.contains("collapsed")
+    )
+      ((tournamentMovesAutoCollapsed_ = !0), t.classList.add("collapsed"));
   } else if (tournamentMovesCardHome_) {
     const e = tournamentMovesCardHome_;
     (e.next && e.next.parentNode === e.parent
       ? e.parent.insertBefore(t, e.next)
       : e.parent.appendChild(t),
       t.classList.remove("tournament-moves-popup"),
+      tournamentMovesAutoCollapsed_ &&
+        (t.classList.remove("collapsed"), (tournamentMovesAutoCollapsed_ = !1)),
       (tournamentMovesCardHome_ = null));
   }
 }

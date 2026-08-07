@@ -1449,8 +1449,18 @@ function sizeFullscreenBoard() {
     u = window.visualViewport
       ? window.visualViewport.height
       : window.innerHeight,
-    m = a.getBoundingClientRect(),
-    p = n ? n.getBoundingClientRect().height : 0,
+    m = a.getBoundingClientRect();
+  if (
+    e.contains("tournament-board-max") &&
+    window.matchMedia(
+      "(orientation: landscape) and (max-height: 600px) and (max-width: 1000px)",
+    ).matches
+  ) {
+    const e = Math.min(290, Math.max(190, Math.floor(0.34 * d))),
+      n = Math.max(180, Math.floor(Math.min((m.width || d) - c - e - l, (m.height || u) - i)));
+    return ((t.style.width = n + "px"), void (t.style.height = n + "px"));
+  }
+  const p = n ? n.getBoundingClientRect().height : 0,
     g = o ? o.getBoundingClientRect().height : 0,
     f = r && null !== r.offsetParent ? r.getBoundingClientRect().height : 0,
     h = (m.height || u) - p - g - f - 2 * l - i,
@@ -1465,7 +1475,8 @@ function resetBoardFrameSize() {
 (movesToggleBtn &&
   floatingMovesCard &&
   movesToggleBtn.addEventListener("click", () => {
-    floatingMovesCard.classList.toggle("collapsed");
+    (floatingMovesCard.classList.toggle("collapsed"),
+      setTimeout(sizeFullscreenBoard, 30));
   }),
   setupFullscreenToggle("game-fullscreen"),
   (function () {

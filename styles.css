@@ -1398,6 +1398,220 @@
         }
       }
 
+      /* Torneo online en celular horizontal: tablero a altura completa y
+         controles en una columna lateral que nunca invade las casillas. */
+      @media (orientation: landscape) and (max-height: 600px) and (max-width: 1000px) {
+        body.fullscreen-game.tournament-board-max #game-card {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) clamp(190px, 34vw, 290px) !important;
+          grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+          align-items: stretch !important;
+          justify-items: stretch !important;
+          justify-content: normal !important;
+          gap: 6px !important;
+          padding-top: max(4px, env(safe-area-inset-top)) !important;
+          padding-bottom: max(4px, env(safe-area-inset-bottom)) !important;
+          padding-left: max(4px, env(safe-area-inset-left)) !important;
+          padding-right: max(4px, env(safe-area-inset-right)) !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .board-frame {
+          grid-column: 1;
+          grid-row: 1 / -1;
+          place-self: center;
+          order: initial;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          padding: 4px !important;
+          border-radius: 14px !important;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48) !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .board {
+          border-radius: 10px !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .clock {
+          grid-column: 2;
+          grid-row: 1;
+          order: initial;
+          width: 100%;
+          gap: 4px !important;
+          padding: 4px !important;
+          border-radius: 12px !important;
+          box-shadow: none !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .clock div {
+          flex: 1 1 0;
+          width: 50%;
+          padding: 4px 5px !important;
+          border-radius: 9px !important;
+          font-size: clamp(0.78rem, 3.8vh, 1rem) !important;
+          letter-spacing: 0 !important;
+          animation: none !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .clock-player-name {
+          display: block;
+          max-width: 100%;
+          overflow: hidden;
+          font-size: clamp(0.55rem, 2.3vh, 0.7rem) !important;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-bar {
+          grid-column: 2;
+          grid-row: 2;
+          order: initial;
+          align-content: start !important;
+          align-items: stretch !important;
+          justify-content: stretch !important;
+          gap: 4px !important;
+          width: 100% !important;
+          max-height: 34dvh;
+          overflow-x: hidden;
+          overflow-y: auto;
+          padding: 5px !important;
+          border-radius: 12px !important;
+          box-shadow: none !important;
+          scrollbar-width: thin;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-controls {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr;
+          width: 100%;
+          gap: 4px !important;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-bar .btn {
+          width: 100%;
+          min-height: 30px !important;
+          padding: 4px 6px !important;
+          border-radius: 8px;
+          font-size: 0.68rem !important;
+          line-height: 1.1;
+          white-space: normal;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-back-btn,
+        body.fullscreen-game.tournament-board-max #tournament-match-chat,
+        body.fullscreen-game.tournament-board-max #tournament-match-call {
+          width: 100%;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-back-btn {
+          font-size: 0 !important;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-back-btn::after {
+          content: "← Volver";
+          font-size: 0.68rem;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-draw-btn {
+          font-size: 0 !important;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-draw-btn::after {
+          content: "🤝 Tablas";
+          font-size: 0.68rem;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-resign-btn {
+          font-size: 0 !important;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-resign-btn::after {
+          content: "🏳 Abandonar";
+          font-size: 0.68rem;
+        }
+
+        body.fullscreen-game.tournament-board-max #tournament-match-chat-panel {
+          position: fixed !important;
+          inset: auto max(6px, env(safe-area-inset-right))
+            max(6px, env(safe-area-inset-bottom)) auto !important;
+          width: min(340px, calc(100vw - 12px)) !important;
+          max-height: calc(100dvh - 12px) !important;
+          transform: none !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .floating-moves-card.tournament-moves-popup {
+          position: static !important;
+          grid-column: 2;
+          grid-row: 3;
+          align-self: stretch;
+          order: initial;
+          width: 100% !important;
+          min-height: 0;
+          max-height: 100% !important;
+          margin: 0 !important;
+          padding: 6px !important;
+          border-radius: 12px !important;
+          box-shadow: none !important;
+          overflow: hidden;
+        }
+
+        body.fullscreen-game.tournament-board-max .floating-moves-card.tournament-moves-popup.collapsed {
+          width: 100% !important;
+          max-width: 100% !important;
+          align-self: end;
+        }
+
+        body.fullscreen-game.tournament-board-max .floating-moves-card.tournament-moves-popup .panel-title {
+          min-height: 28px;
+          font-size: 0.72rem;
+        }
+
+        body.fullscreen-game.tournament-board-max .floating-moves-card.tournament-moves-popup .toggle-panel-btn {
+          min-height: 26px !important;
+          padding: 3px 7px !important;
+          font-size: 0.72rem !important;
+        }
+
+        body.fullscreen-game.tournament-board-max .floating-moves-card.tournament-moves-popup .moves {
+          min-height: 0;
+          max-height: 100%;
+          font-size: 0.7rem;
+        }
+
+        body.fullscreen-game.tournament-board-max .move-row {
+          grid-template-columns: 24px 1fr 1fr;
+          gap: 2px;
+          padding: 3px;
+        }
+
+        body.fullscreen-game.tournament-board-max .controls-panel {
+          grid-column: 2;
+          grid-row: 4;
+          order: initial;
+          display: grid !important;
+          grid-template-columns: 1fr 1fr;
+          width: 100%;
+          gap: 4px;
+          padding: 5px;
+          border-radius: 12px;
+          box-shadow: none;
+        }
+
+        body.fullscreen-game.tournament-board-max .controls-panel .btn {
+          width: 100%;
+          min-height: 30px;
+          padding: 4px 5px;
+          border-radius: 8px;
+          font-size: 0.65rem;
+          line-height: 1.1;
+          white-space: normal;
+        }
+
+        body.fullscreen-game.tournament-board-max #captured-floating,
+        body.fullscreen-game.tournament-board-max #quick-ai-help-btn {
+          display: none !important;
+        }
+      }
+
       .board {
         display: grid;
         grid-template-columns: repeat(8, 1fr);
