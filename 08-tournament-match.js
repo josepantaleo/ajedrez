@@ -73,6 +73,70 @@ function setupRoundCountdownControls_() {
 }
 let tournamentMovesCardHome_ = null,
   tournamentMovesAutoCollapsed_ = !1;
+let tournamentSyncState_ = "online",
+  tournamentLastLatencyMs_ = null,
+  tournamentSyncSlowTimer_ = null;
+function renderTournamentSyncIndicator_() {
+  const e = document.getElementById("tournament-sync-indicator"),
+    t = document.getElementById("tournament-sync-text");
+  if (!e || !t) return;
+  let a = navigator.onLine ? tournamentSyncState_ : "offline",
+    n = "",
+    o = "";
+  if ("syncing" === a)
+    ((n = "Sincronizando"), (o = "Enviando cambios a Firebase"));
+  else if ("delayed" === a)
+    ((n = "Demora…"),
+      (o = "La confirmación de Firebase está tardando más de lo habitual"));
+  else if ("error" === a)
+    ((n = "Error de red"), (o = "La última sincronización no se completó"));
+  else if ("offline" === a)
+    ((n = "Sin conexión"), (o = "El navegador no tiene conexión a Internet"));
+  else if (Number.isFinite(tournamentLastLatencyMs_)) {
+    const e = Math.max(0, Math.round(tournamentLastLatencyMs_));
+    ((a = e > 900 ? "slow" : e > 350 ? "normal" : "fast"),
+      (n = `${e} ms`),
+      (o = `Última confirmación de Firebase: ${e} milisegundos`));
+  } else ((a = "online"), (n = "En línea"), (o = "Conectado a Firebase"));
+  ((e.dataset.state = a),
+    (t.textContent = n),
+    (e.title = o),
+    e.setAttribute("aria-label", o));
+}
+function setTournamentSyncState_(e, t) {
+  (clearTimeout(tournamentSyncSlowTimer_),
+    (tournamentSyncSlowTimer_ = null),
+    Number.isFinite(t) && (tournamentLastLatencyMs_ = t),
+    (tournamentSyncState_ = e),
+    renderTournamentSyncIndicator_());
+  "syncing" === e &&
+    (tournamentSyncSlowTimer_ = setTimeout(() => {
+      "syncing" === tournamentSyncState_ &&
+        ((tournamentSyncState_ = "delayed"),
+        renderTournamentSyncIndicator_());
+    }, 1200));
+}
+function beginTournamentSync_() {
+  return (setTournamentSyncState_("syncing"), performance.now());
+}
+function finishTournamentSync_(e) {
+  setTournamentSyncState_("online", performance.now() - e);
+}
+function failTournamentSync_() {
+  setTournamentSyncState_(navigator.onLine ? "error" : "offline");
+}
+function markTournamentConnectionAlive_() {
+  tournamentMatchBusy ||
+    ("error" !== tournamentSyncState_ && "delayed" !== tournamentSyncState_
+      ? renderTournamentSyncIndicator_()
+      : setTournamentSyncState_("online"));
+}
+(window.addEventListener("online", () => {
+  setTournamentSyncState_("online");
+}),
+  window.addEventListener("offline", () => {
+    setTournamentSyncState_("offline");
+  }));
 function setTournamentMatchBusy_(e) {
   tournamentMatchBusy = !!e;
   tournamentMatchActive &&
@@ -150,6 +214,8 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
         blackEmail: r || "",
       }),
       (tournamentMatchActive = !0),
+      (tournamentLastLatencyMs_ = null),
+      setTournamentSyncState_(navigator.onLine ? "online" : "offline"),
       setTournamentMatchBusy_(!1),
       (tournamentSelectionLastSent_ = null),
       (opponentSelectedSquare = tournamentOpponentSelectionFromRow_(s)),
@@ -228,7 +294,12 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
   }
 }
 function exitTournamentMatch() {
-  (syncTournamentSelection_(null),
+  (closePromotionPicker_(null),
+    syncTournamentSelection_(null),
+    clearTimeout(tournamentSyncSlowTimer_),
+    (tournamentSyncSlowTimer_ = null),
+    (tournamentSyncState_ = "online"),
+    (tournamentLastLatencyMs_ = null),
     setTournamentMatchBusy_(!1),
     (tournamentMatchActive = !1),
     (tournamentMatchCtx = null),
@@ -293,6 +364,7 @@ async function syncTournamentMove() {
       }),
       updateTournamentClockDisplay());
   }
+  const syncStarted = beginTournamentSync_();
   setTournamentMatchBusy_(!0);
   try {
     let t = null;
@@ -317,7 +389,8 @@ async function syncTournamentMove() {
         "move",
       ),
       o = n.gameRow;
-    (o && (tournamentCurrentGameRow = o),
+    (finishTournamentSync_(syncStarted),
+      o && (tournamentCurrentGameRow = o),
       t &&
         !tournamentResultShown &&
         ((tournamentResultShown = !0), showTournamentResult(t)),
@@ -330,10 +403,11 @@ async function syncTournamentMove() {
         !n.resultPendingReferee &&
         "pending_approval" === n.meta.roundStatus &&
         toast(
-          "✅ Ya están todos los resultados de esta ronda, falta que el administrador la apruebe.",
+          "✅ Ya están todos los resultados de esta ronda; falta que el administrador o el árbitro la aprueben.",
         ),
       updateTournamentMatchBar(o));
   } catch (e) {
+    failTournamentSync_();
     const syncMessage =
       e &&
       ("permission-denied" === e.code ||
@@ -361,6 +435,7 @@ async function syncTournamentMove() {
       if (tournamentMatchBusy || tournamentActiveClockExpired_()) return;
       const e = tournamentMyColor();
       if (e && confirm("¿Seguro que te querés rendir en esta partida?")) {
+        const syncStarted = beginTournamentSync_();
         setTournamentMatchBusy_(!0);
         try {
           const t = await fbMakeMove(
@@ -376,7 +451,8 @@ async function syncTournamentMove() {
               "resign",
             ),
             a = t.gameRow;
-          (tournamentResultShown ||
+          (finishTournamentSync_(syncStarted),
+            tournamentResultShown ||
             ((tournamentResultShown = !0),
             showTournamentResult("w" === e ? "0-1" : "1-0")),
             updateTournamentMatchBar(a),
@@ -384,11 +460,11 @@ async function syncTournamentMove() {
               t.resultPendingReferee
                 ? "Te rendiste. Un árbitro debe confirmar el resultado en la tabla."
                 : "pending_approval" === t.meta.roundStatus
-                ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador apruebe la ronda."
+                ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador o el árbitro aprueben la ronda."
                 : "🏳️ Te rendiste. Resultado cargado.",
             ));
         } catch (e) {
-          showError(e);
+          (failTournamentSync_(), showError(e));
         } finally {
           setTournamentMatchBusy_(!1);
         }
@@ -403,12 +479,14 @@ async function syncTournamentMove() {
         tournamentActiveClockExpired_()
       )
         return;
+      let syncStarted = beginTournamentSync_();
       setTournamentMatchBusy_(!0);
       try {
         const e = await fbToggleDrawOffer(
           tournamentMatchCtx.round,
           tournamentMatchCtx.board,
         );
+        finishTournamentSync_(syncStarted);
         if ("offered" === e.action) {
           ((tournamentCurrentGameRow = e.gameRow),
             updateTournamentMatchBar(e.gameRow),
@@ -425,6 +503,7 @@ async function syncTournamentMove() {
           "accept" === e.action &&
           confirm("Tu rival ofreció tablas. ¿Querés aceptar?")
         ) {
+          syncStarted = beginTournamentSync_();
           const t = await fbMakeMove(
               tournamentMatchCtx.round,
               tournamentMatchCtx.board,
@@ -438,19 +517,20 @@ async function syncTournamentMove() {
               "draw",
             ),
             a = t.gameRow;
-          (tournamentResultShown ||
+          (finishTournamentSync_(syncStarted),
+            tournamentResultShown ||
             ((tournamentResultShown = !0), showTournamentResult("1/2-1/2")),
             updateTournamentMatchBar(a),
             toast(
               t.resultPendingReferee
                 ? "Tablas acordadas. Un árbitro debe confirmar el resultado en la tabla."
                 : "pending_approval" === t.meta.roundStatus
-                ? "🤝 Tablas acordadas. Falta que el administrador apruebe la ronda."
+                ? "🤝 Tablas acordadas. Falta que el administrador o el árbitro aprueben la ronda."
                 : "🤝 Tablas acordadas.",
             ));
         }
       } catch (e) {
-        showError(e);
+        (failTournamentSync_(), showError(e));
       } finally {
         setTournamentMatchBusy_(!1);
       }

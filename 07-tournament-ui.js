@@ -1185,6 +1185,8 @@ function handleLiveMatchUpdate(e) {
       e.board === tournamentMatchCtx.board,
   );
   if (!t) return;
+  "function" == typeof markTournamentConnectionAlive_ &&
+    markTournamentConnectionAlive_();
   tournamentCurrentGameRow = t;
   const n = applyTournamentOpponentSelection_(t),
     a =

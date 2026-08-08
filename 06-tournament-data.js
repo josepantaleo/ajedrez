@@ -216,6 +216,15 @@ function gameParticipantColorForState_(e, t, a) {
       ? "b"
       : "";
 }
+function gameParticipantColorForGameRow_(e) {
+  const t = normalizeRoleEmail_(currentUser && currentUser.email);
+  if (!t || !e) return "";
+  return normalizeRoleEmail_(e.whiteEmail) === t
+    ? "w"
+    : normalizeRoleEmail_(e.blackEmail) === t
+      ? "b"
+      : "";
+}
 function assertGameParticipantForState_(e, t, a) {
   const n = gameParticipantColorForState_(e, t, a);
   if (!n)
@@ -1376,18 +1385,21 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
     }
     (o && ((i.status = "finished"), (i.result = o)),
       await fbDb.runTransaction(async (e) => {
-        const t = await e.get(fbRoomRef);
-        if (!t.exists) throw new Error("No se encontró el torneo");
-        const roomState = t.data();
-        assertTournamentNotFinished_(roomState);
-        const participantColor = assertGameParticipantForState_(
-          roomState,
-          m.round,
-          m.board,
-        );
         const currentGameSnap = await e.get(u);
         if (!currentGameSnap.exists) throw new Error("No se encontró esa partida");
         const currentGame = currentGameSnap.data();
+        let participantColor = gameParticipantColorForGameRow_(currentGame);
+        if (!participantColor) {
+          const t = await e.get(fbRoomRef);
+          if (!t.exists) throw new Error("No se encontró el torneo");
+          const roomState = t.data();
+          (assertTournamentNotFinished_(roomState),
+            (participantColor = assertGameParticipantForState_(
+              roomState,
+              m.round,
+              m.board,
+            )));
+        }
         if ("finished" === currentGame.status)
           throw new Error("Esa partida ya terminó");
         if ("suspended" === currentGame.status)
@@ -1487,15 +1499,18 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
   let p = null;
   if (
     (await fbDb.runTransaction(async (tx) => {
-      const roomSnap = await tx.get(fbRoomRef);
-      if (!roomSnap.exists) throw new Error("No se encontró el torneo");
-      const roomData = roomSnap.data();
-      assertTournamentNotFinished_(roomData);
-      const participantColor = assertGameParticipantForState_(roomData, e, t);
       const gameSnap = await tx.get(u);
       if (!gameSnap.exists) throw new Error("No se encontró esa partida");
-      const i = { ...gameSnap.data() },
-        l = a !== i.fen,
+      const i = { ...gameSnap.data() };
+      let participantColor = gameParticipantColorForGameRow_(i);
+      if (!participantColor) {
+        const roomSnap = await tx.get(fbRoomRef);
+        if (!roomSnap.exists) throw new Error("No se encontró el torneo");
+        const roomData = roomSnap.data();
+        (assertTournamentNotFinished_(roomData),
+          (participantColor = assertGameParticipantForState_(roomData, e, t)));
+      }
+      const l = a !== i.fen,
         h = Boolean(i.clock && l);
       if ("finished" === i.status) throw new Error("Esa partida ya terminó");
       if ("suspended" === i.status)
@@ -1616,31 +1631,20 @@ async function fbSetSelectedSquare(e, t, a, n) {
     r = "w" === n || "b" === n ? n : "",
     s = gamesCollectionRef.doc(gameDocId_(e, t));
   if (!r) return;
-  await fbDb.runTransaction(async (tx) => {
-    const l = await tx.get(fbRoomRef);
-    if (!l.exists) return;
-    const i = l.data();
-    (assertTournamentNotFinished_(i),
-      assertGameParticipantForState_(i, e, t));
-    const c = await tx.get(s);
-    if (!c.exists) return;
-    const a = c.data();
-    if ("ongoing" !== a.status) return;
-    if (o) {
-      if (new Chess(a.fen).turn() !== r) return;
-      tx.update(s, {
-        selectedSquare: o,
-        selectedColor: r,
-        selectedAt: syncedNow_(),
-      });
-    } else {
-      if (a.selectedColor && a.selectedColor !== r) return;
-      tx.update(s, {
-        selectedSquare: "",
-        selectedColor: "",
-        selectedAt: null,
-      });
-    }
+  const l =
+    lastRoundGames.find((a) => a.round === e && a.board === t) ||
+    (tournamentCurrentGameRow &&
+    tournamentCurrentGameRow.round === e &&
+    tournamentCurrentGameRow.board === t
+      ? tournamentCurrentGameRow
+      : null);
+  if (!l || "ongoing" !== l.status) return;
+  if (o && new Chess(l.fen).turn() !== r) return;
+  if (!o && l.selectedColor && l.selectedColor !== r) return;
+  await s.update({
+    selectedSquare: o,
+    selectedColor: o ? r : "",
+    selectedAt: o ? syncedNow_() : null,
   });
 }
 async function fbMarkJoined(e, t, a) {

@@ -616,6 +616,7 @@ let tournamentMatchCtx = null,
   tournamentCurrentGameRow = null,
   opponentSelectedSquare = null,
   tournamentSelectionLastSent_ = null,
+  tournamentSelectionSyncTimer_ = null,
   tournamentSelectionWriteChain_ = Promise.resolve(),
   matchChatUnsub = null,
   matchChatMessages = [];
@@ -1098,6 +1099,19 @@ function applyTournamentOpponentSelection_(e) {
     ? !1
     : ((opponentSelectedSquare = t), !0);
 }
+function clearTournamentSelectionForMove_() {
+  const e = tournamentCurrentGameRow;
+  (clearTimeout(tournamentSelectionSyncTimer_),
+    (tournamentSelectionSyncTimer_ = null),
+    (tournamentSelectionLastSent_ = ""),
+    e &&
+      (tournamentCurrentGameRow = {
+        ...e,
+        selectedSquare: "",
+        selectedColor: "",
+        selectedAt: null,
+      }));
+}
 function syncTournamentSelection_(e) {
   if (!tournamentMatchActive || !tournamentMatchCtx) return;
   const t = tournamentMyColor();
@@ -1113,7 +1127,8 @@ function syncTournamentSelection_(e) {
   if (a === tournamentSelectionLastSent_) return;
   const o = tournamentMatchCtx.round,
     r = tournamentMatchCtx.board;
-  ((tournamentSelectionLastSent_ = a),
+  (clearTimeout(tournamentSelectionSyncTimer_),
+    (tournamentSelectionLastSent_ = a),
     n &&
       (tournamentCurrentGameRow = {
         ...n,
@@ -1121,13 +1136,16 @@ function syncTournamentSelection_(e) {
         selectedColor: a ? t : "",
         selectedAt: a ? syncedNow_() : null,
       }),
-    (tournamentSelectionWriteChain_ = tournamentSelectionWriteChain_
-      .catch(() => {})
-      .then(() => fbSetSelectedSquare(o, r, a, t))
-      .catch(() => {
-        tournamentSelectionLastSent_ === a &&
-          (tournamentSelectionLastSent_ = null);
-      })));
+    (tournamentSelectionSyncTimer_ = setTimeout(() => {
+      ((tournamentSelectionSyncTimer_ = null),
+        (tournamentSelectionWriteChain_ = tournamentSelectionWriteChain_
+          .catch(() => {})
+          .then(() => fbSetSelectedSquare(o, r, a, t))
+          .catch(() => {
+            tournamentSelectionLastSent_ === a &&
+              (tournamentSelectionLastSent_ = null);
+          })));
+    }, 120)));
 }
 function onPieceDragMove(e) {
   if (!dragCtx) return;
@@ -1167,37 +1185,123 @@ function isPromotionMove(e, t, a) {
   const o = a[1];
   return "8" === o || "1" === o;
 }
+let promotionPickerResolve_ = null,
+  promotionOverlayHome_ = null;
+function closePromotionPicker_(e) {
+  if (promotionPickerResolve_) return void promotionPickerResolve_(e || null);
+  const t = document.getElementById("promo");
+  (t && (t.classList.remove("show"), t.setAttribute("aria-hidden", "true")),
+    document.body.classList.remove("promotion-open"));
+}
 function askPromotion(e) {
+  closePromotionPicker_(null);
   return new Promise((t) => {
     const a = document.getElementById("promo"),
       n = document.getElementById("promo-box");
     if (!a || !n) return void t("q");
+    const o = document.fullscreenElement;
+    if (o && !o.contains(a)) {
+      const e = a.parentNode;
+      ((promotionOverlayHome_ = { parent: e, next: a.nextSibling }),
+        o.appendChild(a));
+    }
+    let r = !1;
+    const s = (e) => {
+        if (r) return;
+        ((r = !0),
+          (promotionPickerResolve_ = null),
+          document.removeEventListener("keydown", l, !0),
+          a.removeEventListener("click", i),
+          a.classList.remove("show"),
+          a.setAttribute("aria-hidden", "true"),
+          document.body.classList.remove("promotion-open"));
+        if (promotionOverlayHome_) {
+          const e = promotionOverlayHome_;
+          (e.next && e.next.parentNode === e.parent
+            ? e.parent.insertBefore(a, e.next)
+            : e.parent.appendChild(a),
+            (promotionOverlayHome_ = null));
+        }
+        t(e || null);
+      },
+      l = (e) => {
+        const t = String(e.key || "").toLowerCase(),
+          a = {
+            q: "q",
+            d: "q",
+            r: "r",
+            t: "r",
+            b: "b",
+            a: "b",
+            n: "n",
+            c: "n",
+          }[t];
+        if (a) return (e.preventDefault(), void s(a));
+        "escape" === t && (e.preventDefault(), s(null));
+      },
+      i = (e) => {
+        e.target === a && s(null);
+      };
+    promotionPickerResolve_ = s;
     n.innerHTML = "";
-    const o = document.createElement("div");
-    ((o.className = "promo-title"),
-      (o.textContent = "Elegí la pieza para coronar"),
-      n.appendChild(o),
+    const c = document.createElement("div");
+    ((c.className = "promo-title"),
+      (c.textContent = "Coronación de peón"),
+      n.appendChild(c));
+    const d = document.createElement("div");
+    ((d.className = "promo-subtitle"),
+      (d.textContent = "Elegí la pieza nueva"),
+      n.appendChild(d),
       [
-        { code: "q", label: "Dama" },
-        { code: "r", label: "Torre" },
-        { code: "b", label: "Alfil" },
-        { code: "n", label: "Caballo" },
-      ].forEach((o) => {
-        const r = document.createElement("button");
-        ((r.type = "button"),
-          (r.textContent = PIECES[e + o.code.toUpperCase()]),
-          r.setAttribute("aria-label", o.label),
-          (r.title = o.label),
-          r.addEventListener(
+        { code: "q", label: "Dama", key: "D" },
+        { code: "r", label: "Torre", key: "T" },
+        { code: "b", label: "Alfil", key: "A" },
+        { code: "n", label: "Caballo", key: "C" },
+      ].forEach((t) => {
+        const a = document.createElement("button"),
+          o = document.createElement("span"),
+          r = document.createElement("span");
+        ((a.type = "button"),
+          (a.className = "promo-choice"),
+          a.setAttribute("aria-label", `${t.label}. Tecla ${t.key}`),
+          (a.title = `${t.label} (${t.key})`),
+          (o.className = "promo-piece"),
+          (o.textContent = PIECES[e + t.code.toUpperCase()]),
+          (r.className = "promo-label"),
+          (r.textContent = t.label),
+          a.append(o, r),
+          a.addEventListener(
             "click",
             () => {
-              (a.classList.remove("show"), t(o.code));
+              s(t.code);
             },
             { once: !0 },
           ),
-          n.appendChild(r));
+          n.appendChild(a));
       }),
-      a.classList.add("show"));
+      (() => {
+        const e = document.createElement("button");
+        return (
+          (e.type = "button"),
+          (e.className = "promo-cancel"),
+          (e.textContent = "Cancelar jugada"),
+          e.addEventListener("click", () => s(null), { once: !0 }),
+          n.appendChild(e),
+          e
+        );
+      })(),
+      a.setAttribute("role", "dialog"),
+      a.setAttribute("aria-modal", "true"),
+      a.setAttribute("aria-label", "Elegir pieza para coronación"),
+      a.setAttribute("aria-hidden", "false"),
+      a.addEventListener("click", i),
+      document.addEventListener("keydown", l, !0),
+      document.body.classList.add("promotion-open"),
+      a.classList.add("show"),
+      requestAnimationFrame(() => {
+        const e = n.querySelector(".promo-choice");
+        e && e.focus();
+      }));
   });
 }
 async function onPieceDragUp(e) {
@@ -1229,8 +1333,16 @@ async function onPieceDragUp(e) {
     o && validMoves.includes(o))
   ) {
     let e = "q";
-    isPromotionMove(game, t.from, o) &&
+    if (isPromotionMove(game, t.from, o)) {
       (render(), (e = await askPromotion(game.turn())));
+      if (!e)
+        return (
+          (selected = null),
+          (validMoves = []),
+          syncTournamentSelection_(null),
+          void render()
+        );
+    }
     const a = game.fen(),
       n = game.move({ from: t.from, to: o, promotion: e });
     if (n) {
@@ -1238,7 +1350,7 @@ async function onPieceDragUp(e) {
         (addIncrement(),
         (selected = null),
         (validMoves = []),
-        syncTournamentSelection_(null),
+        clearTournamentSelectionForMove_(),
         markMoveForAnimation(n),
         playSoundForMove(n, game),
         showMoveExplanation(a, n),
@@ -1283,7 +1395,16 @@ async function clickSquare(e) {
   if (selected) {
     const t = selected;
     let a = "q";
-    isPromotionMove(game, t, e) && (a = await askPromotion(game.turn()));
+    if (isPromotionMove(game, t, e)) {
+      a = await askPromotion(game.turn());
+      if (!a)
+        return (
+          (selected = null),
+          (validMoves = []),
+          syncTournamentSelection_(null),
+          void render()
+        );
+    }
     const n = game.fen(),
       o = game.move({ from: t, to: e, promotion: a });
     if (o)
@@ -1291,7 +1412,7 @@ async function clickSquare(e) {
         addIncrement(),
         (selected = null),
         (validMoves = []),
-        syncTournamentSelection_(null),
+        clearTournamentSelectionForMove_(),
         markMoveForAnimation(o),
         playSoundForMove(o, game),
         showMoveExplanation(n, o),
@@ -5360,6 +5481,15 @@ function gameParticipantColorForState_(e, t, a) {
       ? "b"
       : "";
 }
+function gameParticipantColorForGameRow_(e) {
+  const t = normalizeRoleEmail_(currentUser && currentUser.email);
+  if (!t || !e) return "";
+  return normalizeRoleEmail_(e.whiteEmail) === t
+    ? "w"
+    : normalizeRoleEmail_(e.blackEmail) === t
+      ? "b"
+      : "";
+}
 function assertGameParticipantForState_(e, t, a) {
   const n = gameParticipantColorForState_(e, t, a);
   if (!n)
@@ -6520,18 +6650,21 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
     }
     (o && ((i.status = "finished"), (i.result = o)),
       await fbDb.runTransaction(async (e) => {
-        const t = await e.get(fbRoomRef);
-        if (!t.exists) throw new Error("No se encontró el torneo");
-        const roomState = t.data();
-        assertTournamentNotFinished_(roomState);
-        const participantColor = assertGameParticipantForState_(
-          roomState,
-          m.round,
-          m.board,
-        );
         const currentGameSnap = await e.get(u);
         if (!currentGameSnap.exists) throw new Error("No se encontró esa partida");
         const currentGame = currentGameSnap.data();
+        let participantColor = gameParticipantColorForGameRow_(currentGame);
+        if (!participantColor) {
+          const t = await e.get(fbRoomRef);
+          if (!t.exists) throw new Error("No se encontró el torneo");
+          const roomState = t.data();
+          (assertTournamentNotFinished_(roomState),
+            (participantColor = assertGameParticipantForState_(
+              roomState,
+              m.round,
+              m.board,
+            )));
+        }
         if ("finished" === currentGame.status)
           throw new Error("Esa partida ya terminó");
         if ("suspended" === currentGame.status)
@@ -6631,15 +6764,18 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
   let p = null;
   if (
     (await fbDb.runTransaction(async (tx) => {
-      const roomSnap = await tx.get(fbRoomRef);
-      if (!roomSnap.exists) throw new Error("No se encontró el torneo");
-      const roomData = roomSnap.data();
-      assertTournamentNotFinished_(roomData);
-      const participantColor = assertGameParticipantForState_(roomData, e, t);
       const gameSnap = await tx.get(u);
       if (!gameSnap.exists) throw new Error("No se encontró esa partida");
-      const i = { ...gameSnap.data() },
-        l = a !== i.fen,
+      const i = { ...gameSnap.data() };
+      let participantColor = gameParticipantColorForGameRow_(i);
+      if (!participantColor) {
+        const roomSnap = await tx.get(fbRoomRef);
+        if (!roomSnap.exists) throw new Error("No se encontró el torneo");
+        const roomData = roomSnap.data();
+        (assertTournamentNotFinished_(roomData),
+          (participantColor = assertGameParticipantForState_(roomData, e, t)));
+      }
+      const l = a !== i.fen,
         h = Boolean(i.clock && l);
       if ("finished" === i.status) throw new Error("Esa partida ya terminó");
       if ("suspended" === i.status)
@@ -6760,31 +6896,20 @@ async function fbSetSelectedSquare(e, t, a, n) {
     r = "w" === n || "b" === n ? n : "",
     s = gamesCollectionRef.doc(gameDocId_(e, t));
   if (!r) return;
-  await fbDb.runTransaction(async (tx) => {
-    const l = await tx.get(fbRoomRef);
-    if (!l.exists) return;
-    const i = l.data();
-    (assertTournamentNotFinished_(i),
-      assertGameParticipantForState_(i, e, t));
-    const c = await tx.get(s);
-    if (!c.exists) return;
-    const a = c.data();
-    if ("ongoing" !== a.status) return;
-    if (o) {
-      if (new Chess(a.fen).turn() !== r) return;
-      tx.update(s, {
-        selectedSquare: o,
-        selectedColor: r,
-        selectedAt: syncedNow_(),
-      });
-    } else {
-      if (a.selectedColor && a.selectedColor !== r) return;
-      tx.update(s, {
-        selectedSquare: "",
-        selectedColor: "",
-        selectedAt: null,
-      });
-    }
+  const l =
+    lastRoundGames.find((a) => a.round === e && a.board === t) ||
+    (tournamentCurrentGameRow &&
+    tournamentCurrentGameRow.round === e &&
+    tournamentCurrentGameRow.board === t
+      ? tournamentCurrentGameRow
+      : null);
+  if (!l || "ongoing" !== l.status) return;
+  if (o && new Chess(l.fen).turn() !== r) return;
+  if (!o && l.selectedColor && l.selectedColor !== r) return;
+  await s.update({
+    selectedSquare: o,
+    selectedColor: o ? r : "",
+    selectedAt: o ? syncedNow_() : null,
   });
 }
 async function fbMarkJoined(e, t, a) {
@@ -8461,6 +8586,8 @@ function handleLiveMatchUpdate(e) {
       e.board === tournamentMatchCtx.board,
   );
   if (!t) return;
+  "function" == typeof markTournamentConnectionAlive_ &&
+    markTournamentConnectionAlive_();
   tournamentCurrentGameRow = t;
   const n = applyTournamentOpponentSelection_(t),
     a =
@@ -8632,6 +8759,70 @@ function setupRoundCountdownControls_() {
 }
 let tournamentMovesCardHome_ = null,
   tournamentMovesAutoCollapsed_ = !1;
+let tournamentSyncState_ = "online",
+  tournamentLastLatencyMs_ = null,
+  tournamentSyncSlowTimer_ = null;
+function renderTournamentSyncIndicator_() {
+  const e = document.getElementById("tournament-sync-indicator"),
+    t = document.getElementById("tournament-sync-text");
+  if (!e || !t) return;
+  let a = navigator.onLine ? tournamentSyncState_ : "offline",
+    n = "",
+    o = "";
+  if ("syncing" === a)
+    ((n = "Sincronizando"), (o = "Enviando cambios a Firebase"));
+  else if ("delayed" === a)
+    ((n = "Demora…"),
+      (o = "La confirmación de Firebase está tardando más de lo habitual"));
+  else if ("error" === a)
+    ((n = "Error de red"), (o = "La última sincronización no se completó"));
+  else if ("offline" === a)
+    ((n = "Sin conexión"), (o = "El navegador no tiene conexión a Internet"));
+  else if (Number.isFinite(tournamentLastLatencyMs_)) {
+    const e = Math.max(0, Math.round(tournamentLastLatencyMs_));
+    ((a = e > 900 ? "slow" : e > 350 ? "normal" : "fast"),
+      (n = `${e} ms`),
+      (o = `Última confirmación de Firebase: ${e} milisegundos`));
+  } else ((a = "online"), (n = "En línea"), (o = "Conectado a Firebase"));
+  ((e.dataset.state = a),
+    (t.textContent = n),
+    (e.title = o),
+    e.setAttribute("aria-label", o));
+}
+function setTournamentSyncState_(e, t) {
+  (clearTimeout(tournamentSyncSlowTimer_),
+    (tournamentSyncSlowTimer_ = null),
+    Number.isFinite(t) && (tournamentLastLatencyMs_ = t),
+    (tournamentSyncState_ = e),
+    renderTournamentSyncIndicator_());
+  "syncing" === e &&
+    (tournamentSyncSlowTimer_ = setTimeout(() => {
+      "syncing" === tournamentSyncState_ &&
+        ((tournamentSyncState_ = "delayed"),
+        renderTournamentSyncIndicator_());
+    }, 1200));
+}
+function beginTournamentSync_() {
+  return (setTournamentSyncState_("syncing"), performance.now());
+}
+function finishTournamentSync_(e) {
+  setTournamentSyncState_("online", performance.now() - e);
+}
+function failTournamentSync_() {
+  setTournamentSyncState_(navigator.onLine ? "error" : "offline");
+}
+function markTournamentConnectionAlive_() {
+  tournamentMatchBusy ||
+    ("error" !== tournamentSyncState_ && "delayed" !== tournamentSyncState_
+      ? renderTournamentSyncIndicator_()
+      : setTournamentSyncState_("online"));
+}
+(window.addEventListener("online", () => {
+  setTournamentSyncState_("online");
+}),
+  window.addEventListener("offline", () => {
+    setTournamentSyncState_("offline");
+  }));
 function setTournamentMatchBusy_(e) {
   tournamentMatchBusy = !!e;
   tournamentMatchActive &&
@@ -8709,6 +8900,8 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
         blackEmail: r || "",
       }),
       (tournamentMatchActive = !0),
+      (tournamentLastLatencyMs_ = null),
+      setTournamentSyncState_(navigator.onLine ? "online" : "offline"),
       setTournamentMatchBusy_(!1),
       (tournamentSelectionLastSent_ = null),
       (opponentSelectedSquare = tournamentOpponentSelectionFromRow_(s)),
@@ -8787,7 +8980,12 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
   }
 }
 function exitTournamentMatch() {
-  (syncTournamentSelection_(null),
+  (closePromotionPicker_(null),
+    syncTournamentSelection_(null),
+    clearTimeout(tournamentSyncSlowTimer_),
+    (tournamentSyncSlowTimer_ = null),
+    (tournamentSyncState_ = "online"),
+    (tournamentLastLatencyMs_ = null),
     setTournamentMatchBusy_(!1),
     (tournamentMatchActive = !1),
     (tournamentMatchCtx = null),
@@ -8852,6 +9050,7 @@ async function syncTournamentMove() {
       }),
       updateTournamentClockDisplay());
   }
+  const syncStarted = beginTournamentSync_();
   setTournamentMatchBusy_(!0);
   try {
     let t = null;
@@ -8876,7 +9075,8 @@ async function syncTournamentMove() {
         "move",
       ),
       o = n.gameRow;
-    (o && (tournamentCurrentGameRow = o),
+    (finishTournamentSync_(syncStarted),
+      o && (tournamentCurrentGameRow = o),
       t &&
         !tournamentResultShown &&
         ((tournamentResultShown = !0), showTournamentResult(t)),
@@ -8889,10 +9089,11 @@ async function syncTournamentMove() {
         !n.resultPendingReferee &&
         "pending_approval" === n.meta.roundStatus &&
         toast(
-          "✅ Ya están todos los resultados de esta ronda, falta que el administrador la apruebe.",
+          "✅ Ya están todos los resultados de esta ronda; falta que el administrador o el árbitro la aprueben.",
         ),
       updateTournamentMatchBar(o));
   } catch (e) {
+    failTournamentSync_();
     const syncMessage =
       e &&
       ("permission-denied" === e.code ||
@@ -8920,6 +9121,7 @@ async function syncTournamentMove() {
       if (tournamentMatchBusy || tournamentActiveClockExpired_()) return;
       const e = tournamentMyColor();
       if (e && confirm("¿Seguro que te querés rendir en esta partida?")) {
+        const syncStarted = beginTournamentSync_();
         setTournamentMatchBusy_(!0);
         try {
           const t = await fbMakeMove(
@@ -8935,7 +9137,8 @@ async function syncTournamentMove() {
               "resign",
             ),
             a = t.gameRow;
-          (tournamentResultShown ||
+          (finishTournamentSync_(syncStarted),
+            tournamentResultShown ||
             ((tournamentResultShown = !0),
             showTournamentResult("w" === e ? "0-1" : "1-0")),
             updateTournamentMatchBar(a),
@@ -8943,11 +9146,11 @@ async function syncTournamentMove() {
               t.resultPendingReferee
                 ? "Te rendiste. Un árbitro debe confirmar el resultado en la tabla."
                 : "pending_approval" === t.meta.roundStatus
-                ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador apruebe la ronda."
+                ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador o el árbitro aprueben la ronda."
                 : "🏳️ Te rendiste. Resultado cargado.",
             ));
         } catch (e) {
-          showError(e);
+          (failTournamentSync_(), showError(e));
         } finally {
           setTournamentMatchBusy_(!1);
         }
@@ -8962,12 +9165,14 @@ async function syncTournamentMove() {
         tournamentActiveClockExpired_()
       )
         return;
+      let syncStarted = beginTournamentSync_();
       setTournamentMatchBusy_(!0);
       try {
         const e = await fbToggleDrawOffer(
           tournamentMatchCtx.round,
           tournamentMatchCtx.board,
         );
+        finishTournamentSync_(syncStarted);
         if ("offered" === e.action) {
           ((tournamentCurrentGameRow = e.gameRow),
             updateTournamentMatchBar(e.gameRow),
@@ -8984,6 +9189,7 @@ async function syncTournamentMove() {
           "accept" === e.action &&
           confirm("Tu rival ofreció tablas. ¿Querés aceptar?")
         ) {
+          syncStarted = beginTournamentSync_();
           const t = await fbMakeMove(
               tournamentMatchCtx.round,
               tournamentMatchCtx.board,
@@ -8997,19 +9203,20 @@ async function syncTournamentMove() {
               "draw",
             ),
             a = t.gameRow;
-          (tournamentResultShown ||
+          (finishTournamentSync_(syncStarted),
+            tournamentResultShown ||
             ((tournamentResultShown = !0), showTournamentResult("1/2-1/2")),
             updateTournamentMatchBar(a),
             toast(
               t.resultPendingReferee
                 ? "Tablas acordadas. Un árbitro debe confirmar el resultado en la tabla."
                 : "pending_approval" === t.meta.roundStatus
-                ? "🤝 Tablas acordadas. Falta que el administrador apruebe la ronda."
+                ? "🤝 Tablas acordadas. Falta que el administrador o el árbitro aprueben la ronda."
                 : "🤝 Tablas acordadas.",
             ));
         }
       } catch (e) {
-        showError(e);
+        (failTournamentSync_(), showError(e));
       } finally {
         setTournamentMatchBusy_(!1);
       }
