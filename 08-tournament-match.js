@@ -322,6 +322,12 @@ async function syncTournamentMove() {
         !tournamentResultShown &&
         ((tournamentResultShown = !0), showTournamentResult(t)),
       t &&
+        n.resultPendingReferee &&
+        toast(
+          "Resultado registrado en la partida. Un árbitro debe confirmarlo en la tabla del torneo.",
+        ),
+      t &&
+        !n.resultPendingReferee &&
         "pending_approval" === n.meta.roundStatus &&
         toast(
           "✅ Ya están todos los resultados de esta ronda, falta que el administrador la apruebe.",
@@ -369,7 +375,9 @@ async function syncTournamentMove() {
             showTournamentResult("w" === e ? "0-1" : "1-0")),
             updateTournamentMatchBar(a),
             toast(
-              "pending_approval" === t.meta.roundStatus
+              t.resultPendingReferee
+                ? "Te rendiste. Un árbitro debe confirmar el resultado en la tabla."
+                : "pending_approval" === t.meta.roundStatus
                 ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador apruebe la ronda."
                 : "🏳️ Te rendiste. Resultado cargado.",
             ));
@@ -428,7 +436,9 @@ async function syncTournamentMove() {
             ((tournamentResultShown = !0), showTournamentResult("1/2-1/2")),
             updateTournamentMatchBar(a),
             toast(
-              "pending_approval" === t.meta.roundStatus
+              t.resultPendingReferee
+                ? "Tablas acordadas. Un árbitro debe confirmar el resultado en la tabla."
+                : "pending_approval" === t.meta.roundStatus
                 ? "🤝 Tablas acordadas. Falta que el administrador apruebe la ronda."
                 : "🤝 Tablas acordadas.",
             ));

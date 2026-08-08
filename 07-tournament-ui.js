@@ -385,7 +385,9 @@ function renderTournamentState(e) {
               })()
             : "",
         g =
-          o && "finished" !== o.status && "suspended" !== o.status && u
+          !t.result && o && "finished" === o.status && o.result
+            ? `Resultado declarado desde el tablero: ${resultLabel(o.result)}. Requiere confirmación del árbitro.`
+            : o && "finished" !== o.status && "suspended" !== o.status && u
             ? u
             : o &&
                 "finished" !== o.status &&
@@ -403,6 +405,8 @@ function renderTournamentState(e) {
                 : ((h = "finished"), (y = "⚪ Finalizada"))
             : ((h = "pending"), (y = "🟣 Resultado pendiente de confirmar")),
           t.locked && (y += " 🔒"))
+        : o && "finished" === o.status && o.result
+          ? ((h = "pending"), (y = "🟣 Resultado pendiente del árbitro"))
         : o && "suspended" === o.status
           ? ((h = "suspended"), (y = "⏸️ Suspendida"))
           : i > 0 &&
@@ -1248,8 +1252,7 @@ async function claimTournamentTimeout(e) {
     tournamentTimeoutClaimBusy = !0;
     try {
       const t = "w" === e ? "0-1" : "1-0",
-        a = (
-          await fbMakeMove(
+        n = await fbMakeMove(
             tournamentMatchCtx.round,
             tournamentMatchCtx.board,
             game.fen(),
@@ -1260,11 +1263,15 @@ async function claimTournamentTimeout(e) {
             void 0,
             !0,
             "timeout",
-          )
-        ).gameRow;
+          ),
+        a = n.gameRow;
       (tournamentResultShown ||
         ((tournamentResultShown = !0),
         showTournamentResult(t, "tiempo agotado")),
+        n.resultPendingReferee &&
+          toast(
+            "Tiempo agotado registrado. Un árbitro debe confirmar el resultado.",
+          ),
         updateTournamentMatchBar(a));
     } catch (e) {
     } finally {

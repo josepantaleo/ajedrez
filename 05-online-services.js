@@ -1049,15 +1049,30 @@ function connectFirebase(e, t) {
       firebase.auth().onAuthStateChanged((e) => {
         ((currentUser = e
           ? {
+              uid: e.uid,
               email: (e.email || "").toLowerCase(),
               displayName: e.displayName || e.email,
             }
           : null),
           updateAuthUI(),
-          renderTournamentState(lastTournamentState));
-      })),
-    subscribeTournament(),
-    subscribeAnnouncements());
+          currentUser
+            ? (subscribeTournament(), subscribeAnnouncements())
+            : (tournamentUnsub &&
+                (tournamentUnsub(), (tournamentUnsub = null)),
+              gamesRoundUnsub &&
+                (gamesRoundUnsub(), (gamesRoundUnsub = null)),
+              announcementsUnsub &&
+                (announcementsUnsub(), (announcementsUnsub = null)),
+              tournamentMatchActive && exitTournamentMatch(),
+              unsubscribeMatchChat(),
+              unsubscribeCallSignaling(),
+              (announcementHistory_ = []),
+              renderAnnouncementHistory_(),
+              renderAnnouncementBanner_(null),
+              (lastTournamentState = null),
+              (lastRoundGames = []),
+              renderTournamentState(null)));
+      })));
 }
 function updateAuthUI() {
   const e = document.getElementById("tournament-auth-status"),

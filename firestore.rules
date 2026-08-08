@@ -1,0 +1,356 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function email() {
+      return request.auth.token.email;
+    }
+
+    function roomData(roomId) {
+      return get(/databases/$(database)/documents/torneos/$(roomId)).data;
+    }
+
+    function adminEmails(data) {
+      return data.meta.get(
+        'adminEmails',
+        ['ipem146centenario@gmail.com']
+      );
+    }
+
+    function refereeEmails(data) {
+      return data.meta.get(
+        'refereeEmails',
+        ['josepantaleo@gmail.com']
+      );
+    }
+
+    function isAdminFor(data) {
+      return signedIn() && adminEmails(data).hasAny([email()]);
+    }
+
+    function isRefereeFor(data) {
+      return signedIn() && refereeEmails(data).hasAny([email()]);
+    }
+
+    function isOfficialFor(data) {
+      return isAdminFor(data) || isRefereeFor(data);
+    }
+
+    function isAdmin(roomId) {
+      return isAdminFor(roomData(roomId));
+    }
+
+    function isOfficial(roomId) {
+      return isOfficialFor(roomData(roomId));
+    }
+
+    function isParticipant(game) {
+      return signedIn()
+        && (
+          game.whiteEmail == email()
+          || game.blackEmail == email()
+        );
+    }
+
+    function gameData(roomId, gameId) {
+      return get(
+        /databases/$(database)/documents/torneos/$(roomId)/games/$(gameId)
+      ).data;
+    }
+
+    function isGameParticipant(roomId, gameId) {
+      return isParticipant(gameData(roomId, gameId));
+    }
+
+    function gameIsOngoing(roomId, gameId) {
+      return gameData(roomId, gameId).status == 'ongoing';
+    }
+
+    function validBootstrapCreate() {
+      return signedIn()
+        && email() == 'ipem146centenario@gmail.com'
+        && request.resource.data.keys().hasOnly([
+          'meta',
+          'players',
+          'pairings',
+          'registeredUids'
+        ])
+        && request.resource.data.meta.adminEmails is list
+        && request.resource.data.meta.adminEmails.size() > 0
+        && request.resource.data.meta.adminEmails.hasAny([email()]);
+    }
+
+    function validAdminRoomUpdate() {
+      return request.resource.data.keys().hasOnly([
+          'meta',
+          'players',
+          'pairings',
+          'registeredUids'
+        ])
+        && request.resource.data.meta.get(
+          'adminEmails',
+          ['ipem146centenario@gmail.com']
+        ) is list
+        && request.resource.data.meta.get(
+          'adminEmails',
+          ['ipem146centenario@gmail.com']
+        ).size() > 0
+        && request.resource.data.meta.get(
+          'adminEmails',
+          ['ipem146centenario@gmail.com']
+        ).size() <= 20
+        && request.resource.data.meta.get(
+          'refereeEmails',
+          ['josepantaleo@gmail.com']
+        ) is list
+        && request.resource.data.meta.get(
+          'refereeEmails',
+          ['josepantaleo@gmail.com']
+        ).size() <= 50;
+    }
+
+    function validRefereeRoomUpdate() {
+      return request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['players', 'pairings', 'meta'])
+        && request.resource.data.meta
+          .diff(resource.data.meta)
+          .affectedKeys()
+          .hasOnly([
+            'round',
+            'status',
+            'roundStatus',
+            'pendingApprovalAt',
+            'autoApprovalCancelled',
+            'statusBeforeFinish',
+            'finishedAt',
+            'finishedBy',
+            'roundCountdownSetAt',
+            'roundCountdownEndsAtMs',
+            'roundCountdownMs',
+            'roundCountdownDurationMs',
+            'roundCountdownRound',
+            'roundCountdownStartedBy',
+            'roundCountdownAdjustedBy'
+          ]);
+    }
+
+    function validSelfRegistration() {
+      let oldSize = resource.data.players.size();
+      let player = request.resource.data.players[oldSize];
+      let oldRegistrations = resource.data.get('registeredUids', {});
+      let newRegistrations = request.resource.data.registeredUids;
+      return signedIn()
+        && resource.data.meta.status != 'finished'
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['players', 'registeredUids'])
+        && request.resource.data.players.size() == oldSize + 1
+        && request.resource.data.players[0:oldSize] == resource.data.players
+        && oldRegistrations.get(request.auth.uid, '') == ''
+        && newRegistrations
+          .diff(oldRegistrations)
+          .affectedKeys()
+          .hasOnly([request.auth.uid])
+        && newRegistrations[request.auth.uid] == email()
+        && player.keys().hasOnly([
+          'id',
+          'name',
+          'email',
+          'points',
+          'played',
+          'byes',
+          'colorBalance',
+          'status'
+        ])
+        && player.id == 'u_' + request.auth.uid
+        && player.name is string
+        && player.name.size() > 0
+        && player.name.size() <= 80
+        && player.email == email()
+        && player.points == 0
+        && player.played is list
+        && player.played.size() == 0
+        && player.byes == 0
+        && player.colorBalance == 0
+        && player.status == 'pending';
+    }
+
+    function validPlayerGameUpdate(roomId) {
+      return isParticipant(resource.data)
+        && roomData(roomId).meta.status == 'active'
+        && resource.data.status == 'ongoing'
+        && request.resource.data.round == resource.data.round
+        && request.resource.data.board == resource.data.board
+        && request.resource.data.whiteEmail == resource.data.whiteEmail
+        && request.resource.data.blackEmail == resource.data.blackEmail
+        && request.resource.data.increment == resource.data.increment
+        && request.resource.data.startedAt == resource.data.startedAt
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'fen',
+            'lastMoveSan',
+            'moves',
+            'lastFrom',
+            'lastTo',
+            'clock',
+            'turnStartAt',
+            'selectedSquare',
+            'selectedColor',
+            'selectedAt',
+            'joined',
+            'drawOfferBy',
+            'drawOfferAt',
+            'status',
+            'result'
+          ])
+        && ['ongoing', 'finished'].hasAny([
+          request.resource.data.status
+        ])
+        && ['', '1-0', '0-1', '1/2-1/2'].hasAny([
+          request.resource.data.get('result', '')
+        ])
+        && ['', 'w', 'b'].hasAny([
+          request.resource.data.get('selectedColor', '')
+        ])
+        && ['', 'w', 'b'].hasAny([
+          request.resource.data.get('drawOfferBy', '')
+        ]);
+    }
+
+    match /torneos/{roomId} {
+      allow read: if signedIn();
+      allow create: if validBootstrapCreate();
+      allow update: if (isAdminFor(resource.data) && validAdminRoomUpdate())
+        || (isRefereeFor(resource.data) && validRefereeRoomUpdate())
+        || validSelfRegistration();
+      allow delete: if false;
+
+      match /games/{gameId} {
+        allow read: if signedIn();
+        allow create: if isOfficial(roomId)
+          && request.resource.data.whiteEmail is string
+          && request.resource.data.blackEmail is string
+          && request.resource.data.whiteEmail.size() > 0
+          && request.resource.data.blackEmail.size() > 0;
+        allow update: if isOfficial(roomId)
+          || validPlayerGameUpdate(roomId);
+        allow delete: if isAdmin(roomId);
+
+        match /chat/{messageId} {
+          allow read: if isGameParticipant(roomId, gameId);
+          allow create: if isGameParticipant(roomId, gameId)
+            && gameIsOngoing(roomId, gameId)
+            && request.resource.data.keys().hasOnly([
+              'text',
+              'senderEmail',
+              'senderName',
+              'senderColor',
+              'at'
+            ])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 300
+            && request.resource.data.senderEmail == email()
+            && request.resource.data.senderName is string
+            && request.resource.data.senderName.size() <= 100
+            && ['w', 'b'].hasAny([
+              request.resource.data.senderColor
+            ])
+            && request.resource.data.at is int;
+          allow update: if false;
+          allow delete: if isGameParticipant(roomId, gameId);
+        }
+
+        match /call/{callId} {
+          allow read: if callId == 'session'
+            && isGameParticipant(roomId, gameId);
+          allow create: if callId == 'session'
+            && isGameParticipant(roomId, gameId)
+            && gameIsOngoing(roomId, gameId)
+            && request.resource.data.keys().hasOnly([
+              'offer',
+              'answer',
+              'status',
+              'callerEmail',
+              'at'
+            ])
+            && request.resource.data.callerEmail == email()
+            && request.resource.data.status == 'calling';
+          allow update: if callId == 'session'
+            && isGameParticipant(roomId, gameId)
+            && request.resource.data
+              .diff(resource.data)
+              .affectedKeys()
+              .hasOnly([
+                'offer',
+                'answer',
+                'status',
+                'callerEmail',
+                'at'
+              ])
+            && request.resource.data.get(
+              'callerEmail',
+              resource.data.get('callerEmail', '')
+            ) == resource.data.get('callerEmail', '')
+            && (
+              gameIsOngoing(roomId, gameId)
+              || ['ended', 'idle', 'declined'].hasAny([
+                request.resource.data.status
+              ])
+            );
+          allow delete: if isAdmin(roomId);
+
+          match /{candidateGroup}/{candidateId} {
+            allow read: if isGameParticipant(roomId, gameId);
+            allow create: if isGameParticipant(roomId, gameId)
+              && gameIsOngoing(roomId, gameId)
+              && ['offerCandidates', 'answerCandidates'].hasAny([
+                candidateGroup
+              ])
+              && request.resource.data.keys().hasOnly([
+                'candidate',
+                'sdpMid',
+                'sdpMLineIndex',
+                'usernameFragment'
+              ]);
+            allow update: if false;
+            allow delete: if isGameParticipant(roomId, gameId);
+          }
+        }
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if signedIn();
+        allow create: if isOfficial(roomId)
+          && roomData(roomId).meta.status != 'finished'
+          && request.resource.data.keys().hasOnly([
+            'text',
+            'ts',
+            'byEmail'
+          ])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.byEmail == email()
+          && request.resource.data.ts == request.time;
+        allow update: if false;
+        allow delete: if isAdmin(roomId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -70,6 +70,14 @@ function subscribeTournament() {
         n = lastKnownTournamentStatus_;
       ((lastKnownTournamentStatus_ = a.meta.status),
         (lastTournamentState = a),
+        currentUser &&
+          isCurrentUserAdmin(a) &&
+          fbBackfillGameAccessFields_(a).catch((e) =>
+            console.warn(
+              "No se pudieron completar los participantes de partidas antiguas:",
+              e,
+            ),
+          ),
         subscribeRoundGames(
           "active" === a.meta.status || "finished" === a.meta.status
             ? a.meta.round
@@ -181,6 +189,7 @@ async function fbCreateTournament(e, t, a, n, o, r, s) {
       },
       players: i,
       pairings: [],
+      registeredUids: {},
     }),
     getTournamentStateOnce()
   );
@@ -209,6 +218,51 @@ function assertGameParticipantForState_(e, t, a) {
   if (!n)
     throw new Error("Solo los jugadores asignados pueden modificar esta partida");
   return n;
+}
+let gameAccessBackfillSignature_ = "";
+async function fbBackfillGameAccessFields_(e) {
+  if (!gamesCollectionRef || !e || !isCurrentUserAdmin(e)) return;
+  const t = new Map(
+      (e.pairings || [])
+        .filter((e) => "" !== e.blackId)
+        .map((e) => [
+          gameDocId_(e.round, e.board),
+          {
+            whiteEmail: normalizeRoleEmail_(e.whiteEmail),
+            blackEmail: normalizeRoleEmail_(e.blackEmail),
+          },
+        ]),
+    ),
+    a =
+      getTournamentRoom() +
+      "|" +
+      Array.from(t.entries())
+        .map(([e, t]) => `${e}:${t.whiteEmail}:${t.blackEmail}`)
+        .join("|");
+  if (a === gameAccessBackfillSignature_) return;
+  gameAccessBackfillSignature_ = a;
+  try {
+    const e = await gamesCollectionRef.get(),
+      n = e.docs
+        .map((e) => {
+          const a = t.get(e.id),
+            n = e.data();
+          return a &&
+            (normalizeRoleEmail_(n.whiteEmail) !== a.whiteEmail ||
+              normalizeRoleEmail_(n.blackEmail) !== a.blackEmail)
+            ? { ref: e.ref, data: a }
+            : null;
+        })
+        .filter(Boolean);
+    for (let e = 0; e < n.length; e += 400) {
+      const t = fbDb.batch();
+      (n.slice(e, e + 400).forEach((e) => t.update(e.ref, e.data)),
+        await t.commit());
+    }
+  } catch (e) {
+    gameAccessBackfillSignature_ = "";
+    throw e;
+  }
 }
 async function fbUpdateTournamentRoles(e, t) {
   const a = parseRoleEmails_(e),
@@ -279,11 +333,10 @@ async function fbSelfRegister(e) {
       const r = o.players || [];
       if (r.some((e) => (e.email || "").toLowerCase() === a))
         throw new Error("Ya estás inscripto en este torneo");
-      let s = r.length + 1;
-      const l = new Set(r.map((e) => e.id));
-      for (; l.has("p" + s); ) s++;
+      if (!currentUser.uid)
+        throw new Error("La sesión no tiene un identificador de usuario válido");
       const i = {
-        id: "p" + s,
+        id: "u_" + currentUser.uid,
         name: t,
         email: a,
         points: 0,
@@ -292,7 +345,13 @@ async function fbSelfRegister(e) {
         colorBalance: 0,
         status: "pending",
       };
-      e.update(fbRoomRef, { players: r.concat([i]) });
+      e.update(fbRoomRef, {
+        players: r.concat([i]),
+        registeredUids: {
+          ...(o.registeredUids || {}),
+          [currentUser.uid]: a,
+        },
+      });
     }),
     getTournamentStateOnce()
   );
@@ -561,6 +620,8 @@ function buildNextRoundPairings_(e, t, a, n, o) {
       .map((e) => ({
         round: e.round,
         board: e.board,
+        whiteEmail: (e.whiteEmail || "").toLowerCase(),
+        blackEmail: (e.blackEmail || "").toLowerCase(),
         fen: START_FEN_TOURNEY,
         lastMoveSan: "",
         status: "ongoing",
@@ -991,12 +1052,21 @@ async function fbSubmitResult(e, t, a) {
           l[c.whiteId].played.push(c.blackId),
         -1 === l[c.blackId].played.indexOf(c.whiteId) &&
           l[c.blackId].played.push(c.whiteId));
-      let p = null,
-        g = null;
-      ("wo-white" !== a && "wo-black" !== a) ||
-        ((p = gamesCollectionRef.doc(gameDocId_(e, t))),
-        (await n.get(p)).exists &&
-          (g = { status: "finished", resultReason: "wo" }));
+      const p = gamesCollectionRef.doc(gameDocId_(e, t)),
+        gameSnap = await n.get(p),
+        g = gameSnap.exists
+          ? {
+              status: "finished",
+              result: a,
+              resultReason:
+                "wo-white" === a || "wo-black" === a ? "wo" : "official",
+              drawOfferBy: "",
+              drawOfferAt: null,
+              selectedSquare: "",
+              selectedColor: "",
+              selectedAt: null,
+            }
+          : null;
       const f = { ...r.meta },
         h = f.totalRounds;
       ("active" === f.status &&
@@ -1016,7 +1086,7 @@ async function fbSubmitResult(e, t, a) {
             (f.pendingApprovalAt = syncedNow_()),
             (f.autoApprovalCancelled = !1))),
         n.update(fbRoomRef, { players: s, pairings: i, meta: f }),
-        p && g && n.update(p, g));
+        g && n.update(p, g));
     }),
     getTournamentStateOnce()
   );
@@ -1181,6 +1251,18 @@ function expectedResultForPosition_(e, t) {
       ? "1/2-1/2"
       : "";
 }
+async function fbRegisterGameResult_(e, t, a, n) {
+  const o = await getTournamentStateOnce();
+  if (isCurrentUserAdmin(o) || isCurrentUserReferee(o)) {
+    const r = await fbSubmitResult(e, t, a);
+    return ((r.gameRow = n), r);
+  }
+  return {
+    gameRow: n,
+    meta: o.meta,
+    resultPendingReferee: !0,
+  };
+}
 async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
   ((e = Number(e)), (t = Number(t)));
   if (
@@ -1322,8 +1404,7 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
       }));
     const c = { ...m, ...i };
     if ((h && (c.turnStartAt = d), !o)) return { gameRow: c };
-    const p = await fbSubmitResult(e, t, o);
-    return ((p.gameRow = c), p);
+    return fbRegisterGameResult_(e, t, o, c);
   }
   let p = null;
   if (
@@ -1430,8 +1511,7 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
     !o)
   )
     return { gameRow: p };
-  const g = await fbSubmitResult(e, t, o);
-  return ((g.gameRow = p), g);
+  return fbRegisterGameResult_(e, t, o, p);
 }
 async function fbSetSelectedSquare(e, t, a, n) {
   if (!gamesCollectionRef) return;
@@ -1547,6 +1627,7 @@ async function fbResetAll() {
       },
       players: [],
       pairings: [],
+      registeredUids: {},
     }),
     getTournamentStateOnce()
   );
