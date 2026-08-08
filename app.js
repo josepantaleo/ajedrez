@@ -6518,8 +6518,15 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
                       : "q",
                   })
                 : currentPosition.move(n);
-          if (!legalMove || currentPosition.fen() !== a)
-            throw new Error("La jugada indicada no es válida");
+          if (!legalMove)
+            throw new Error(
+              `La jugada ${r || n}-${s || ""} no es legal en la posición sincronizada`,
+            );
+          ((a = currentPosition.fen()),
+            (n = legalMove.san || n),
+            (i.fen = a),
+            (i.lastMoveSan = n),
+            (i.moves = (currentGame.moves || []).concat(n)));
           if (currentGame.clock) {
             const joined = currentGame.joined || { w: !1, b: !1 };
             if (!joined.w || !joined.b)
@@ -6656,8 +6663,11 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
                     : "q",
                 })
               : currentPosition.move(n);
-        if (!legalMove || currentPosition.fen() !== a)
-          throw new Error("La jugada indicada no es válida");
+        if (!legalMove)
+          throw new Error(
+            `La jugada ${r || n}-${s || ""} no es legal en la posición sincronizada`,
+          );
+        ((a = currentPosition.fen()), (n = legalMove.san || n));
       }
       if (h) {
         const e = new Chess(i.fen).turn(),
