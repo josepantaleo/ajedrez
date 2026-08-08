@@ -12,7 +12,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260808-2" />
+    <link rel="stylesheet" href="styles.css?v=20260808-3" />
   </head>
 
   <body>
@@ -337,6 +337,18 @@
                       >
                         <span class="tournament-sync-dot" aria-hidden="true"></span>
                         <span id="tournament-sync-text">En línea</span>
+                      </span>
+                      <span
+                        id="tournament-opponent-indicator"
+                        class="tournament-opponent-indicator"
+                        data-state="unknown"
+                        role="status"
+                        aria-live="polite"
+                        title="Estado de conexión del rival"
+                        style="display: none"
+                      >
+                        <span class="tournament-opponent-dot" aria-hidden="true"></span>
+                        <span id="tournament-opponent-text">Rival: sin verificar</span>
                       </span>
                     </div>
                     <button class="btn" id="tournament-match-back-btn">← Volver al torneo</button>
@@ -3436,7 +3448,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260808-13"></script>
+    <script defer src="app.js?v=20260808-14"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

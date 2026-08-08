@@ -24,6 +24,16 @@ function subscribeRoundGames(e) {
                         ? tournamentCurrentGameRow
                         : t.get(e.id),
                     r = o && o.fen === n.fen && o.status === n.status;
+                  (a &&
+                    o &&
+                    !n.presenceWAt &&
+                    o.presenceWAt &&
+                    (n.presenceWAt = o.presenceWAt),
+                    a &&
+                      o &&
+                      !n.presenceBAt &&
+                      o.presenceBAt &&
+                      (n.presenceBAt = o.presenceBAt));
                   if (
                     (r &&
                       !n.turnStartAt &&
@@ -1683,6 +1693,18 @@ async function fbMarkJoined(e, t, a) {
       (p.turnStartAt = syncedNow_()),
       i.update(n, p));
   });
+}
+async function fbTouchGamePresence_(e, t, a) {
+  if (!gamesCollectionRef || ("w" !== a && "b" !== a)) return;
+  if (
+    lastTournamentState &&
+    lastTournamentState.meta &&
+    "active" !== lastTournamentState.meta.status
+  )
+    return;
+  const n = gamesCollectionRef.doc(gameDocId_(Number(e), Number(t))),
+    o = "w" === a ? "presenceWAt" : "presenceBAt";
+  await n.update({ [o]: srvTimestamp() });
 }
 async function fbResetAll() {
   assertAdmin();

@@ -75,7 +75,13 @@ let tournamentMovesCardHome_ = null,
   tournamentMovesAutoCollapsed_ = !1;
 let tournamentSyncState_ = "online",
   tournamentLastLatencyMs_ = null,
-  tournamentSyncSlowTimer_ = null;
+  tournamentSyncSlowTimer_ = null,
+  tournamentPresenceHeartbeatTimer_ = null,
+  tournamentPresenceDisplayTimer_ = null,
+  tournamentPresenceLastSentAt_ = 0,
+  tournamentLastConfirmedSnapshotAt_ = 0,
+  tournamentRecoveryBusy_ = !1,
+  tournamentWasOffline_ = !1;
 function renderTournamentSyncIndicator_() {
   const e = document.getElementById("tournament-sync-indicator"),
     t = document.getElementById("tournament-sync-text");
@@ -126,16 +132,190 @@ function failTournamentSync_() {
   setTournamentSyncState_(navigator.onLine ? "error" : "offline");
 }
 function markTournamentConnectionAlive_() {
-  tournamentMatchBusy ||
+  ((tournamentLastConfirmedSnapshotAt_ = Date.now()),
+    tournamentMatchBusy ||
     ("error" !== tournamentSyncState_ && "delayed" !== tournamentSyncState_
       ? renderTournamentSyncIndicator_()
-      : setTournamentSyncState_("online"));
+      : setTournamentSyncState_("online")));
+}
+function renderTournamentOpponentPresence_(e) {
+  const t = document.getElementById("tournament-opponent-indicator"),
+    a = document.getElementById("tournament-opponent-text"),
+    n = tournamentMyColor();
+  if (
+    !t ||
+    !a ||
+    !tournamentMatchActive ||
+    !n ||
+    !e ||
+    "ongoing" !== e.status
+  )
+    return void (t && (t.style.display = "none"));
+  t.style.display = "";
+  const o = "w" === n ? "b" : "w",
+    r = "w" === o ? "presenceWAt" : "presenceBAt",
+    s = getTimestampMs(e[r]),
+    l = ((e && e.joined) || { w: !1, b: !1 })[o];
+  let i = "unknown",
+    c = "Rival: sin verificar",
+    d = "Todavía no se pudo verificar la conexión del rival";
+  if (!navigator.onLine)
+    d = "Tu conexión está interrumpida; no se puede verificar al rival";
+  else if (!s)
+    l
+      ? ((i = "reconnecting"),
+        (c = "Rival reconectando"),
+        (d = "El rival entró a la partida, pero todavía no confirmó presencia"))
+      : ((i = "away"),
+        (c = "Rival ausente"),
+        (d = "El rival todavía no entró o no confirmó conexión"));
+  else {
+    const e = Math.max(0, syncedNow_() - s);
+    e <= 35e3
+      ? ((i = "connected"),
+        (c = "Rival conectado"),
+        (d = "El rival confirmó conexión recientemente"))
+      : e <= 65e3
+        ? ((i = "reconnecting"),
+          (c = "Rival reconectando"),
+          (d = "Se perdió el pulso reciente del rival; puede ser un microcorte"))
+        : ((i = "away"),
+          (c = "Rival ausente"),
+          (d = "El rival no confirma conexión desde hace más de un minuto"));
+  }
+  ((t.dataset.state = i),
+    (a.textContent = c),
+    (t.title = d),
+    t.setAttribute("aria-label", d));
+}
+async function touchTournamentPresence_(e) {
+  const t = tournamentMyColor();
+  if (
+    !tournamentMatchActive ||
+    !tournamentMatchCtx ||
+    !t ||
+    !navigator.onLine ||
+    !tournamentCurrentGameRow ||
+    "ongoing" !== tournamentCurrentGameRow.status
+  )
+    return !1;
+  const a = Date.now();
+  if (!e && a - tournamentPresenceLastSentAt_ < 15e3) return !1;
+  tournamentPresenceLastSentAt_ = a;
+  try {
+    return (
+      await fbTouchGamePresence_(
+        tournamentMatchCtx.round,
+        tournamentMatchCtx.board,
+        t,
+      ),
+      !0
+    );
+  } catch (e) {
+    return (
+      navigator.onLine &&
+        console.warn("No se pudo actualizar la presencia de la partida:", e),
+      !1
+    );
+  }
+}
+function stopTournamentPresence_() {
+  (clearInterval(tournamentPresenceHeartbeatTimer_),
+    clearInterval(tournamentPresenceDisplayTimer_),
+    (tournamentPresenceHeartbeatTimer_ = null),
+    (tournamentPresenceDisplayTimer_ = null),
+    (tournamentPresenceLastSentAt_ = 0));
+  const e = document.getElementById("tournament-opponent-indicator");
+  e && (e.style.display = "none");
+}
+function startTournamentPresence_() {
+  (stopTournamentPresence_(),
+    touchTournamentPresence_(!0),
+    renderTournamentOpponentPresence_(tournamentCurrentGameRow),
+    (tournamentPresenceHeartbeatTimer_ = setInterval(
+      () => touchTournamentPresence_(!1),
+      2e4,
+    )),
+    (tournamentPresenceDisplayTimer_ = setInterval(
+      () => renderTournamentOpponentPresence_(tournamentCurrentGameRow),
+      5e3,
+    )));
+}
+async function recoverTournamentMatch_() {
+  if (
+    !tournamentMatchActive ||
+    !tournamentMatchCtx ||
+    !gamesCollectionRef ||
+    tournamentRecoveryBusy_ ||
+    tournamentMatchBusy
+  )
+    return !1;
+  if (!navigator.onLine)
+    return (
+      setTournamentSyncState_("offline"),
+      renderTournamentOpponentPresence_(tournamentCurrentGameRow),
+      !1
+    );
+  const e = {
+      round: tournamentMatchCtx.round,
+      board: tournamentMatchCtx.board,
+    },
+    t = tournamentWasOffline_,
+    a = beginTournamentSync_();
+  ((tournamentRecoveryBusy_ = !0), setTournamentMatchBusy_(!0));
+  try {
+    const t = await gamesCollectionRef
+      .doc(gameDocId_(e.round, e.board))
+      .get({ source: "server" });
+    if (!t.exists) throw new Error("La partida ya no está disponible");
+    if (
+      !tournamentMatchActive ||
+      !tournamentMatchCtx ||
+      tournamentMatchCtx.round !== e.round ||
+      tournamentMatchCtx.board !== e.board
+    )
+      return !1;
+    let n = t.data({ serverTimestamps: "estimate" });
+    const o = tournamentMyColor();
+    if (o && "ongoing" === n.status) {
+      await fbMarkJoined(e.round, e.board, o);
+      n = {
+        ...n,
+        joined: { ...(n.joined || { w: !1, b: !1 }), [o]: !0 },
+      };
+    }
+    const r = lastRoundGames.findIndex(
+      (t) => t.round === e.round && t.board === e.board,
+    );
+    (r >= 0 ? (lastRoundGames[r] = n) : lastRoundGames.push(n),
+      (tournamentCurrentGameRow = n),
+      handleLiveMatchUpdate(lastTournamentState),
+      (tournamentLastConfirmedSnapshotAt_ = Date.now()),
+      finishTournamentSync_(a),
+      (tournamentWasOffline_ = !1),
+      touchTournamentPresence_(!0),
+      t && toast("✓ Conexión restablecida. Partida sincronizada."));
+    return !0;
+  } catch (e) {
+    return (
+      failTournamentSync_(),
+      renderTournamentOpponentPresence_(tournamentCurrentGameRow),
+      console.warn("No se pudo recuperar la partida desde Firebase:", e),
+      !1
+    );
+  } finally {
+    ((tournamentRecoveryBusy_ = !1), setTournamentMatchBusy_(!1));
+  }
 }
 (window.addEventListener("online", () => {
-  setTournamentSyncState_("online");
+  tournamentMatchActive
+    ? recoverTournamentMatch_()
+    : setTournamentSyncState_("online");
 }),
   window.addEventListener("offline", () => {
-    setTournamentSyncState_("offline");
+    ((tournamentWasOffline_ = tournamentMatchActive || tournamentWasOffline_),
+      setTournamentSyncState_("offline"),
+      renderTournamentOpponentPresence_(tournamentCurrentGameRow));
   }));
 function setTournamentMatchBusy_(e) {
   tournamentMatchBusy = !!e;
@@ -215,6 +395,9 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
       }),
       (tournamentMatchActive = !0),
       (tournamentLastLatencyMs_ = null),
+      (tournamentLastConfirmedSnapshotAt_ = 0),
+      (tournamentRecoveryBusy_ = !1),
+      (tournamentWasOffline_ = !navigator.onLine),
       setTournamentSyncState_(navigator.onLine ? "online" : "offline"),
       setTournamentMatchBusy_(!1),
       (tournamentSelectionLastSent_ = null),
@@ -285,6 +468,7 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
         (p.style.display = "none"));
     (subscribeMatchChat(e, t),
       tournamentMyColor() && !h && subscribeCallSignaling(e, t),
+      tournamentMyColor() && !h && startTournamentPresence_(),
       renderCallUI(),
       render(),
       updateTournamentMatchBar(tournamentCurrentGameRow || s),
@@ -298,8 +482,12 @@ function exitTournamentMatch() {
     syncTournamentSelection_(null),
     clearTimeout(tournamentSyncSlowTimer_),
     (tournamentSyncSlowTimer_ = null),
+    stopTournamentPresence_(),
     (tournamentSyncState_ = "online"),
     (tournamentLastLatencyMs_ = null),
+    (tournamentLastConfirmedSnapshotAt_ = 0),
+    (tournamentRecoveryBusy_ = !1),
+    (tournamentWasOffline_ = !1),
     setTournamentMatchBusy_(!1),
     (tournamentMatchActive = !1),
     (tournamentMatchCtx = null),
@@ -1063,7 +1251,13 @@ const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
   document.addEventListener("visibilitychange", () => {
     "visible" === document.visibilityState &&
       (tournamentMatchActive
-        ? updateTournamentClockDisplay()
+        ? (updateTournamentClockDisplay(),
+          renderTournamentOpponentPresence_(tournamentCurrentGameRow),
+          navigator.onLine &&
+            (tournamentWasOffline_ ||
+            Date.now() - tournamentLastConfirmedSnapshotAt_ > 45e3
+              ? recoverTournamentMatch_()
+              : touchTournamentPresence_(!1)))
         : updateClockDisplay(),
       lastTournamentState &&
         lastTournamentState.meta &&

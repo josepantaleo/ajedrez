@@ -5488,6 +5488,72 @@ body.tournament-board-max .tournament-sync-indicator {
   font-size: 0.68rem;
 }
 
+.tournament-opponent-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  margin: 7px 0 0 5px;
+  padding: 3px 8px;
+  border: 1px solid rgba(145, 170, 200, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 16, 32, 0.56);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tournament-opponent-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #8b9bb4;
+  box-shadow: 0 0 0 3px rgba(139, 155, 180, 0.12);
+}
+
+.tournament-opponent-indicator[data-state="connected"] {
+  color: #79dfa4;
+  border-color: rgba(88, 214, 141, 0.32);
+}
+
+.tournament-opponent-indicator[data-state="connected"] .tournament-opponent-dot {
+  background: #58d68d;
+  box-shadow: 0 0 0 3px rgba(88, 214, 141, 0.12);
+}
+
+.tournament-opponent-indicator[data-state="reconnecting"] {
+  color: #f7c948;
+  border-color: rgba(247, 201, 72, 0.35);
+}
+
+.tournament-opponent-indicator[data-state="reconnecting"] .tournament-opponent-dot {
+  background: #f7c948;
+  box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.12);
+  animation: tournamentSyncPulse 1.2s ease-in-out infinite;
+}
+
+.tournament-opponent-indicator[data-state="away"] {
+  color: #ff9b91;
+  border-color: rgba(255, 123, 114, 0.32);
+}
+
+.tournament-opponent-indicator[data-state="away"] .tournament-opponent-dot {
+  background: #ff7b72;
+  box-shadow: 0 0 0 3px rgba(255, 123, 114, 0.12);
+}
+
+body.fullscreen-game .tournament-opponent-indicator,
+body.tournament-board-max .tournament-opponent-indicator {
+  flex: 0 0 auto;
+  min-height: 28px;
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+}
+
 @keyframes tournamentSyncPulse {
   0%,
   100% {

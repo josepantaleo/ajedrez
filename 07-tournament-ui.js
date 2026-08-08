@@ -1188,6 +1188,8 @@ function handleLiveMatchUpdate(e) {
   "function" == typeof markTournamentConnectionAlive_ &&
     markTournamentConnectionAlive_();
   tournamentCurrentGameRow = t;
+  "function" == typeof renderTournamentOpponentPresence_ &&
+    renderTournamentOpponentPresence_(t);
   const n = applyTournamentOpponentSelection_(t),
     a =
       t.fen !== game.fen() ||
