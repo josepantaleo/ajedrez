@@ -6485,10 +6485,10 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
       await fbDb.runTransaction(async (e) => {
         const t = await e.get(fbRoomRef);
         if (!t.exists) throw new Error("No se encontró el torneo");
-        const a = t.data();
-        assertTournamentNotFinished_(a);
+        const roomState = t.data();
+        assertTournamentNotFinished_(roomState);
         const participantColor = assertGameParticipantForState_(
-          a,
+          roomState,
           m.round,
           m.board,
         );
