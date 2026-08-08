@@ -710,8 +710,20 @@ function onPieceDragMove(e) {
 function isPromotionMove(e, t, a) {
   const n = e.get(t);
   if (!n || "p" !== n.type) return !1;
-  const o = a[1];
-  return "8" === o || "1" === o;
+  if (!/^[a-h][1-8]$/.test(String(a || ""))) return !1;
+  const o = "w" === n.color ? "8" : "1";
+  if (a[1] !== o) return !1;
+  try {
+    return e
+      .moves({ square: t, verbose: !0 })
+      .some(
+        (e) =>
+          e.to === a &&
+          (!!e.promotion || (e.flags && e.flags.includes("p"))),
+      );
+  } catch (e) {
+    return !1;
+  }
 }
 let promotionPickerResolve_ = null,
   promotionOverlayHome_ = null;
