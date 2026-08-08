@@ -83,8 +83,8 @@ function renderApprovalPanel(e, t, a) {
     (o.textContent = i
       ? "El árbitro ya cerró esta ronda: los resultados quedaron bloqueados y solo él puede corregirlos. Falta generar la ronda siguiente."
       : t
-        ? "Ya están cargados todos los resultados de esta ronda. Revisá la tabla de posiciones y los resultados abajo; podés corregir cualquier resultado antes de aprobar."
-        : "Ya terminaron todas las partidas de esta ronda. Falta que el administrador la revise y apruebe para que se genere la ronda siguiente."));
+        ? "Ya están cargados todos los resultados de esta ronda. Revisá la tabla de posiciones y los resultados abajo; el administrador o el árbitro pueden aprobarla."
+        : "Ya terminaron todas las partidas de esta ronda. Falta que el administrador o el árbitro la revisen y aprueben para generar la ronda siguiente."));
   const c = document.getElementById("tournament-referee-round-controls");
   if (c) {
     c.style.display = l ? "" : "none";
@@ -273,6 +273,7 @@ function renderTournamentState(e) {
     (a.style.display = ""),
     startWOGraceTimerIfNeeded(e));
   const n = isCurrentUserAdmin(e),
+    p = isCurrentUserReferee(e),
     o = "finished" === e.meta.status,
     r =
       !o &&
@@ -322,7 +323,7 @@ function renderTournamentState(e) {
         "none")),
     renderTournamentRoleSummary_(e),
     renderSelfRegisterCard(e, o),
-    renderApprovalPanel(e, n, r));
+    renderApprovalPanel(e, n || p, r));
   const u = document.getElementById("tournament-champion-banner");
   if (o) {
     const t = rankPlayers_(e.players, e.pairings),
@@ -337,7 +338,6 @@ function renderTournamentState(e) {
   } else u.style.display = "none";
   const m =
       currentUser && currentUser.email ? currentUser.email.toLowerCase() : "",
-    p = isCurrentUserReferee(e),
     g = e.pairings.filter((t) => t.round === e.meta.round),
     f = document.getElementById("tournament-pairings-list"),
     h = lastRoundGames;

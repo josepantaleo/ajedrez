@@ -830,7 +830,7 @@ configSignoutBtn &&
     .getElementById("tournament-approve-round-btn")
     .addEventListener("click", async () => {
       try {
-        (assertAdmin(),
+        (assertAdminOrReferee(),
           await fbApproveRound(),
           toast("✅ Ronda aprobada: se generó y publicó la ronda siguiente."));
       } catch (e) {
@@ -841,7 +841,7 @@ configSignoutBtn &&
     .getElementById("tournament-cancel-auto-approve-btn")
     .addEventListener("click", async () => {
       try {
-        (assertAdmin(),
+        (assertAdminOrReferee(),
           await fbCancelAutoApproval(),
           toast(
             "✖️ Aprobación automática cancelada. Aprobá la ronda a mano cuando quieras.",

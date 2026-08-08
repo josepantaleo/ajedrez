@@ -560,6 +560,42 @@ async function fbDisqualifyPlayer(e) {
     getTournamentStateOnce()
   );
 }
+function findNonRepeatingPairingPlan_(e) {
+  let t = 0;
+  const a = 5e4,
+    n = (e) => {
+      if (0 === e.length) return [];
+      if (++t > a) return null;
+      const o = e[0],
+        r = [];
+      for (let t = 1; t < e.length; t++)
+        -1 === (o.played || []).indexOf(e[t].id) &&
+          -1 === (e[t].played || []).indexOf(o.id) &&
+          r.push(t);
+      for (const t of r) {
+        const a = e[t],
+          r = e.filter((e, a) => 0 !== a && a !== t),
+          s = n(r);
+        if (s) return [[o, a]].concat(s);
+      }
+      return null;
+    };
+  return n(e);
+}
+function buildFallbackPairingPlan_(e) {
+  const t = e.slice(),
+    a = [];
+  for (; t.length > 0; ) {
+    const e = t.shift();
+    let n = t.findIndex(
+      (t) =>
+        -1 === (e.played || []).indexOf(t.id) &&
+        -1 === (t.played || []).indexOf(e.id),
+    );
+    (-1 === n && (n = 0), a.push([e, t.splice(n, 1)[0]]));
+  }
+  return a;
+}
 function buildNextRoundPairings_(e, t, a, n, o) {
   const r = t + 1,
     s = e.filter((e) => "active" === (e.status || "active"));
@@ -591,30 +627,30 @@ function buildNextRoundPairings_(e, t, a, n, o) {
     }
     l = l.filter((e) => e.id !== i.id);
   }
-  let c = l.slice();
-  const d = [],
+  const c =
+      findNonRepeatingPairingPlan_(l) || buildFallbackPairingPlan_(l),
+    d = [],
     u = {};
   e.forEach((e) => (u[e.id] = e.colorBalance || 0));
   let m = 1;
-  for (; c.length > 0; ) {
-    const e = c.shift();
-    let t = c.findIndex((t) => -1 === e.played.indexOf(t.id));
-    -1 === t && (t = 0);
-    const a = c.splice(t, 1)[0],
-      n = (u[e.id] || 0) <= (u[a.id] || 0),
-      o = n ? e : a,
-      s = n ? a : e;
-    ((u[o.id] = (u[o.id] || 0) + 1),
-      (u[s.id] = (u[s.id] || 0) - 1),
+  for (const [e, a] of c) {
+    const n =
+        Math.abs((u[e.id] || 0) + 1) + Math.abs((u[a.id] || 0) - 1),
+      o = Math.abs((u[e.id] || 0) - 1) + Math.abs((u[a.id] || 0) + 1),
+      s = n < o || (n === o && (r + m) % 2 == 0),
+      l = s ? e : a,
+      i = s ? a : e;
+    ((u[l.id] = (u[l.id] || 0) + 1),
+      (u[i.id] = (u[i.id] || 0) - 1),
       d.push({
         round: r,
         board: m++,
-        whiteId: o.id,
-        whiteName: o.name,
-        whiteEmail: o.email || "",
-        blackId: s.id,
-        blackName: s.name,
-        blackEmail: s.email || "",
+        whiteId: l.id,
+        whiteName: l.name,
+        whiteEmail: l.email || "",
+        blackId: i.id,
+        blackName: i.name,
+        blackEmail: i.email || "",
         result: "",
       }));
   }
@@ -715,6 +751,7 @@ async function fbGenerateRound() {
         },
         players: u,
         pairings: o.concat(d),
+        registeredUids: a.registeredUids || {},
       }),
         m.forEach((t) =>
           e.set(gamesCollectionRef.doc(gameDocId_(t.round, t.board)), t),
@@ -725,13 +762,13 @@ async function fbGenerateRound() {
 }
 async function fbApproveRound() {
   return (
-    assertAdmin(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertAdminForState_(a);
+      assertAdminOrRefereeForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "No hay ninguna ronda pendiente de aprobación en este momento",
@@ -785,12 +822,12 @@ async function fbApproveRound() {
 }
 async function fbCancelAutoApproval() {
   return (
-    assertAdmin(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data();
-      (assertAdminForState_(a), assertTournamentNotFinished_(a));
+      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
       "pending_approval" === a.meta.roundStatus &&
         e.update(fbRoomRef, { meta: { ...a.meta, autoApprovalCancelled: !0 } });
     }),
