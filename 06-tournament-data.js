@@ -1363,7 +1363,17 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
           const currentPosition = new Chess(currentGame.fen);
           if (currentPosition.turn() !== participantColor)
             throw new Error("No es tu turno");
-          const legalMove = currentPosition.move(n);
+          const promotionMatch = String(n || "").match(/=([qrbn])/i),
+            legalMove =
+              r && s
+                ? currentPosition.move({
+                    from: r,
+                    to: s,
+                    promotion: promotionMatch
+                      ? promotionMatch[1].toLowerCase()
+                      : "q",
+                  })
+                : currentPosition.move(n);
           if (!legalMove || currentPosition.fen() !== a)
             throw new Error("La jugada indicada no es válida");
           if (currentGame.clock) {
@@ -1491,7 +1501,17 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
         const currentPosition = new Chess(i.fen);
         if (currentPosition.turn() !== participantColor)
           throw new Error("No es tu turno");
-        const legalMove = currentPosition.move(n);
+        const promotionMatch = String(n || "").match(/=([qrbn])/i),
+          legalMove =
+            r && s
+              ? currentPosition.move({
+                  from: r,
+                  to: s,
+                  promotion: promotionMatch
+                    ? promotionMatch[1].toLowerCase()
+                    : "q",
+                })
+              : currentPosition.move(n);
         if (!legalMove || currentPosition.fen() !== a)
           throw new Error("La jugada indicada no es válida");
       }
