@@ -205,11 +205,14 @@ function gameParticipantColorForState_(e, t, a) {
   const n = normalizeRoleEmail_(currentUser && currentUser.email),
     o = (e.pairings || []).find(
       (e) => Number(e.round) === Number(t) && Number(e.board) === Number(a),
+    ),
+    r = new Map(
+      (e.players || []).map((e) => [e.id, normalizeRoleEmail_(e.email)]),
     );
   if (!n || !o) return "";
-  return normalizeRoleEmail_(o.whiteEmail) === n
+  return normalizeRoleEmail_(o.whiteEmail || r.get(o.whiteId)) === n
     ? "w"
-    : normalizeRoleEmail_(o.blackEmail) === n
+    : normalizeRoleEmail_(o.blackEmail || r.get(o.blackId)) === n
       ? "b"
       : "";
 }
@@ -222,14 +225,25 @@ function assertGameParticipantForState_(e, t, a) {
 let gameAccessBackfillSignature_ = "";
 async function fbBackfillGameAccessFields_(e) {
   if (!gamesCollectionRef || !e || !isCurrentUserAdmin(e)) return;
+  const defaultIncrement = Math.max(
+      0,
+      Number((e.meta && e.meta.timeControlIncrement) || 0),
+    ),
+    playerEmails = new Map(
+      (e.players || []).map((e) => [e.id, normalizeRoleEmail_(e.email)]),
+    );
   const t = new Map(
       (e.pairings || [])
         .filter((e) => "" !== e.blackId)
         .map((e) => [
           gameDocId_(e.round, e.board),
           {
-            whiteEmail: normalizeRoleEmail_(e.whiteEmail),
-            blackEmail: normalizeRoleEmail_(e.blackEmail),
+            whiteEmail: normalizeRoleEmail_(
+              e.whiteEmail || playerEmails.get(e.whiteId),
+            ),
+            blackEmail: normalizeRoleEmail_(
+              e.blackEmail || playerEmails.get(e.blackId),
+            ),
           },
         ]),
     ),
@@ -246,12 +260,22 @@ async function fbBackfillGameAccessFields_(e) {
       n = e.docs
         .map((e) => {
           const a = t.get(e.id),
-            n = e.data();
-          return a &&
-            (normalizeRoleEmail_(n.whiteEmail) !== a.whiteEmail ||
-              normalizeRoleEmail_(n.blackEmail) !== a.blackEmail)
-            ? { ref: e.ref, data: a }
-            : null;
+            n = e.data(),
+            o = {};
+          if (!a) return null;
+          (normalizeRoleEmail_(n.whiteEmail) !== a.whiteEmail ||
+            normalizeRoleEmail_(n.blackEmail) !== a.blackEmail) &&
+            Object.assign(o, a);
+          (Object.prototype.hasOwnProperty.call(n, "increment") ||
+            (o.increment = defaultIncrement),
+            Object.prototype.hasOwnProperty.call(n, "startedAt") ||
+              (o.startedAt = syncedNow_()),
+            Array.isArray(n.moves) || (o.moves = []),
+            n.joined &&
+              "boolean" == typeof n.joined.w &&
+              "boolean" == typeof n.joined.b) ||
+            (o.joined = { w: !1, b: !1 });
+          return Object.keys(o).length ? { ref: e.ref, data: o } : null;
         })
         .filter(Boolean);
     for (let e = 0; e < n.length; e += 400) {

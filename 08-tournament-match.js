@@ -334,6 +334,12 @@ async function syncTournamentMove() {
         ),
       updateTournamentMatchBar(o));
   } catch (e) {
+    const syncMessage =
+      e &&
+      ("permission-denied" === e.code ||
+        String(e.message || "").toLowerCase().includes("permission"))
+        ? "Firestore rechazo el permiso de esta partida. Un administrador debe abrir el torneo una vez para actualizar las partidas antiguas y verificar que las reglas publicadas sean las nuevas."
+        : e.message;
     (a &&
       ((tournamentCurrentGameRow = a),
       loadTournamentGame_(a),
@@ -341,7 +347,7 @@ async function syncTournamentMove() {
       (validMoves = []),
       render(),
       updateTournamentClockDisplay()),
-      toast("❌ No se pudo sincronizar la jugada: " + e.message));
+      toast("❌ No se pudo sincronizar la jugada: " + syncMessage));
   } finally {
     setTournamentMatchBusy_(!1);
   }

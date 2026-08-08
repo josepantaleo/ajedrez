@@ -192,8 +192,14 @@ service cloud.firestore {
         && request.resource.data.board == resource.data.board
         && request.resource.data.whiteEmail == resource.data.whiteEmail
         && request.resource.data.blackEmail == resource.data.blackEmail
-        && request.resource.data.increment == resource.data.increment
-        && request.resource.data.startedAt == resource.data.startedAt
+        && request.resource.data.get(
+          'increment',
+          0
+        ) == resource.data.get('increment', 0)
+        && request.resource.data.get(
+          'startedAt',
+          null
+        ) == resource.data.get('startedAt', null)
         && request.resource.data
           .diff(resource.data)
           .affectedKeys()
