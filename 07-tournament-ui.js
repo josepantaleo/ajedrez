@@ -239,6 +239,21 @@ function setupPairingsListDelegation_(e) {
         })();
     }));
 }
+function renderTournamentRoleSummary_(e) {
+  const t = document.getElementById("tournament-roles-summary");
+  if (!t) return;
+  const a = tournamentRoleEmails_(
+      e,
+      "adminEmails",
+      TOURNAMENT_ADMIN_EMAIL,
+    ),
+    n = tournamentRoleEmails_(
+      e,
+      "refereeEmails",
+      TOURNAMENT_REFEREE_EMAIL,
+    );
+  t.textContent = `${a.length} administrador${1 === a.length ? "" : "es"} · ${n.length} árbitro${1 === n.length ? "" : "s"}`;
+}
 function renderTournamentState(e) {
   const t = document.getElementById("tournament-setup-box"),
     a = document.getElementById("tournament-active-box");
@@ -281,9 +296,10 @@ function renderTournamentState(e) {
         (l.title = "Ir a las inscripciones pendientes"))
       : (l.style.display = "none"));
   const c = document.getElementById("tournament-announcement-composer");
-  c && (c.style.display = n || isCurrentUserReferee() ? "" : "none");
+  c && (c.style.display = !o && (n || isCurrentUserReferee(e)) ? "" : "none");
   const d = document.getElementById("tournament-round-countdown-composer");
-  (d && (d.style.display = n || isCurrentUserReferee() ? "" : "none"),
+  (d &&
+      (d.style.display = !o && (n || isCurrentUserReferee(e)) ? "" : "none"),
     renderRoundCountdown_(e),
     (document.getElementById("tournament-admin-panel").style.display = n
       ? ""
@@ -296,9 +312,15 @@ function renderTournamentState(e) {
     (document.getElementById("tournament-reopen-btn").style.display = o
       ? ""
       : "none"),
+    (document.getElementById("tournament-settings-btn").style.display = o
+      ? "none"
+      : ""),
     n ||
-      (document.getElementById("tournament-settings-panel").style.display =
+      ((document.getElementById("tournament-settings-panel").style.display =
         "none"),
+      (document.getElementById("tournament-roles-panel").style.display =
+        "none")),
+    renderTournamentRoleSummary_(e),
     renderSelfRegisterCard(e, o),
     renderApprovalPanel(e, n, r));
   const u = document.getElementById("tournament-champion-banner");
@@ -315,7 +337,7 @@ function renderTournamentState(e) {
   } else u.style.display = "none";
   const m =
       currentUser && currentUser.email ? currentUser.email.toLowerCase() : "",
-    p = isCurrentUserReferee(),
+    p = isCurrentUserReferee(e),
     g = e.pairings.filter((t) => t.round === e.meta.round),
     f = document.getElementById("tournament-pairings-list"),
     h = lastRoundGames;
@@ -401,7 +423,7 @@ function renderTournamentState(e) {
         C =
           (t.whiteEmail && t.whiteEmail.toLowerCase() === m) ||
           (t.blackEmail && t.blackEmail.toLowerCase() === m),
-        S = n || C,
+        S = "finished" !== e.meta.status && C,
         x = [
           ["1-0", "1-0"],
           ["1/2-1/2", "½-½"],
@@ -410,7 +432,7 @@ function renderTournamentState(e) {
       p &&
         (x.push(["wo-black", "WO Blancas"]), x.push(["wo-white", "WO Negras"]));
       const I =
-          (!n && !p) || (t.locked && !p)
+          "finished" === e.meta.status || (!n && !p) || (t.locked && !p)
             ? t.result
               ? `<span class="muted">${resultLabel(t.result)}${t.locked ? " 🔒" : ""}</span>`
               : ""
@@ -422,7 +444,10 @@ function renderTournamentState(e) {
                 .join(""),
         T = `<button class="btn" data-play-round="${t.round}" data-play-board="${t.board}" data-white="${escapeHtml_(t.whiteName)}" data-black="${escapeHtml_(t.blackName)}" data-white-email="${escapeHtml_(t.whiteEmail || "")}" data-black-email="${escapeHtml_(t.blackEmail || "")}">${S ? "▶️ Jugar" : "👁️ Ver"}</button>`,
         k =
-          p && o && "finished" !== o.status
+          "finished" !== e.meta.status &&
+          p &&
+          o &&
+          "finished" !== o.status
             ? `<button class="btn" data-suspend-round="${t.round}" data-suspend-board="${t.board}" data-suspend-action="${"suspended" === o.status ? "resume" : "suspend"}">${"suspended" === o.status ? "▶️ Reanudar" : "⏸️ Suspender"}</button>`
             : "";
       s.innerHTML = `\n            <div class="pairing-card-header">\n              <div class="pairing-card-board">Mesa ${t.board}</div>\n              <span class="pairing-status pairing-status-${h}">${y}</span>\n            </div>\n            <div class="pairing-card-names">\n              <span class="pairing-side pairing-side-white">⚪ ${escapeHtml_(t.whiteName)}</span>\n              <span class="vs">vs</span>\n              <span class="pairing-side pairing-side-black">${escapeHtml_(t.blackName)} ⚫</span>\n            </div>\n            ${w}\n            ${g ? `<div class="pairing-card-detail">${g}</div>` : ""}\n            <div class="pairing-card-actions">\n              ${T}\n              ${k}\n              <div class="pairing-result-btns">${I}</div>\n            </div>\n          `;
@@ -457,7 +482,10 @@ function renderStandingsAndPlayers_(e, t, a) {
   const s = document.getElementById("tournament-referee-panel");
   s && (s.style.display = a ? "" : "none");
   const l = document.getElementById("tournament-referee-tools");
-  (l && (l.style.display = a ? "flex" : "none"), renderPlayersPanel(e, t));
+  l && (l.style.display = a ? "flex" : "none");
+  const i = document.getElementById("tournament-recalc-positions-btn");
+  (i && (i.style.display = "finished" === e.meta.status ? "none" : ""),
+    renderPlayersPanel(e, t));
 }
 function escapePublicScreenHtml_(e) {
   return escapeHtml_(e);
@@ -846,12 +874,17 @@ function renderPlayersPanel(e, t) {
   const n = isCurrentUserReferee();
   if (!n && !t) return void (a.style.display = "none");
   a.style.display = "";
+  const i = "finished" === e.meta.status,
+    c = document.getElementById("tournament-add-player-controls"),
+    d = document.getElementById("tournament-add-player-note");
+  (c && (c.style.display = t && !i ? "flex" : "none"),
+    d && (d.style.display = t || n ? "" : "none"));
   const o = document.getElementById("tournament-players-list");
   (setupPlayersListDelegation_(o),
     tournamentEditingPlayerId &&
       !e.players.some((e) => e.id === tournamentEditingPlayerId) &&
       (tournamentEditingPlayerId = null));
-  const r = JSON.stringify([e.players, tournamentEditingPlayerId]);
+  const r = JSON.stringify([e.players, tournamentEditingPlayerId, t, n, i]);
   if (o.dataset.sig === r) return;
   o.dataset.sig = r;
   const s = e.players
@@ -865,7 +898,7 @@ function renderPlayersPanel(e, t) {
       (l.style.cssText =
         "display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;"),
       o.parentNode.insertBefore(l, o)),
-    t && s.length > 0)
+    t && !i && s.length > 0)
   ) {
     ((l.style.display = "flex"),
       (l.innerHTML = `\n            <button class="btn primary" id="tournament-approve-all-btn">✅ Autorizar todos (${s.length})</button>\n            <button class="btn danger" id="tournament-reject-all-btn">🚫 Rechazar todos (${s.length})</button>\n          `));
@@ -902,15 +935,15 @@ function renderPlayersPanel(e, t) {
         return `\n                <div class="pairing-row" data-player-row="${e.id}">\n                  <input type="text" class="player-edit-name" value="${e.name.replace(/"/g, "&quot;")}" style="flex:1; min-width:120px; padding:6px 8px; border-radius:8px; border:1px solid var(--surface2); background:var(--surface); color:var(--text)" />\n                  <input type="email" class="player-edit-email" value="${(e.email || "").replace(/"/g, "&quot;")}" placeholder="Email" style="flex:1; min-width:160px; padding:6px 8px; border-radius:8px; border:1px solid var(--surface2); background:var(--surface); color:var(--text)" />\n                  <button class="btn primary" data-save-player="${e.id}">Guardar</button>\n                  <button class="btn" data-cancel-edit-player="1">Cancelar</button>\n                </div>`;
       const a = e.status || "active";
       if ("pending" === a) {
-        const a = t
+        const a = t && !i
           ? `\n                  <button class="btn primary" data-approve-registration="${e.id}">✅ Autorizar</button>\n                  <button class="btn danger" data-reject-registration="${e.id}">🚫 Rechazar</button>\n                `
           : '<span class="muted" style="font-size:12px">Esperando autorización del administrador</span>';
         return `\n                <div class="pairing-row" data-player-row="${e.id}">\n                  <div class="pairing-names">${escapeHtml_(e.name)}${e.email ? ` <span class="muted" style="font-size:12px">(${escapeHtml_(e.email)})</span>` : ""}\n                    <div class="mini-diagram-caption" style="margin:2px 0 0;text-align:left">${playerStatusLabel_(e.status)}</div>\n                  </div>\n                  ${a}\n                </div>`;
       }
-      const o = n
+      const o = n && !i
           ? `\n                ${"active" === a ? `<button class="btn" data-withdraw-player="${e.id}">🚪 Retirar</button>` : ""}\n                ${"withdrawn" === a ? `<button class="btn" data-reactivate-player="${e.id}">↩️ Reincorporar</button>` : ""}\n                ${"disqualified" !== a ? `<button class="btn danger" data-disqualify-player="${e.id}">⛔ Descalificar</button>` : ""}\n              `
           : "",
-        r = t
+        r = t && !i
           ? `\n                <button class="btn" data-edit-player="${e.id}">✏️ Editar</button>\n                <button class="btn danger" data-delete-player="${e.id}">🗑️ Eliminar</button>\n              `
           : "";
       return `\n              <div class="pairing-row" data-player-row="${e.id}">\n                <div class="pairing-names">${escapeHtml_(e.name)}${e.email ? ` <span class="muted" style="font-size:12px">(${escapeHtml_(e.email)})</span>` : ""}\n                  <div class="mini-diagram-caption" style="margin:2px 0 0;text-align:left">${playerStatusLabel_(e.status)} · ${e.points} pts</div>\n                </div>\n                ${o}\n                ${r}\n              </div>`;
@@ -1046,18 +1079,40 @@ function tournamentClockWaitingForBothPlayers() {
   const t = e.joined || { w: !1, b: !1 };
   return !(t.w && t.b);
 }
+function tournamentActiveClockExpired_() {
+  const e = tournamentCurrentGameRow;
+  if (
+    !e ||
+    !e.clock ||
+    "ongoing" !== e.status ||
+    tournamentClockWaitingForBothPlayers() ||
+    !e.turnStartAt
+  )
+    return !1;
+  const t = game.turn(),
+    a = Math.max(
+      0,
+      Math.floor((syncedNow_() - getTimestampMs(e.turnStartAt)) / 1e3),
+    );
+  return Number(e.clock[t]) - a <= 0;
+}
 function updateTournamentMatchBar(e) {
   if (!tournamentMatchActive || !tournamentMatchCtx) return;
   const t = document.getElementById("tournament-match-status"),
-    a = tournamentMyColor();
+    a = tournamentMyColor(),
+    n = document.getElementById("tournament-match-controls"),
+    o = document.getElementById("tournament-match-spectator-note"),
+    r = document.getElementById("tournament-match-draw-btn"),
+    s = document.getElementById("tournament-match-resign-btn"),
+    l =
+      lastTournamentState &&
+      lastTournamentState.meta &&
+      "finished" === lastTournamentState.meta.status;
   if (e && "finished" === e.status) {
     if (
       ((t.textContent = "🏁 Partida terminada."),
-      (document.getElementById("tournament-match-controls").style.display =
-        "none"),
-      (document.getElementById(
-        "tournament-match-spectator-note",
-      ).style.display = "none"),
+      (n.style.display = "none"),
+      (o.style.display = "none"),
       clearInterval(tournamentClockTimer),
       !tournamentResultShown)
     ) {
@@ -1078,22 +1133,45 @@ function updateTournamentMatchBar(e) {
     return (
       (t.textContent =
         "⏸️ El árbitro suspendió esta partida. Esperá novedades antes de seguir jugando."),
-      void (document.getElementById("tournament-match-controls").style.display =
-        "none")
+      (n.style.display = "none"),
+      void (o.style.display = "none")
     );
-  const n = game.turn(),
-    o = "w" === n ? tournamentMatchCtx.whiteName : tournamentMatchCtx.blackName;
+  if (!a || l) {
+    (n.style.display = "none"), (o.style.display = "");
+    o.textContent = l
+      ? "Torneo finalizado: esta partida está disponible solo para consulta."
+      : "Estás viendo la partida como espectador.";
+  } else {
+    (n.style.display = "flex"), (o.style.display = "none");
+    const t = e && ("w" === e.drawOfferBy || "b" === e.drawOfferBy)
+      ? e.drawOfferBy
+      : "";
+    r.textContent = !t
+      ? "🤝 Ofrecer tablas"
+      : t === a
+        ? "✖ Cancelar oferta de tablas"
+        : "🤝 Aceptar tablas";
+    (r.disabled = tournamentMatchBusy || tournamentActiveClockExpired_(),
+      (s.disabled = tournamentMatchBusy || tournamentActiveClockExpired_()));
+  }
+  const i = game.turn(),
+    c = "w" === i ? tournamentMatchCtx.whiteName : tournamentMatchCtx.blackName,
+    d = e && ("w" === e.drawOfferBy || "b" === e.drawOfferBy) ? e.drawOfferBy : "";
   if (tournamentClockWaitingForBothPlayers()) {
     const a = ((e && e.joined) || { w: !1, b: !1 }).w
       ? tournamentMatchCtx.blackName
       : tournamentMatchCtx.whiteName;
     t.textContent = `Esperando a que entre ${a}. El reloj comenzará cuando estén ambos jugadores.`;
-  } else
+  } else if (a && d && d !== a)
+    t.textContent = "Tu rival ofreció tablas. Podés aceptar o continuar jugando.";
+  else if (a && d === a)
+    t.textContent = "Oferta de tablas enviada. Podés cancelarla mientras el rival decide.";
+  else
     t.textContent = a
-      ? a === n
+      ? a === i
         ? `¡Tu turno! Jugás con ${"w" === a ? "blancas" : "negras"}.`
-        : `Turno de ${o}. Esperando la jugada...`
-      : `Turno de ${o}.`;
+        : `Turno de ${c}. Esperando la jugada...`
+      : `Turno de ${c}.`;
 }
 function handleLiveMatchUpdate(e) {
   if (!tournamentMatchActive || !tournamentMatchCtx) return;
@@ -1120,6 +1198,9 @@ function handleLiveMatchUpdate(e) {
       render())
     : n && updateSelectionHighlights(),
     updateTournamentMatchBar(t),
+    renderMatchChat(),
+    renderCallUI(),
+    ("ongoing" !== t.status && "idle" !== callState) && teardownCallLocal_(),
     updateTournamentClockDisplay());
 }
 function updateTournamentClockDisplay() {
@@ -1178,6 +1259,7 @@ async function claimTournamentTimeout(e) {
             void 0,
             void 0,
             !0,
+            "timeout",
           )
         ).gameRow;
       (tournamentResultShown ||

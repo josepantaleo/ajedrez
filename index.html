@@ -2306,15 +2306,70 @@
               <div class="card" id="tournament-admin-panel" style="display: none; border: 2px solid var(--surface2)">
                 <h3 style="margin: 0 0 10px">🛠️ Panel de administrador</h3>
                 <p class="muted" style="font-size: 12px; margin: 0 0 10px">
-                  Acciones exclusivas de la cuenta administradora del torneo (<strong>ipem146centenario@gmail.com</strong>).
+                  Acciones exclusivas de las cuentas configuradas como administradoras del torneo.
                 </p>
                 <div id="tournament-admin-controls" style="display: flex; gap: 8px; flex-wrap: wrap">
                   <button class="btn" id="tournament-next-round-btn">➡️ Generar próxima ronda</button>
                   <button class="btn" id="tournament-finish-btn">🏁 Finalizar torneo</button>
                   <button class="btn" id="tournament-reopen-btn" style="display: none">↩️ Reabrir torneo</button>
                   <button class="btn" id="tournament-settings-btn">⚙️ Configuración</button>
+                  <button class="btn" id="tournament-roles-btn">🔐 Administradores y árbitros</button>
                   <button class="btn" id="tournament-export-full-pdf-btn">📄 Imprimir resultados del torneo (PDF)</button>
                   <button class="btn" id="tournament-reset-btn">🗑️ Reiniciar torneo</button>
+                </div>
+              </div>
+
+              <div class="card" id="tournament-roles-panel" style="display: none">
+                <h3 style="margin-top: 0">🔐 Administradores y árbitros</h3>
+                <p class="muted" style="font-size: 13px; margin-bottom: 14px">
+                  Escribí un correo por línea. También podés separarlos con comas o espacios.
+                  Los administradores gestionan el torneo y los árbitros controlan rondas, resultados y jugadores.
+                </p>
+
+                <label for="tournament-admin-emails-input" style="display: block; margin-bottom: 6px; font-weight: 600">
+                  Administradores
+                </label>
+                <textarea
+                  id="tournament-admin-emails-input"
+                  rows="4"
+                  spellcheck="false"
+                  placeholder="administrador@ejemplo.com"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 8px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    resize: vertical;
+                    margin-bottom: 12px;
+                  "
+                ></textarea>
+
+                <label for="tournament-referee-emails-input" style="display: block; margin-bottom: 6px; font-weight: 600">
+                  Árbitros
+                </label>
+                <textarea
+                  id="tournament-referee-emails-input"
+                  rows="4"
+                  spellcheck="false"
+                  placeholder="arbitro@ejemplo.com"
+                  style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    border-radius: 8px;
+                    border: 1px solid var(--surface2);
+                    background: var(--surface);
+                    color: var(--text);
+                    resize: vertical;
+                    margin-bottom: 8px;
+                  "
+                ></textarea>
+
+                <p class="muted" id="tournament-roles-summary" style="font-size: 12px; margin: 0 0 12px"></p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                  <button class="btn primary" id="tournament-roles-save-btn">Guardar roles</button>
+                  <button class="btn" id="tournament-roles-cancel-btn">Cancelar</button>
                 </div>
               </div>
 
@@ -2493,8 +2548,7 @@
                 </p>
 
                 <p class="muted" style="font-size: 13px; margin-bottom: 12px">
-                  🔒 El administrador del torneo es fijo:
-                  <strong>ipem146centenario@gmail.com</strong>.
+                  🔒 Los administradores y árbitros se gestionan desde el panel de roles.
                 </p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap">
                   <button class="btn primary" id="tournament-settings-save-btn">Guardar configuración</button>
@@ -2583,9 +2637,12 @@
               </div>
 
               <div class="card" id="tournament-players-card" style="display: none">
-                <h3>👥 Jugadores (panel de árbitro)</h3>
+                <h3>👥 Gestión de jugadores</h3>
                 <div id="tournament-players-list"></div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px">
+                <div
+                  id="tournament-add-player-controls"
+                  style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px"
+                >
                   <input
                     type="text"
                     id="tournament-add-player-name"
@@ -2616,7 +2673,11 @@
                   />
                   <button class="btn primary" id="tournament-add-player-btn">➕ Agregar jugador</button>
                 </div>
-                <p class="muted" style="font-size: 12px; margin-top: 8px">
+                <p
+                  class="muted"
+                  id="tournament-add-player-note"
+                  style="font-size: 12px; margin-top: 8px"
+                >
                   Un jugador agregado ya iniciado el torneo entra con 0 puntos y queda disponible recién para la próxima ronda que se
                   genere. "Eliminar" solo funciona si todavía no jugó ninguna partida; si ya jugó, usá "Retirar" (o "Descalificar", si
                   corresponde) para no perder su historial. Retirar/Reincorporar/Descalificar son acciones exclusivas del árbitro del
@@ -3364,7 +3425,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260807-16"></script>
+    <script defer src="app.js?v=20260808-3"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

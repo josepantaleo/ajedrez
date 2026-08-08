@@ -198,6 +198,7 @@ async function fbAdjustRoundCountdown(e) {
     if (!n.exists) throw new Error("Todavía no creaste un torneo");
     const o = n.data(),
       r = getRoundCountdownEndMs_(o.meta);
+    (assertAdminOrRefereeForState_(o), assertTournamentNotFinished_(o));
     if (!r) throw new Error("No hay un countdown activo para ajustar");
     const s = t > 0 && r <= a ? a + t : Math.max(a, r + t),
       l = Math.max(0, s - a);
@@ -243,9 +244,12 @@ function renderAnnouncementHistory_() {
   }
 }
 async function sendTournamentAnnouncement(e) {
-  assertAdminOrReferee();
   const t = (e || "").trim();
   if (!t) throw new Error("Escribí un mensaje para anunciar");
+  if (t.length > 500)
+    throw new Error("El anuncio no puede superar los 500 caracteres");
+  const a = await getTournamentStateOnce();
+  (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
   await announcementsCollectionRef.add({
     text: t,
     ts: srvTimestamp(),
@@ -265,6 +269,7 @@ async function fbSetRoundCountdown(e) {
     const t = await e.get(fbRoomRef);
     if (!t.exists) throw new Error("Todavía no creaste un torneo");
     const r = t.data();
+    (assertAdminOrRefereeForState_(r), assertTournamentNotFinished_(r));
     e.update(fbRoomRef, {
       meta: {
         ...r.meta,
@@ -285,6 +290,7 @@ async function fbCancelRoundCountdown() {
       const t = await e.get(fbRoomRef);
       if (!t.exists) return;
       const a = t.data();
+      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
       e.update(fbRoomRef, {
         meta: {
           ...a.meta,
@@ -349,6 +355,23 @@ function unsubscribeMatchChat() {
   const t = document.getElementById("tournament-match-chat-input");
   (t && (t.value = ""), resetMatchChatComposer_());
 }
+function tournamentMatchCommunicationAllowed_() {
+  return !!(
+    tournamentMatchActive &&
+    tournamentMyColor() &&
+    tournamentCurrentGameRow &&
+    "ongoing" === tournamentCurrentGameRow.status &&
+    (!lastTournamentState ||
+      !lastTournamentState.meta ||
+      "finished" !== lastTournamentState.meta.status)
+  );
+}
+async function assertLiveTournamentGame_(e, t) {
+  const a = await gamesCollectionRef.doc(gameDocId_(e, t)).get();
+  if (!a.exists) throw new Error("No se encontró esa partida");
+  if ("ongoing" !== a.data().status)
+    throw new Error("La partida ya no está habilitada para comunicarse");
+}
 function renderMatchChat() {
   const e = document.getElementById("tournament-match-chat"),
     t = document.getElementById("tournament-match-chat-messages"),
@@ -358,11 +381,15 @@ function renderMatchChat() {
     r = document.getElementById("tournament-match-chat-clear-btn"),
     s = document.getElementById("tournament-match-chat-toggle-btn");
   if (!e || !t) return;
-  const l = !!tournamentMyColor();
+  const l = !!tournamentMyColor(),
+    i = tournamentMatchCommunicationAllowed_();
   if (((e.style.display = tournamentMatchActive && l ? "" : "none"), l))
     if (
-      (o && (o.style.display = ""),
-      a && (a.textContent = ""),
+      (o && (o.style.display = i ? "" : "none"),
+      a &&
+        (a.textContent = i
+          ? ""
+          : "El chat quedó en modo lectura porque la partida no está activa."),
       r && (r.style.display = matchChatMessages.length ? "" : "none"),
       renderMatchChatMuteBtn_(),
       n &&
@@ -416,11 +443,27 @@ async function sendMatchChatMessage() {
   if (!e) return;
   const t = e.value.trim();
   if (!t) return;
-  if (!tournamentMatchCtx || !currentUser) return;
+  if (
+    !tournamentMatchCtx ||
+    !currentUser ||
+    !tournamentMatchCommunicationAllowed_()
+  )
+    return;
   const a = tournamentMyColor();
   if (a) {
     ((e.value = ""), resetMatchChatComposer_());
     try {
+      const n = await getTournamentStateOnce();
+      (assertTournamentNotFinished_(n),
+        assertGameParticipantForState_(
+          n,
+          tournamentMatchCtx.round,
+          tournamentMatchCtx.board,
+        ));
+      await assertLiveTournamentGame_(
+        tournamentMatchCtx.round,
+        tournamentMatchCtx.board,
+      );
       await matchChatCollectionRef_(
         tournamentMatchCtx.round,
         tournamentMatchCtx.board,
@@ -475,6 +518,9 @@ async function clearMatchChat() {
   const e = tournamentMatchCtx.round,
     t = tournamentMatchCtx.board;
   try {
+    const o = await getTournamentStateOnce();
+    (assertTournamentNotFinished_(o),
+      assertGameParticipantForState_(o, e, t));
     const a = await matchChatCollectionRef_(e, t).get();
     if (a.empty) return;
     const n = fbDb.batch();
@@ -503,8 +549,9 @@ function renderCallUI() {
     r = document.getElementById("tournament-match-call-note"),
     s = document.getElementById("tournament-match-call-mute-btn");
   if (!e) return;
-  const l = tournamentMyColor();
-  ((e.style.display = tournamentMatchActive && l ? "" : "none"),
+  const l = tournamentMyColor(),
+    i = tournamentMatchCommunicationAllowed_();
+  ((e.style.display = i ? "" : "none"),
     l &&
       ((t.style.display = "idle" === callState ? "" : "none"),
       (a.style.display = "incoming" === callState ? "flex" : "none"),
@@ -563,11 +610,19 @@ function newCallPeerConnection_() {
   );
 }
 async function startAudioCall() {
-  if (!tournamentMatchCtx || "idle" !== callState || !tournamentMyColor())
+  if (
+    !tournamentMatchCtx ||
+    "idle" !== callState ||
+    !tournamentMatchCommunicationAllowed_()
+  )
     return;
   const e = tournamentMatchCtx.round,
     t = tournamentMatchCtx.board;
   try {
+    const a = await getTournamentStateOnce();
+    (assertTournamentNotFinished_(a),
+      assertGameParticipantForState_(a, e, t));
+    await assertLiveTournamentGame_(e, t);
     callLocalStream = await navigator.mediaDevices.getUserMedia({
       audio: !0,
       video: !1,
@@ -605,10 +660,14 @@ async function startAudioCall() {
   listenRemoteCandidates_(e, t, "answerCandidates");
 }
 async function acceptIncomingCall_(e) {
-  if (!tournamentMatchCtx || !tournamentMyColor()) return;
+  if (!tournamentMatchCtx || !tournamentMatchCommunicationAllowed_()) return;
   const t = tournamentMatchCtx.round,
     a = tournamentMatchCtx.board;
   try {
+    const n = await getTournamentStateOnce();
+    (assertTournamentNotFinished_(n),
+      assertGameParticipantForState_(n, t, a));
+    await assertLiveTournamentGame_(t, a);
     callLocalStream = await navigator.mediaDevices.getUserMedia({
       audio: !0,
       video: !1,
@@ -818,12 +877,65 @@ function syncedNow_() {
 let authListenerAttached = !1,
   authRedirectChecked_ = !1;
 const TOURNAMENT_REFEREE_EMAIL = "josepantaleo@gmail.com";
-function isCurrentUserReferee() {
-  return !!currentUser && currentUser.email === TOURNAMENT_REFEREE_EMAIL;
+function normalizeRoleEmail_(e) {
+  return (e || "").trim().toLowerCase();
+}
+function tournamentRoleEmails_(e, t, a) {
+  const n = e && e.meta;
+  if (n && Object.prototype.hasOwnProperty.call(n, t) && Array.isArray(n[t]))
+    return Array.from(new Set(n[t].map(normalizeRoleEmail_).filter(Boolean)));
+  const o = normalizeRoleEmail_(a);
+  return o ? [o] : [];
+}
+function isCurrentUserReferee(e) {
+  if (!currentUser || !currentUser.email) return !1;
+  const t = normalizeRoleEmail_(currentUser.email);
+  return tournamentRoleEmails_(
+    e || lastTournamentState,
+    "refereeEmails",
+    TOURNAMENT_REFEREE_EMAIL,
+  ).includes(t);
 }
 function assertReferee() {
   if (!isCurrentUserReferee())
     throw new Error("Esta acción es exclusiva del árbitro del torneo");
+}
+function assertAdminForState_(e) {
+  if (!isCurrentUserAdmin(normalizeTournamentState(e)))
+    throw new Error(
+      "Tu cuenta ya no tiene permisos de administrador en este torneo",
+    );
+}
+function assertRefereeForState_(e) {
+  if (!isCurrentUserReferee(normalizeTournamentState(e)))
+    throw new Error("Tu cuenta ya no tiene permisos de árbitro en este torneo");
+}
+function assertAdminOrRefereeForState_(e) {
+  const t = normalizeTournamentState(e);
+  if (!isCurrentUserAdmin(t) && !isCurrentUserReferee(t))
+    throw new Error(
+      "Tu cuenta ya no tiene permisos de administrador ni de árbitro",
+    );
+}
+function assertTournamentNotFinished_(e, t) {
+  if (e && e.meta && "finished" === e.meta.status)
+    throw new Error(
+      t || "El torneo está finalizado. Reabrilo antes de realizar esta acción",
+    );
+}
+function parseRoleEmails_(e) {
+  const t = Array.from(
+    new Set(
+      String(e || "")
+        .split(/[\s,;]+/)
+        .map(normalizeRoleEmail_)
+        .filter(Boolean),
+    ),
+  );
+  for (const e of t)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+      throw new Error(`El correo "${e}" no es válido`);
+  return t;
 }
 function getFirebaseConfig() {
   const e = localStorage.getItem(FB_CONFIG_KEY) || "";
@@ -870,7 +982,6 @@ function normalizeTournamentState(e) {
     name: "",
     round: 0,
     status: "setup",
-    adminEmails: [],
     totalRounds: null,
     roundStatus: "playing",
     roundApprovalMode: "manual",
@@ -976,7 +1087,13 @@ function updateConfigAccountUI_() {
         (t.style.display = "none")));
 }
 function isCurrentUserAdmin(e) {
-  return !!currentUser && currentUser.email === TOURNAMENT_ADMIN_EMAIL;
+  if (!currentUser || !currentUser.email) return !1;
+  const t = normalizeRoleEmail_(currentUser.email);
+  return tournamentRoleEmails_(
+    e || lastTournamentState,
+    "adminEmails",
+    TOURNAMENT_ADMIN_EMAIL,
+  ).includes(t);
 }
 function isBootstrapping(e) {
   return !1;
@@ -995,8 +1112,11 @@ function updateModeBadge() {
   if (!currentUser)
     return void e.forEach((e) => e && (e.style.display = "none"));
   const t = isCurrentUserAdmin(lastTournamentState),
-    a = isCurrentUserReferee()
-      ? "🧑‍⚖️ Modo Árbitro"
+    n = isCurrentUserReferee(),
+    a = t && n
+      ? "🔐 Modo Administrador y Árbitro"
+      : n
+        ? "🧑‍⚖️ Modo Árbitro"
       : t
         ? "🛠️ Modo Administrador"
         : "👤 Modo Jugador";

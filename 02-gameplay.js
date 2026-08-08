@@ -552,7 +552,11 @@ function attachPieceDrag(e, t) {
     if (void 0 !== a.button && 0 !== a.button) return;
     if (!gameStarted || game.game_over() || botThinking) return;
     if (botEnabled && game.turn() === botColor) return;
+    if (tournamentMatchActive && tournamentMatchBusy)
+      return void toast("Esperá a que termine de sincronizar la jugada anterior.");
     if (tournamentMatchActive && game.turn() !== tournamentMyColor()) return;
+    if (tournamentMatchActive && tournamentActiveClockExpired_())
+      return void toast("El tiempo de esta partida ya se agotó.");
     if (tournamentMatchActive && tournamentClockWaitingForBothPlayers())
       return void toast("⏳ Esperando a que el rival entre a la partida.");
     if (
@@ -734,6 +738,16 @@ async function onPieceDragUp(e) {
     n = a ? a.closest(".square") : null,
     o = n ? n.dataset.square : null;
   if (
+    tournamentMatchActive &&
+    (tournamentMatchBusy || tournamentActiveClockExpired_())
+  )
+    return (
+      (selected = null),
+      (validMoves = []),
+      syncTournamentSelection_(null),
+      void render()
+    );
+  if (
     (document
       .querySelectorAll(".square.drop-target")
       .forEach((e) => e.classList.remove("drop-target")),
@@ -774,7 +788,11 @@ async function clickSquare(e) {
   if (Date.now() < justDraggedUntil) return;
   if (!gameStarted || game.game_over() || botThinking) return;
   if (botEnabled && game.turn() === botColor) return;
+  if (tournamentMatchActive && tournamentMatchBusy)
+    return void toast("Esperá a que termine de sincronizar la jugada anterior.");
   if (tournamentMatchActive && game.turn() !== tournamentMyColor()) return;
+  if (tournamentMatchActive && tournamentActiveClockExpired_())
+    return void toast("El tiempo de esta partida ya se agotó.");
   if (tournamentMatchActive && tournamentClockWaitingForBothPlayers())
     return void toast("⏳ Esperando a que el rival entre a la partida.");
   if (
