@@ -3007,6 +3007,121 @@
         border-color: transparent;
       }
 
+      .learning-overview {
+        display: grid;
+        grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .learning-recommendation,
+      .exercise-recommendation {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-color: rgba(92, 200, 255, 0.28);
+      }
+
+      .learning-recommendation h3,
+      .exercise-recommendation h3 {
+        margin: 4px 0 6px;
+      }
+
+      .learning-recommendation p,
+      .exercise-recommendation p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .learning-mini-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .learning-mini-stat {
+        min-width: 0;
+        padding: 14px;
+      }
+
+      .learning-mini-stat strong {
+        display: block;
+        font-size: 1.25rem;
+        margin-bottom: 4px;
+      }
+
+      .learning-mini-stat span {
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .learning-toolbar,
+      .exercise-toolbar {
+        display: grid;
+        grid-template-columns: minmax(240px, 1fr) auto auto;
+        gap: 14px;
+        align-items: end;
+        padding: 14px;
+        margin: 0 0 18px;
+      }
+
+      .learning-search {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .learning-search input {
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.14);
+        color: var(--text);
+      }
+
+      .learning-search input:focus {
+        outline: 2px solid rgba(92, 200, 255, 0.45);
+        outline-offset: 1px;
+      }
+
+      .learning-toolbar-group {
+        display: grid;
+        gap: 6px;
+      }
+
+      .learning-toolbar-label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .learning-status-filters,
+      .exercise-status-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .learning-status.active,
+      .exercise-status.active {
+        background: var(--accent2);
+        border-color: transparent;
+        color: #071722;
+      }
+
+      .learning-results {
+        align-self: center;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
       .learning-path {
         position: relative;
       }
@@ -3075,6 +3190,16 @@
         font-size: 0.72rem;
       }
 
+      .activity-state-badge {
+        color: var(--accent);
+        border-color: rgba(242, 184, 75, 0.25);
+      }
+
+      .activity-state-badge.is-complete {
+        color: var(--success);
+        border-color: rgba(85, 209, 135, 0.28);
+      }
+
       .lesson-description {
         color: var(--muted);
         margin: 5px 0 0;
@@ -3112,6 +3237,14 @@
       .lesson-modal-content h3 {
         margin-top: 0;
         font-size: 1.7rem;
+      }
+
+      .activity-position {
+        float: right;
+        margin-top: -24px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
       }
 
       .lesson-content {
@@ -3470,6 +3603,20 @@
           grid-column: 2;
           justify-self: start;
         }
+
+        .learning-overview {
+          grid-template-columns: 1fr;
+        }
+
+        .learning-toolbar,
+        .exercise-toolbar {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+        }
+
+        .learning-results {
+          justify-self: start;
+        }
       }
 
       /* =========================
@@ -3521,6 +3668,14 @@
         background: var(--accent);
         color: #1e1307;
         border-color: transparent;
+      }
+
+      .exercise-recommendation {
+        margin-top: 16px;
+      }
+
+      .exercise-toolbar {
+        margin-top: 0;
       }
 
       .exercise-list {
@@ -3689,6 +3844,25 @@
       @media (max-width: 520px) {
         .exercise-dashboard {
           grid-template-columns: 1fr 1fr;
+        }
+
+        .learning-recommendation,
+        .exercise-recommendation {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .learning-mini-stats {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .learning-mini-stat:last-child {
+          grid-column: 1 / -1;
+        }
+
+        .activity-position {
+          float: none;
+          margin: 4px 0 10px;
         }
       }
 

@@ -3683,23 +3683,167 @@ const LESSONS = {
     estrategia: "Estrategia",
     tactica: "Táctica",
   };
-function wireFilterButtons(e, t, a, n) {
-  const o = document.querySelectorAll(e);
-  o.forEach((e) => {
+const learningView = {
+    category: "all",
+    status: "all",
+    search: "",
+  },
+  exerciseView = {
+    category: "all",
+    status: "all",
+    search: "",
+  };
+function normalizeStudyText(e) {
+  return String(e || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+function setActiveStudyButton(e, t) {
+  document.querySelectorAll(e).forEach((e) => {
+    e.classList.toggle("active", e === t);
+  });
+}
+function getCardTitle(e) {
+  const t = e && e.querySelector("h3");
+  return t ? t.textContent.trim() : "";
+}
+function getRecommendedLessonId() {
+  const e = state.lessonsCompleted || [],
+    t = Object.keys(LESSONS);
+  return t.find((t) => !e.includes(String(t))) || t[0] || null;
+}
+function getRecommendedExerciseId(e = null) {
+  const t = (state.exerciseStats && state.exerciseStats.solved) || [],
+    a = Object.keys(EXERCISES),
+    n = null == e ? -1 : a.indexOf(String(e));
+  for (let e = 1; e <= a.length; e++) {
+    const o = a[(Math.max(-1, n) + e) % a.length];
+    if (!t.includes(String(o))) return o;
+  }
+  return a[(Math.max(-1, n) + 1) % a.length] || null;
+}
+function updateLearningRecommendation() {
+  const e = getRecommendedLessonId(),
+    t = e && document.querySelector(`[data-lesson-card][data-lesson-id="${e}"]`),
+    a = document.getElementById("learning-recommendation-title"),
+    n = document.getElementById("learning-recommendation-text"),
+    o = document.getElementById("learning-recommendation-action"),
+    r = (state.lessonsCompleted || []).length === Object.keys(LESSONS).length;
+  if (!e || !t) return;
+  (a && (a.textContent = r ? "Curso completado: repasá una lección" : getCardTitle(t)),
+    n &&
+      (n.textContent = r
+        ? "Mantené frescos los conceptos volviendo a la primera lección."
+        : `Siguiente paso recomendado: ${LESSON_CATEGORY_LABEL[LESSONS[e].category]}.`),
+    o &&
+      ((o.textContent = r ? "Repasar" : "Continuar"),
+      (o.onclick = () => openLessonModal(e))));
+}
+function updateExerciseRecommendation() {
+  const e = getRecommendedExerciseId(currentExerciseId),
+    t = e &&
+      document.querySelector(`[data-exercise-card][data-exercise-id="${e}"]`),
+    a = document.getElementById("exercise-recommendation-title"),
+    n = document.getElementById("exercise-recommendation-text"),
+    o = document.getElementById("exercise-recommendation-action"),
+    r =
+      ((state.exerciseStats && state.exerciseStats.solved) || []).length ===
+      Object.keys(EXERCISES).length;
+  if (!e || !t) return;
+  (a && (a.textContent = r ? "Repaso recomendado" : getCardTitle(t)),
+    n &&
+      (n.textContent = r
+        ? "Ya resolviste todos los desafíos. Seguimos con práctica de repaso."
+        : `Próximo desafío pendiente: ${EXERCISE_CATEGORY_LABEL[EXERCISES[e].category]}.`),
+    o &&
+      ((o.textContent = r ? "Repasar" : "Entrenar ahora"),
+      (o.onclick = () => openExerciseModal(e))));
+}
+function applyLearningFilters() {
+  const e = state.lessonsCompleted || [],
+    t = normalizeStudyText(learningView.search);
+  let a = 0;
+  document.querySelectorAll("[data-lesson-card]").forEach((n) => {
+    const o = e.includes(String(n.dataset.lessonId)),
+      r =
+        "all" === learningView.category ||
+        n.dataset.category === learningView.category,
+      s =
+        "all" === learningView.status ||
+        ("completed" === learningView.status ? o : !o),
+      l = !t || normalizeStudyText(n.textContent).includes(t),
+      i = r && s && l;
+    ((n.style.display = i ? "" : "none"), i && a++);
+  });
+  const n = document.getElementById("learning-empty"),
+    o = document.getElementById("learning-results-count");
+  (n && (n.style.display = a ? "none" : ""),
+    o && (o.textContent = `${a} ${1 === a ? "lección" : "lecciones"}`));
+}
+function applyExerciseFilters() {
+  const e = (state.exerciseStats && state.exerciseStats.solved) || [],
+    t = normalizeStudyText(exerciseView.search);
+  let a = 0;
+  document.querySelectorAll("[data-exercise-card]").forEach((n) => {
+    const o = e.includes(String(n.dataset.exerciseId)),
+      r =
+        "all" === exerciseView.category ||
+        n.dataset.category === exerciseView.category,
+      s =
+        "all" === exerciseView.status ||
+        ("completed" === exerciseView.status ? o : !o),
+      l = !t || normalizeStudyText(n.textContent).includes(t),
+      i = r && s && l;
+    ((n.style.display = i ? "" : "none"), i && a++);
+  });
+  const n = document.getElementById("exercise-empty"),
+    o = document.getElementById("exercise-results-count");
+  (n && (n.style.display = a ? "none" : ""),
+    o && (o.textContent = `${a} ${1 === a ? "ejercicio" : "ejercicios"}`));
+}
+function wireLearningControls() {
+  document.querySelectorAll("[data-learning-filter]").forEach((e) => {
     e.addEventListener("click", () => {
-      (o.forEach((e) => e.classList.remove("active")),
-        e.classList.add("active"));
-      const r = e.dataset[a],
-        s = document.querySelectorAll(t);
-      let l = 0;
-      s.forEach((e) => {
-        const t = "all" === r || e.dataset.category === r;
-        ((e.style.display = t ? "" : "none"), t && l++);
-      });
-      const i = document.getElementById(n);
-      i && (i.style.display = 0 === l ? "" : "none");
+      ((learningView.category = e.dataset.learningFilter),
+        setActiveStudyButton("[data-learning-filter]", e),
+        applyLearningFilters());
     });
   });
+  document.querySelectorAll("[data-learning-status]").forEach((e) => {
+    e.addEventListener("click", () => {
+      ((learningView.status = e.dataset.learningStatus),
+        setActiveStudyButton("[data-learning-status]", e),
+        applyLearningFilters());
+    });
+  });
+  const e = document.getElementById("learning-search");
+  e &&
+    e.addEventListener("input", () => {
+      ((learningView.search = e.value), applyLearningFilters());
+    });
+}
+function wireExerciseControls() {
+  document.querySelectorAll("[data-exercise-filter]").forEach((e) => {
+    e.addEventListener("click", () => {
+      ((exerciseView.category = e.dataset.exerciseFilter),
+        setActiveStudyButton("[data-exercise-filter]", e),
+        applyExerciseFilters());
+    });
+  });
+  document.querySelectorAll("[data-exercise-status]").forEach((e) => {
+    e.addEventListener("click", () => {
+      ((exerciseView.status = e.dataset.exerciseStatus),
+        setActiveStudyButton("[data-exercise-status]", e),
+        applyExerciseFilters());
+    });
+  });
+  const e = document.getElementById("exercise-search");
+  e &&
+    e.addEventListener("input", () => {
+      ((exerciseView.search = e.value), applyExerciseFilters());
+    });
 }
 function updateLearningProgress() {
   const e = state.lessonsCompleted || [],
@@ -3707,17 +3851,36 @@ function updateLearningProgress() {
     a = Math.round((e.length / t) * 100),
     n = document.getElementById("learning-progress-text"),
     o = document.getElementById("learning-progress-bar"),
-    r = document.getElementById("learning-progress-detail");
+    r = document.getElementById("learning-progress-detail"),
+    s = document.getElementById("learning-completed-stat"),
+    l = document.getElementById("learning-pending-stat"),
+    i = document.getElementById("learning-xp-stat"),
+    c = e.reduce((e, t) => e + ((LESSONS[t] && LESSONS[t].xp) || 0), 0);
   (n && (n.textContent = a + "%"),
     o && (o.style.width = a + "%"),
     r && (r.textContent = `${e.length} de ${t} lecciones completadas`),
+    s && (s.textContent = e.length),
+    l && (l.textContent = Math.max(0, t - e.length)),
+    i && (i.textContent = c + " XP"),
     document.querySelectorAll("[data-lesson-card]").forEach((t) => {
       const a = t.dataset.lessonId,
-        n = e.includes(a);
-      t.classList.toggle("completed", n);
-      const o = t.querySelector(".lesson-btn");
-      o && (o.textContent = n ? "✓ Repasar" : "Comenzar");
-    }));
+        n = e.includes(a),
+        o = t.querySelector(".lesson-btn"),
+        r = t.querySelector(".lesson-meta");
+      let s = r && r.querySelector(".activity-state-badge");
+      (t.classList.toggle("completed", n),
+        o && (o.textContent = n ? "✓ Repasar" : "Comenzar"),
+        r &&
+          !s &&
+          ((s = document.createElement("span")),
+          (s.className = "badge activity-state-badge"),
+          r.appendChild(s)),
+        s &&
+          ((s.textContent = n ? "Completada" : "Pendiente"),
+          s.classList.toggle("is-complete", n)));
+    }),
+    updateLearningRecommendation(),
+    applyLearningFilters());
 }
 function updateExerciseDashboard() {
   const e = state.exerciseStats || {
@@ -3739,20 +3902,39 @@ function updateExerciseDashboard() {
     o && (o.textContent = e.bestStreak || 0),
     document.querySelectorAll("[data-exercise-card]").forEach((t) => {
       const a = t.dataset.exerciseId,
-        n = (e.solved || []).includes(a);
-      t.classList.toggle("completed", n);
-    }));
+        n = (e.solved || []).includes(a),
+        o = t.querySelector(".exercise-start"),
+        r = t.querySelector(".exercise-meta");
+      let s = r && r.querySelector(".activity-state-badge");
+      (t.classList.toggle("completed", n),
+        o && (o.textContent = n ? "Repasar" : "Resolver"),
+        r &&
+          !s &&
+          ((s = document.createElement("span")),
+          (s.className = "badge activity-state-badge"),
+          r.appendChild(s)),
+        s &&
+          ((s.textContent = n ? "Resuelto" : "Pendiente"),
+          s.classList.toggle("is-complete", n)));
+    }),
+    updateExerciseRecommendation(),
+    applyExerciseFilters());
 }
 function ensureLearningState() {
-  (state.lessonsCompleted || (state.lessonsCompleted = []),
-    state.exerciseStats ||
-      (state.exerciseStats = {
-        solved: [],
-        firstTry: 0,
-        attempts: 0,
-        streak: 0,
-        bestStreak: 0,
-      }));
+  (Array.isArray(state.lessonsCompleted) ||
+    (state.lessonsCompleted = []),
+    state.exerciseStats && "object" == typeof state.exerciseStats ||
+      (state.exerciseStats = {}),
+    Array.isArray(state.exerciseStats.solved) ||
+      (state.exerciseStats.solved = []),
+    Number.isFinite(state.exerciseStats.firstTry) ||
+      (state.exerciseStats.firstTry = 0),
+    Number.isFinite(state.exerciseStats.attempts) ||
+      (state.exerciseStats.attempts = 0),
+    Number.isFinite(state.exerciseStats.streak) ||
+      (state.exerciseStats.streak = 0),
+    Number.isFinite(state.exerciseStats.bestStreak) ||
+      (state.exerciseStats.bestStreak = 0));
 }
 function renderBoardGrid(e, t, a = {}) {
   e.innerHTML = "";
@@ -3836,19 +4018,7 @@ function createPuzzleBoard(e) {
     t
   );
 }
-(wireFilterButtons(
-  "[data-learning-filter]",
-  "[data-lesson-card]",
-  "learningFilter",
-  "learning-empty",
-),
-  wireFilterButtons(
-    "[data-exercise-filter]",
-    "[data-exercise-card]",
-    "exerciseFilter",
-    null,
-  ),
-  ensureLearningState());
+(ensureLearningState(), wireLearningControls(), wireExerciseControls());
 const lessonBoardCtx = createPuzzleBoard(
     document.getElementById("lesson-puzzle-board"),
   ),
@@ -3965,6 +4135,15 @@ function openLessonModal(e) {
   ((document.getElementById("lesson-modal-category").textContent =
     "📚 " + (LESSON_CATEGORY_LABEL[t.category] || "Lección")),
     (document.getElementById("lesson-title").textContent = n));
+  const lessonIds = Object.keys(LESSONS),
+    lessonIndex = lessonIds.indexOf(String(e)),
+    lessonPosition = document.getElementById("lesson-modal-position"),
+    previousButton = document.getElementById("lesson-previous"),
+    nextButton = document.getElementById("lesson-next");
+  (lessonPosition &&
+      (lessonPosition.textContent = `Lección ${lessonIndex + 1} de ${lessonIds.length}`),
+    previousButton && (previousButton.disabled = lessonIndex <= 0),
+    nextButton && (nextButton.disabled = lessonIndex >= lessonIds.length - 1));
   const o = document.getElementById("lesson-content");
   ((o.innerHTML = t.content),
     renderMiniDiagrams(o),
@@ -4002,6 +4181,18 @@ function closeLessonModal() {
   document
     .getElementById("lesson-close")
     .addEventListener("click", closeLessonModal),
+  document
+    .getElementById("lesson-previous")
+    .addEventListener("click", () => {
+      const e = Object.keys(LESSONS),
+        t = e.indexOf(String(currentLessonId));
+      t > 0 && openLessonModal(e[t - 1]);
+    }),
+  document.getElementById("lesson-next").addEventListener("click", () => {
+    const e = Object.keys(LESSONS),
+      t = e.indexOf(String(currentLessonId));
+    t >= 0 && t < e.length - 1 && openLessonModal(e[t + 1]);
+  }),
   document.getElementById("lesson-modal").addEventListener("click", (e) => {
     "lesson-modal" === e.target.id && closeLessonModal();
   }),
@@ -4046,11 +4237,14 @@ function openExerciseModal(e) {
   ((document.getElementById("exercise-modal-category").textContent =
     "⚡ " + (EXERCISE_CATEGORY_LABEL[t.category] || "Ejercicio")),
     (document.getElementById("exercise-modal-title").textContent = n),
+    (document.getElementById("exercise-modal-position").textContent =
+      `Ejercicio ${Object.keys(EXERCISES).indexOf(String(e)) + 1} de ${Object.keys(EXERCISES).length}`),
     (document.getElementById("exercise-modal-streak").textContent =
       "🔥 Racha: " +
       ((state.exerciseStats && state.exerciseStats.streak) || 0)),
     (document.getElementById("exercise-question").textContent = t.prompt),
     (document.getElementById("exercise-result").style.display = "none"),
+    (document.getElementById("exercise-next").style.display = "none"),
     exerciseRunner.start(t),
     (exerciseBoardCtx.onAttempt = function (a, n) {
       exerciseRunner.attempt(a, n, {
@@ -4080,6 +4274,7 @@ function openExerciseModal(e) {
               ? "Ya habías resuelto este ejercicio antes. ¡Repaso completado!"
               : `¡Resuelto! Ganaste ${t.xp} XP.`),
             (document.getElementById("exercise-result").style.display = ""),
+            (document.getElementById("exercise-next").style.display = ""),
             updateExerciseDashboard());
         },
         onWrong: (t) => {
@@ -4111,6 +4306,10 @@ function closeExerciseModal() {
   document
     .getElementById("exercise-close")
     .addEventListener("click", closeExerciseModal),
+  document.getElementById("exercise-next").addEventListener("click", () => {
+    const e = getRecommendedExerciseId(currentExerciseId);
+    e && openExerciseModal(e);
+  }),
   document.getElementById("exercise-modal").addEventListener("click", (e) => {
     "exercise-modal" === e.target.id && closeExerciseModal();
   }),
@@ -4126,6 +4325,7 @@ function closeExerciseModal() {
       const e = EXERCISES[currentExerciseId];
       e &&
         ((document.getElementById("exercise-result").style.display = "none"),
+        (document.getElementById("exercise-next").style.display = "none"),
         exerciseRunner.start(e));
     }),
   updateLearningProgress(),

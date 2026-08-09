@@ -12,7 +12,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260808-3" />
+    <link rel="stylesheet" href="styles.css?v=20260809-4" />
   </head>
 
   <body>
@@ -590,6 +590,35 @@
             </div>
           </div>
 
+          <div class="learning-overview">
+            <div class="card learning-recommendation">
+              <div>
+                <div class="learning-kicker">Proximo paso</div>
+                <h3 id="learning-recommendation-title">Continuar aprendiendo</h3>
+                <p id="learning-recommendation-text">
+                  Te recomendamos la siguiente leccion pendiente de tu ruta.
+                </p>
+              </div>
+              <button class="btn primary" id="learning-recommendation-action" type="button">
+                Continuar
+              </button>
+            </div>
+            <div class="learning-mini-stats">
+              <div class="card learning-mini-stat">
+                <strong id="learning-completed-stat">0</strong>
+                <span>Completadas</span>
+              </div>
+              <div class="card learning-mini-stat">
+                <strong id="learning-pending-stat">20</strong>
+                <span>Pendientes</span>
+              </div>
+              <div class="card learning-mini-stat">
+                <strong id="learning-xp-stat">0 XP</strong>
+                <span>XP del curso</span>
+              </div>
+            </div>
+          </div>
+
           <div
             class="learning-filters"
             role="tablist"
@@ -616,6 +645,22 @@
             <button class="btn learning-filter" data-learning-filter="tactica">
               ⚡ Táctica
             </button>
+          </div>
+
+          <div class="card learning-toolbar">
+            <label class="learning-search">
+              <span>Buscar leccion</span>
+              <input id="learning-search" type="search" placeholder="Ej.: enroque, tactica, finales..." autocomplete="off" />
+            </label>
+            <div class="learning-toolbar-group">
+              <span class="learning-toolbar-label">Estado</span>
+              <div class="learning-status-filters" role="group" aria-label="Filtrar lecciones por estado">
+                <button class="btn learning-status active" data-learning-status="all" type="button">Todas</button>
+                <button class="btn learning-status" data-learning-status="pending" type="button">Pendientes</button>
+                <button class="btn learning-status" data-learning-status="completed" type="button">Completadas</button>
+              </div>
+            </div>
+            <div class="learning-results" id="learning-results-count">20 lecciones</div>
           </div>
 
           <div class="learning-path grid">
@@ -1156,6 +1201,7 @@
         <div id="lesson-modal" class="alert" style="display: none">
           <div class="lesson-modal-content">
             <div class="panel-title" id="lesson-modal-category">📚 Lección</div>
+            <div class="activity-position" id="lesson-modal-position">Lección 1 de 20</div>
             <h3 id="lesson-title">Lección</h3>
             <div id="lesson-content" class="lesson-content"></div>
             <div class="lesson-checklist">
@@ -1207,6 +1253,8 @@
               <button class="btn primary" id="lesson-complete" disabled>
                 ✓ Marcar como completada
               </button>
+              <button class="btn" id="lesson-previous" type="button">Anterior</button>
+              <button class="btn" id="lesson-next" type="button">Siguiente</button>
               <button class="btn" id="lesson-close">Cerrar</button>
             </div>
           </div>
@@ -1241,6 +1289,19 @@
             </div>
           </div>
 
+          <div class="card exercise-recommendation">
+            <div>
+              <div class="learning-kicker">Entrenamiento recomendado</div>
+              <h3 id="exercise-recommendation-title">Resolver un ejercicio pendiente</h3>
+              <p id="exercise-recommendation-text">
+                Continuaremos con el siguiente desafio que todavia no resolviste.
+              </p>
+            </div>
+            <button class="btn primary" id="exercise-recommendation-action" type="button">
+              Entrenar ahora
+            </button>
+          </div>
+
           <div class="exercise-controls">
             <button
               class="btn exercise-filter active"
@@ -1263,6 +1324,22 @@
             <button class="btn exercise-filter" data-exercise-filter="tactica">
               ⚡ Táctica
             </button>
+          </div>
+
+          <div class="card exercise-toolbar">
+            <label class="learning-search">
+              <span>Buscar ejercicio</span>
+              <input id="exercise-search" type="search" placeholder="Ej.: clavada, apertura, mate..." autocomplete="off" />
+            </label>
+            <div class="learning-toolbar-group">
+              <span class="learning-toolbar-label">Estado</span>
+              <div class="exercise-status-filters" role="group" aria-label="Filtrar ejercicios por estado">
+                <button class="btn exercise-status active" data-exercise-status="all" type="button">Todos</button>
+                <button class="btn exercise-status" data-exercise-status="pending" type="button">Pendientes</button>
+                <button class="btn exercise-status" data-exercise-status="completed" type="button">Resueltos</button>
+              </div>
+            </div>
+            <div class="learning-results" id="exercise-results-count">20 ejercicios</div>
           </div>
 
           <div class="exercise-list" id="exercise-list">
@@ -1788,11 +1865,16 @@
             </article>
           </div>
 
+          <div class="card learning-empty" id="exercise-empty">
+            No hay ejercicios que coincidan con la busqueda y los filtros.
+          </div>
+
           <div id="exercise-modal" class="alert" style="display: none">
             <div class="exercise-modal-content">
               <div class="panel-title" id="exercise-modal-category">
                 ⚡ Ejercicio
               </div>
+              <div class="activity-position" id="exercise-modal-position">Ejercicio 1 de 20</div>
               <h3 id="exercise-modal-title">Ejercicio</h3>
               <div class="exercise-streak" id="exercise-modal-streak">
                 🔥 Racha: 0
@@ -1840,6 +1922,9 @@
                   margin-top: 22px;
                 "
               >
+                <button class="btn primary" id="exercise-next" type="button" style="display: none">
+                  Siguiente ejercicio
+                </button>
                 <button class="btn" id="exercise-close">Cerrar</button>
               </div>
             </div>
@@ -3448,7 +3533,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260808-14"></script>
+    <script defer src="app.js?v=20260809-15"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>
