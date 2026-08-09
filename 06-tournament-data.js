@@ -907,13 +907,13 @@ async function fbGenerateRoundFromClosed(e) {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertReferee(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (t) => {
       const a = await t.get(fbRoomRef);
       if (!a.exists) throw new Error("Todavía no creaste un torneo");
       const n = a.data(),
         o = { ...n.meta };
-      assertRefereeForState_(n);
+      assertAdminOrRefereeForState_(n);
       if ("active" !== o.status || "closed" !== o.roundStatus)
         throw new Error(
           'Primero hay que "Cerrar ronda" antes de generar la próxima',

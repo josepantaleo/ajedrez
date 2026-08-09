@@ -373,8 +373,23 @@ function renderTournamentState(e) {
     (document.getElementById("tournament-open-admin-btn").style.display = n
       ? ""
       : "none"),
-    (document.getElementById("tournament-next-round-btn").style.display =
-      o || 0 !== e.meta.round ? "none" : ""),
+    (() => {
+      const t = document.getElementById("tournament-next-round-btn"),
+        a =
+          n &&
+          !o &&
+          (0 === e.meta.round ||
+            "pending_approval" === e.meta.roundStatus ||
+            "closed" === e.meta.roundStatus);
+      t &&
+        ((t.style.display = a ? "" : "none"),
+        (t.textContent =
+          0 === e.meta.round
+            ? "Generar ronda 1"
+            : "pending_approval" === e.meta.roundStatus
+              ? "Aprobar y generar nueva ronda"
+              : "Generar nueva ronda"));
+    })(),
     (document.getElementById("tournament-finish-btn").style.display = o
       ? "none"
       : ""),

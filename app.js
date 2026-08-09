@@ -6748,13 +6748,13 @@ async function fbGenerateRoundFromClosed(e) {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertReferee(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (t) => {
       const a = await t.get(fbRoomRef);
       if (!a.exists) throw new Error("Todavía no creaste un torneo");
       const n = a.data(),
         o = { ...n.meta };
-      assertRefereeForState_(n);
+      assertAdminOrRefereeForState_(n);
       if ("active" !== o.status || "closed" !== o.roundStatus)
         throw new Error(
           'Primero hay que "Cerrar ronda" antes de generar la próxima',
@@ -8405,8 +8405,23 @@ function renderTournamentState(e) {
     (document.getElementById("tournament-open-admin-btn").style.display = n
       ? ""
       : "none"),
-    (document.getElementById("tournament-next-round-btn").style.display =
-      o || 0 !== e.meta.round ? "none" : ""),
+    (() => {
+      const t = document.getElementById("tournament-next-round-btn"),
+        a =
+          n &&
+          !o &&
+          (0 === e.meta.round ||
+            "pending_approval" === e.meta.roundStatus ||
+            "closed" === e.meta.roundStatus);
+      t &&
+        ((t.style.display = a ? "" : "none"),
+        (t.textContent =
+          0 === e.meta.round
+            ? "Generar ronda 1"
+            : "pending_approval" === e.meta.roundStatus
+              ? "Aprobar y generar nueva ronda"
+              : "Generar nueva ronda"));
+    })(),
     (document.getElementById("tournament-finish-btn").style.display = o
       ? "none"
       : ""),
@@ -10384,7 +10399,24 @@ configSignoutBtn &&
     .getElementById("tournament-next-round-btn")
     .addEventListener("click", async () => {
       try {
-        await fbGenerateRound();
+        const e = lastTournamentState && lastTournamentState.meta;
+        if (!e) throw new Error("No se pudo leer el estado actual del torneo");
+        0 === e.round
+          ? await fbGenerateRound()
+          : "pending_approval" === e.roundStatus
+            ? await fbApproveRound()
+            : "closed" === e.roundStatus
+              ? await fbGenerateRoundFromClosed()
+              : (() => {
+                  throw new Error(
+                    "La ronda actual todavía está en juego o no está lista para generar la siguiente.",
+                  );
+                })();
+        toast(
+          0 === e.round
+            ? "Ronda 1 generada y publicada."
+            : "Nueva ronda generada y publicada.",
+        );
       } catch (e) {
         showError(e);
       }

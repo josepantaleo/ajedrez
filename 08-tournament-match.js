@@ -943,7 +943,24 @@ configSignoutBtn &&
     .getElementById("tournament-next-round-btn")
     .addEventListener("click", async () => {
       try {
-        await fbGenerateRound();
+        const e = lastTournamentState && lastTournamentState.meta;
+        if (!e) throw new Error("No se pudo leer el estado actual del torneo");
+        0 === e.round
+          ? await fbGenerateRound()
+          : "pending_approval" === e.roundStatus
+            ? await fbApproveRound()
+            : "closed" === e.roundStatus
+              ? await fbGenerateRoundFromClosed()
+              : (() => {
+                  throw new Error(
+                    "La ronda actual todavía está en juego o no está lista para generar la siguiente.",
+                  );
+                })();
+        toast(
+          0 === e.round
+            ? "Ronda 1 generada y publicada."
+            : "Nueva ronda generada y publicada.",
+        );
       } catch (e) {
         showError(e);
       }
