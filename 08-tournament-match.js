@@ -625,7 +625,8 @@ async function syncTournamentMove() {
       o && (tournamentCurrentGameRow = o),
       t &&
         !tournamentResultShown &&
-        ((tournamentResultShown = !0), showTournamentResult(t)),
+        ((tournamentResultShown = !0),
+        showTournamentResult(t, void 0, n.meta, n.resultPendingReferee)),
       t &&
         n.resultPendingReferee &&
         toast(
@@ -686,7 +687,12 @@ async function syncTournamentMove() {
           (finishTournamentSync_(syncStarted),
             tournamentResultShown ||
             ((tournamentResultShown = !0),
-            showTournamentResult("w" === e ? "0-1" : "1-0")),
+            showTournamentResult(
+              "w" === e ? "0-1" : "1-0",
+              void 0,
+              t.meta,
+              t.resultPendingReferee,
+            )),
             updateTournamentMatchBar(a),
             toast(
               t.resultPendingReferee
@@ -751,7 +757,13 @@ async function syncTournamentMove() {
             a = t.gameRow;
           (finishTournamentSync_(syncStarted),
             tournamentResultShown ||
-            ((tournamentResultShown = !0), showTournamentResult("1/2-1/2")),
+            ((tournamentResultShown = !0),
+            showTournamentResult(
+              "1/2-1/2",
+              void 0,
+              t.meta,
+              t.resultPendingReferee,
+            )),
             updateTournamentMatchBar(a),
             toast(
               t.resultPendingReferee

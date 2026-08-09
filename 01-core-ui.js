@@ -248,7 +248,9 @@ function showAlert(e, t) {
   const n = document.getElementById("alert-back-to-tournament-btn");
   n && (n.style.display = "none");
   const o = document.getElementById("alert-chat-btn");
+  const r = document.getElementById("alert-tournament-round-actions");
   (o && (o.style.display = "none"),
+    r && r.remove(),
     (alertOnClose_ = null),
     document.getElementById("alert").classList.add("show"));
 }

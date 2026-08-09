@@ -6,6 +6,68 @@ function stopAutoApproveTimer() {
 }
 let tournamentWOGraceTimer = null,
   alertedDoubleNoShowBoards_ = new Set();
+let tournamentJoinReminderTimer_ = null,
+  tournamentJoinReminderSent_ = new Set();
+function stopTournamentJoinReminder_() {
+  (clearInterval(tournamentJoinReminderTimer),
+    (tournamentJoinReminderTimer_ = null));
+}
+function checkTournamentJoinReminder_(e) {
+  if (
+    !e ||
+    !e.meta ||
+    "active" !== e.meta.status ||
+    "playing" !== e.meta.roundStatus ||
+    !currentUser ||
+    !currentUser.email ||
+    tournamentMatchActive
+  )
+    return;
+  const t = currentUser.email.toLowerCase(),
+    a = (e.pairings || []).find(
+      (a) =>
+        a.round === e.meta.round &&
+        "" !== a.blackId &&
+        !a.result &&
+        ((a.whiteEmail || "").toLowerCase() === t ||
+          (a.blackEmail || "").toLowerCase() === t),
+    );
+  if (!a) return;
+  const n = lastRoundGames.find(
+    (e) => e.round === a.round && e.board === a.board,
+  );
+  if (!n || "ongoing" !== n.status) return;
+  const o =
+      (a.whiteEmail || "").toLowerCase() === t ? "w" : "b",
+    r = (n.joined || { w: !1, b: !1 })[o],
+    s = getTimestampMs(n.startedAt);
+  if (r || !s || syncedNow_() - s < 6e4) return;
+  const l = `${a.round}:${a.board}:${s}:${o}`;
+  if (tournamentJoinReminderSent_.has(l)) return;
+  tournamentJoinReminderSent_.add(l);
+  const i = "w" === o ? a.blackName : a.whiteName;
+  (toast(
+    `Recordatorio: ronda ${a.round}, mesa #${a.board}. Todavia no ingresaste a tu partida con ${i}.`,
+    7e3,
+  ),
+    SoundFX.announcement());
+}
+function startTournamentJoinReminder_(e) {
+  if (
+    !e ||
+    !e.meta ||
+    "active" !== e.meta.status ||
+    "playing" !== e.meta.roundStatus ||
+    !currentUser
+  )
+    return void stopTournamentJoinReminder_();
+  (checkTournamentJoinReminder_(e),
+    tournamentJoinReminderTimer_ ||
+      (tournamentJoinReminderTimer_ = setInterval(
+        () => checkTournamentJoinReminder_(lastTournamentState),
+        15e3,
+      )));
+}
 function checkDoubleNoShowBoards_(e) {
   const t = Number(e.meta.woGraceMinutes) || 0;
   if (!t) return;
@@ -261,17 +323,20 @@ function renderTournamentState(e) {
     return (
       (t.style.display = "none"),
       (a.style.display = "none"),
-      void stopWOGraceTimer()
+      stopWOGraceTimer(),
+      void stopTournamentJoinReminder_()
     );
   if (!e || ("active" !== e.meta.status && "finished" !== e.meta.status))
     return (
       (t.style.display = isCurrentUserAdmin(e) ? "" : "none"),
       (a.style.display = "none"),
-      void stopWOGraceTimer()
+      stopWOGraceTimer(),
+      void stopTournamentJoinReminder_()
     );
   ((t.style.display = "none"),
     (a.style.display = ""),
-    startWOGraceTimerIfNeeded(e));
+    startWOGraceTimerIfNeeded(e),
+    startTournamentJoinReminder_(e));
   const n = isCurrentUserAdmin(e),
     p = isCurrentUserReferee(e),
     o = "finished" === e.meta.status,
@@ -1058,11 +1123,56 @@ function saveTournamentGameForAnalysis_(e, t) {
     s
   );
 }
-function showTournamentResult(e, t) {
+function showTournamentRoundApprovalPopup_(e, t) {
+  const a = document.getElementById("alert-box");
+  if (!a) return;
+  const n = document.createElement("div");
+  n.id = "alert-tournament-round-actions";
+  n.className = "alert-tournament-round-actions";
+  const o = e && "active" === e.status && "pending_approval" === e.roundStatus,
+    r = isCurrentUserAdmin({ meta: e }) || isCurrentUserReferee({ meta: e });
+  if (t)
+    n.innerHTML =
+      "<strong>Resultado pendiente de validacion</strong><span>Un arbitro debe confirmar el resultado antes de revisar la aprobacion de la ronda.</span>";
+  else if (o) {
+    n.innerHTML = r
+      ? "<strong>Ronda lista para aprobar</strong><span>Todos los resultados fueron cargados. Podes aprobarla ahora y publicar la siguiente ronda.</span>"
+      : "<strong>Ronda pendiente de aprobacion</strong><span>Todos los resultados fueron cargados. Espera a que el administrador o arbitro apruebe la ronda.</span>";
+    if (r) {
+      const e = document.createElement("button");
+      ((e.className = "btn primary"),
+        (e.type = "button"),
+        (e.textContent = "Aprobar ronda y generar la siguiente"),
+        e.addEventListener("click", async () => {
+          if (e.disabled) return;
+          ((e.disabled = !0), (e.textContent = "Aprobando ronda..."));
+          try {
+            (await fbApproveRound(),
+              toast("Ronda aprobada y siguiente ronda publicada."),
+              closeAlert_());
+          } catch (t) {
+            ((e.disabled = !1),
+              (e.textContent = "Aprobar ronda y generar la siguiente"),
+              showError(t));
+          }
+        }),
+        n.appendChild(e));
+    }
+  } else if (e && "finished" === e.status)
+    n.innerHTML =
+      "<strong>Torneo finalizado</strong><span>La ultima ronda ya quedo cerrada. No hay una ronda nueva para aprobar.</span>";
+  else
+    n.innerHTML =
+      "<strong>Estado de la ronda</strong><span>El resultado fue registrado. La ronda seguira abierta hasta que finalicen las demas mesas.</span>";
+  a.appendChild(n);
+}
+function showTournamentResult(e, t, n, o) {
   const a = tournamentResultMessage(e, t);
   showAlert(a.text, a.variant);
-  const n = saveTournamentGameForAnalysis_(e, t);
-  (n && offerAnalysis(n.id),
+  const s = saveTournamentGameForAnalysis_(e, t),
+    r = n || (lastTournamentState && lastTournamentState.meta);
+  (showTournamentRoundApprovalPopup_(r, o),
+    s && offerAnalysis(s.id),
     showAlertBackToTournamentButton_(),
     (alertOnClose_ = () => exitTournamentMatch()));
 }
@@ -1129,7 +1239,11 @@ function updateTournamentMatchBar(e) {
         ).find((t) => t.round === e.round && t.board === e.board);
         t = a ? a.result : "";
       }
-      showTournamentResult(t);
+      showTournamentResult(
+        t,
+        void 0,
+        lastTournamentState && lastTournamentState.meta,
+      );
     }
     return;
   }
@@ -1276,7 +1390,7 @@ async function claimTournamentTimeout(e) {
         a = n.gameRow;
       (tournamentResultShown ||
         ((tournamentResultShown = !0),
-        showTournamentResult(t, "tiempo agotado")),
+        showTournamentResult(t, "tiempo agotado", n.meta, n.resultPendingReferee)),
         n.resultPendingReferee &&
           toast(
             "Tiempo agotado registrado. Un árbitro debe confirmar el resultado.",

@@ -2702,7 +2702,7 @@
         box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.4), 0 20px 60px rgba(231, 76, 60, 0.2);
       }
 
-      .alert-box.result-draw {
+.alert-box.result-draw {
         border-color: #f1c40f;
         box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.4), 0 20px 60px rgba(241, 196, 15, 0.2);
       }
@@ -4181,6 +4181,33 @@
     grid-template-columns:minmax(520px,650px) 1fr;
     gap:28px;
     align-items:start;
+}
+
+.alert-tournament-round-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(93, 173, 226, 0.42);
+  border-radius: 7px;
+  background: rgba(24, 65, 104, 0.22);
+  color: var(--text);
+  text-align: left;
+}
+
+.alert-tournament-round-actions strong {
+  font-size: 0.9rem;
+}
+
+.alert-tournament-round-actions span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.alert-tournament-round-actions .btn {
+  justify-self: start;
+  margin-top: 2px;
 }
 
 .analysis-board-col{

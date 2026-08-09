@@ -779,7 +779,32 @@ async function fbGenerateRound() {
     getTournamentStateOnce()
   );
 }
+async function notifyPublishedRound_(e, t) {
+  const a = e && e.meta,
+    n = Number(a && a.round) || 0;
+  if (
+    !a ||
+    "active" !== a.status ||
+    "playing" !== a.roundStatus ||
+    !n ||
+    n <= t
+  )
+    return e;
+  try {
+    await sendTournamentAnnouncement(
+      `Ronda ${n} publicada. Revisa tus emparejamientos.`,
+    );
+  } catch (e) {
+    console.warn("No se pudo publicar el anuncio de la nueva ronda:", e);
+  }
+  return e;
+}
 async function fbApproveRound() {
+  const e =
+    (lastTournamentState &&
+      lastTournamentState.meta &&
+      Number(lastTournamentState.meta.round)) ||
+    0;
   return (
     assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
@@ -836,7 +861,7 @@ async function fbApproveRound() {
           e.set(gamesCollectionRef.doc(gameDocId_(t.round, t.board)), t),
         ));
     }),
-    getTournamentStateOnce()
+    getTournamentStateOnce().then((t) => notifyPublishedRound_(t, e))
   );
 }
 async function fbCancelAutoApproval() {
@@ -876,6 +901,11 @@ async function fbCloseRound() {
   );
 }
 async function fbGenerateRoundFromClosed(e) {
+  const t =
+    (lastTournamentState &&
+      lastTournamentState.meta &&
+      Number(lastTournamentState.meta.round)) ||
+    0;
   return (
     assertReferee(),
     await fbDb.runTransaction(async (t) => {
@@ -935,7 +965,7 @@ async function fbGenerateRoundFromClosed(e) {
           t.set(gamesCollectionRef.doc(gameDocId_(e.round, e.board)), e),
         ));
     }),
-    getTournamentStateOnce()
+    getTournamentStateOnce().then((e) => notifyPublishedRound_(e, t))
   );
 }
 async function fbSetGameSuspended(e, t, a) {
