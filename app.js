@@ -5770,7 +5770,8 @@ function connectFirebase(e, t) {
 function updateAuthUI() {
   const e = document.getElementById("tournament-auth-status"),
     t = document.getElementById("tournament-google-signin-btn"),
-    a = document.getElementById("tournament-signout-btn");
+    a = document.getElementById("tournament-signout-btn"),
+    n = document.getElementById("tournament-admin-entry-btn");
   (currentUser
     ? ((e.textContent = `Conectado como ${currentUser.displayName} (${currentUser.email})`),
       (t.style.display = "none"),
@@ -5779,6 +5780,9 @@ function updateAuthUI() {
         "Iniciá sesión con tu cuenta de Gmail para jugar o administrar el torneo."),
       (t.style.display = ""),
       (a.style.display = "none")),
+    n &&
+      (n.style.display =
+        currentUser && isCurrentUserAdmin(lastTournamentState) ? "" : "none"),
     updateModeBadge(),
     updateConfigAccountUI_());
 }
@@ -10721,11 +10725,25 @@ configSignoutBtn &&
 const tournamentOpenAdminBtn = document.getElementById(
   "tournament-open-admin-btn",
 );
-if (tournamentOpenAdminBtn)
-  tournamentOpenAdminBtn.addEventListener("click", () => {
-    const e = document.getElementById("tournament-admin-panel");
-    e && e.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+function openTournamentAdministration_() {
+  const e = document.getElementById("tournament-admin-panel"),
+    t = document.getElementById("tournament-setup-box"),
+    a = e && "none" !== e.style.display ? e : t;
+  a && a.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+tournamentOpenAdminBtn &&
+  tournamentOpenAdminBtn.addEventListener(
+    "click",
+    openTournamentAdministration_,
+  );
+const tournamentAdminEntryBtn = document.getElementById(
+  "tournament-admin-entry-btn",
+);
+tournamentAdminEntryBtn &&
+  tournamentAdminEntryBtn.addEventListener(
+    "click",
+    openTournamentAdministration_,
+  );
 const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {

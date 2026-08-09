@@ -1079,7 +1079,8 @@ function connectFirebase(e, t) {
 function updateAuthUI() {
   const e = document.getElementById("tournament-auth-status"),
     t = document.getElementById("tournament-google-signin-btn"),
-    a = document.getElementById("tournament-signout-btn");
+    a = document.getElementById("tournament-signout-btn"),
+    n = document.getElementById("tournament-admin-entry-btn");
   (currentUser
     ? ((e.textContent = `Conectado como ${currentUser.displayName} (${currentUser.email})`),
       (t.style.display = "none"),
@@ -1088,6 +1089,9 @@ function updateAuthUI() {
         "Iniciá sesión con tu cuenta de Gmail para jugar o administrar el torneo."),
       (t.style.display = ""),
       (a.style.display = "none")),
+    n &&
+      (n.style.display =
+        currentUser && isCurrentUserAdmin(lastTournamentState) ? "" : "none"),
     updateModeBadge(),
     updateConfigAccountUI_());
 }

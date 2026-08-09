@@ -1284,11 +1284,25 @@ configSignoutBtn &&
 const tournamentOpenAdminBtn = document.getElementById(
   "tournament-open-admin-btn",
 );
-if (tournamentOpenAdminBtn)
-  tournamentOpenAdminBtn.addEventListener("click", () => {
-    const e = document.getElementById("tournament-admin-panel");
-    e && e.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+function openTournamentAdministration_() {
+  const e = document.getElementById("tournament-admin-panel"),
+    t = document.getElementById("tournament-setup-box"),
+    a = e && "none" !== e.style.display ? e : t;
+  a && a.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+tournamentOpenAdminBtn &&
+  tournamentOpenAdminBtn.addEventListener(
+    "click",
+    openTournamentAdministration_,
+  );
+const tournamentAdminEntryBtn = document.getElementById(
+  "tournament-admin-entry-btn",
+);
+tournamentAdminEntryBtn &&
+  tournamentAdminEntryBtn.addEventListener(
+    "click",
+    openTournamentAdministration_,
+  );
 const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {
