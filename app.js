@@ -7014,7 +7014,7 @@ async function fbSubmitResult(e, t, a) {
             (c.blackEmail || "").toLowerCase() === d);
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
-        E = ["wo-black", "wo-white"];
+        E = ["wo-black", "wo-white", "double-wo"];
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
@@ -7031,6 +7031,25 @@ async function fbSubmitResult(e, t, a) {
         throw new Error(
           "Esta ronda ya fue cerrada por el árbitro; solo el árbitro puede corregir resultados de una ronda cerrada",
         );
+      const P = gamesCollectionRef.doc(gameDocId_(e, t)),
+        gameSnap = await n.get(P),
+        gameRow = gameSnap.exists ? gameSnap.data() : null;
+      if ("double-wo" === a) {
+        const graceMinutes = Number(m.meta.woGraceMinutes) || 0,
+          joined = (gameRow && gameRow.joined) || { w: !1, b: !1 };
+        if (
+          !gameRow ||
+          "ongoing" !== gameRow.status ||
+          !gameRow.startedAt ||
+          joined.w ||
+          joined.b ||
+          !graceMinutes ||
+          syncedNow_() - getTimestampMs(gameRow.startedAt) < 6e4 * graceMinutes
+        )
+          throw new Error(
+            "El doble W.O. solo puede declararse cuando venció la tolerancia y ningún jugador ingresó",
+          );
+      }
       (applyResultToPlayers_(l[c.whiteId], l[c.blackId], c.result, -1),
         (c.result = a),
         applyResultToPlayers_(l[c.whiteId], l[c.blackId], a, 1),
@@ -7038,14 +7057,17 @@ async function fbSubmitResult(e, t, a) {
           l[c.whiteId].played.push(c.blackId),
         -1 === l[c.blackId].played.indexOf(c.whiteId) &&
           l[c.blackId].played.push(c.whiteId));
-      const p = gamesCollectionRef.doc(gameDocId_(e, t)),
-        gameSnap = await n.get(p),
+      const p = P,
         g = gameSnap.exists
           ? {
               status: "finished",
               result: a,
               resultReason:
-                "wo-white" === a || "wo-black" === a ? "wo" : "official",
+                "double-wo" === a
+                  ? "double-wo"
+                  : "wo-white" === a || "wo-black" === a
+                    ? "wo"
+                    : "official",
               drawOfferBy: "",
               drawOfferAt: null,
               selectedSquare: "",
@@ -7669,7 +7691,9 @@ function resultLabel(e) {
           ? "WO Blancas (1-0)"
           : "wo-white" === e
             ? "WO Negras (0-1)"
-            : "";
+            : "double-wo" === e
+              ? "Doble W.O. (0-0)"
+              : "";
 }
 let _rankPlayersCache_ = { players: null, pairings: null, result: null };
 function rankPlayers_(e, t) {
@@ -8199,6 +8223,7 @@ function startWOGraceTimerIfNeeded(e) {
     try {
       lastTournamentState && checkDoubleNoShowBoards_(lastTournamentState);
     } catch (e) {}
+    lastTournamentState && renderTournamentState(lastTournamentState);
   };
   (a(), (tournamentWOGraceTimer = setInterval(a, 15e3)));
 }
@@ -8329,9 +8354,11 @@ function setupPairingsListDelegation_(e) {
                 throw new Error("No tenés permiso para cargar resultados");
               const t = n.dataset.result;
               if (
-                ("wo-black" === t || "wo-white" === t) &&
+                ["wo-black", "wo-white", "double-wo"].includes(t) &&
                 !confirm(
-                  "¿Confirmás declarar esta partida como W.O. (incomparecencia)?",
+                  "double-wo" === t
+                    ? "¿Confirmás declarar Doble W.O.? Ningún jugador recibirá puntos."
+                    : "¿Confirmás declarar esta partida como W.O. (incomparecencia)?",
                 )
               )
                 return void (tournamentBusy = !1);
@@ -8704,7 +8731,7 @@ function renderTournamentState(e) {
       b.add(String(t.board));
       const a = "" === t.blackId,
         o = a ? null : v.get(t.round + "_" + t.board) || null,
-        r = JSON.stringify([t, o, n, p, m]);
+        r = JSON.stringify([t, o, n, p, m, Math.floor(syncedNow_() / 15e3)]);
       let s = E.get(String(t.board));
       if (s && s.dataset.sig === r) return;
       if (
@@ -8722,6 +8749,14 @@ function renderTournamentState(e) {
         i = Number(e.meta.woGraceMinutes) || 0,
         c = (o && o.joined) || { w: !1, b: !1 },
         d = o && "ongoing" === o.status && c.w !== c.b,
+        q =
+          i > 0 &&
+          o &&
+          "ongoing" === o.status &&
+          o.startedAt &&
+          !c.w &&
+          !c.b &&
+          syncedNow_() - getTimestampMs(o.startedAt) >= 6e4 * i,
         u =
           i > 0 && d && o.startedAt
             ? (() => {
@@ -8748,6 +8783,8 @@ function renderTournamentState(e) {
         ? ("pending_approval" !== e.meta.roundStatus || t.locked
             ? "wo-black" === t.result || "wo-white" === t.result
               ? ((h = "wo"), (y = "⚫ Incomparecencia"))
+              : "double-wo" === t.result
+                ? ((h = "no-show"), (y = "🔴 Doble W.O. · sin puntos"))
               : "1/2-1/2" === t.result
                 ? ((h = "draw"), (y = "🔵 Tablas acordadas"))
                 : ((h = "finished"), (y = "⚪ Finalizada"))
@@ -8757,13 +8794,7 @@ function renderTournamentState(e) {
             ? ((h = "pending"), (y = "🟣 Resultado pendiente del árbitro"))
         : o && "suspended" === o.status
           ? ((h = "suspended"), (y = "⏸️ Suspendida"))
-          : i > 0 &&
-              o &&
-              "ongoing" === o.status &&
-              o.startedAt &&
-              !c.w &&
-              !c.b &&
-              syncedNow_() - o.startedAt >= 6e4 * i
+          : q
             ? ((h = "no-show"), (y = "🔴 Nadie se presentó"))
             : o && o.clock && !l
               ? ((h = "waiting"), (y = "🟡 Esperando jugadores"))
@@ -8782,7 +8813,9 @@ function renderTournamentState(e) {
           ["0-1", "0-1"],
         ];
       p &&
-        (x.push(["wo-black", "WO Blancas"]), x.push(["wo-white", "WO Negras"]));
+        (x.push(["wo-black", "WO Blancas"]),
+        x.push(["wo-white", "WO Negras"]),
+        q && x.push(["double-wo", "Doble W.O. (0-0)"]));
       const I =
           "finished" === e.meta.status || (!n && !p) || (t.locked && !p)
             ? t.result
@@ -8856,6 +8889,8 @@ function resultLabelForPairing_(e) {
       return "1 - 0 (WO)";
     case "wo-white":
       return "0 - 1 (WO)";
+    case "double-wo":
+      return "0 - 0 (Doble W.O.)";
     default:
       return e.result;
   }
@@ -9350,6 +9385,10 @@ function tournamentResultMessage(e, t) {
       (c = "w" === s ? "win" : "b" === s ? "loss" : null),
       "w" === s && (i += "\n¡Ganaste vos! 🎉"),
       "b" === s && (i += "\nPerdiste esta partida."));
+  else if ("double-wo" === e)
+    ((l = "🚫 Doble W.O."),
+      (i = `${n} y ${o} no se presentaron. La mesa fue cerrada sin puntos.`),
+      (c = null));
   else {
     if ("wo-white" !== e)
       return { text: "🏁 Partida de torneo terminada.", variant: null };
@@ -9431,7 +9470,7 @@ function showTournamentRoundApprovalPopup_(e, t) {
 }
 function showTournamentResult(e, t, n, o) {
   const a = tournamentResultMessage(e, t);
-  showAlert(a.text, a.variant);
+  showAlert(a.text + "\n\nVas a volver al menú Torneo en unos segundos.", a.variant);
   const s = saveTournamentGameForAnalysis_(e, t),
     r = n || (lastTournamentState && lastTournamentState.meta);
   (showTournamentRoundApprovalPopup_(r, o),

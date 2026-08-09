@@ -1152,7 +1152,7 @@ async function fbSubmitResult(e, t, a) {
             (c.blackEmail || "").toLowerCase() === d);
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
-        E = ["wo-black", "wo-white"];
+        E = ["wo-black", "wo-white", "double-wo"];
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
@@ -1169,6 +1169,25 @@ async function fbSubmitResult(e, t, a) {
         throw new Error(
           "Esta ronda ya fue cerrada por el árbitro; solo el árbitro puede corregir resultados de una ronda cerrada",
         );
+      const P = gamesCollectionRef.doc(gameDocId_(e, t)),
+        gameSnap = await n.get(P),
+        gameRow = gameSnap.exists ? gameSnap.data() : null;
+      if ("double-wo" === a) {
+        const graceMinutes = Number(m.meta.woGraceMinutes) || 0,
+          joined = (gameRow && gameRow.joined) || { w: !1, b: !1 };
+        if (
+          !gameRow ||
+          "ongoing" !== gameRow.status ||
+          !gameRow.startedAt ||
+          joined.w ||
+          joined.b ||
+          !graceMinutes ||
+          syncedNow_() - getTimestampMs(gameRow.startedAt) < 6e4 * graceMinutes
+        )
+          throw new Error(
+            "El doble W.O. solo puede declararse cuando venció la tolerancia y ningún jugador ingresó",
+          );
+      }
       (applyResultToPlayers_(l[c.whiteId], l[c.blackId], c.result, -1),
         (c.result = a),
         applyResultToPlayers_(l[c.whiteId], l[c.blackId], a, 1),
@@ -1176,14 +1195,17 @@ async function fbSubmitResult(e, t, a) {
           l[c.whiteId].played.push(c.blackId),
         -1 === l[c.blackId].played.indexOf(c.whiteId) &&
           l[c.blackId].played.push(c.whiteId));
-      const p = gamesCollectionRef.doc(gameDocId_(e, t)),
-        gameSnap = await n.get(p),
+      const p = P,
         g = gameSnap.exists
           ? {
               status: "finished",
               result: a,
               resultReason:
-                "wo-white" === a || "wo-black" === a ? "wo" : "official",
+                "double-wo" === a
+                  ? "double-wo"
+                  : "wo-white" === a || "wo-black" === a
+                    ? "wo"
+                    : "official",
               drawOfferBy: "",
               drawOfferAt: null,
               selectedSquare: "",
@@ -1807,7 +1829,9 @@ function resultLabel(e) {
           ? "WO Blancas (1-0)"
           : "wo-white" === e
             ? "WO Negras (0-1)"
-            : "";
+            : "double-wo" === e
+              ? "Doble W.O. (0-0)"
+              : "";
 }
 let _rankPlayersCache_ = { players: null, pairings: null, result: null };
 function rankPlayers_(e, t) {
