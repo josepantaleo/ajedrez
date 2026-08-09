@@ -1285,10 +1285,35 @@ const tournamentOpenAdminBtn = document.getElementById(
   "tournament-open-admin-btn",
 );
 function openTournamentAdministration_() {
+  if (!isCurrentUserAdmin(lastTournamentState))
+    return void toast(
+      "Iniciá sesión con la cuenta administradora para gestionar el torneo.",
+    );
   const e = document.getElementById("tournament-admin-panel"),
     t = document.getElementById("tournament-setup-box"),
-    a = e && "none" !== e.style.display ? e : t;
-  a && a.scrollIntoView({ behavior: "smooth", block: "start" });
+    a =
+      e &&
+      lastTournamentState &&
+      ("active" === lastTournamentState.meta.status ||
+        "finished" === lastTournamentState.meta.status)
+        ? e
+        : t;
+  if (!a) return;
+  ((a.style.display = ""),
+    (a.tabIndex = -1),
+    (a.style.outline = "2px solid var(--accent)"),
+    (a.style.outlineOffset = "4px"),
+    a.scrollIntoView({ behavior: "smooth", block: "start" }),
+    a.focus({ preventScroll: !0 }),
+    setTimeout(() => {
+      ((a.style.outline = ""), (a.style.outlineOffset = ""));
+    }, 1800));
+  toast(
+    a === e
+      ? "Panel de gestión del torneo abierto."
+      : "Opciones de creación y gestión del torneo abiertas.",
+    2600,
+  );
 }
 tournamentOpenAdminBtn &&
   tournamentOpenAdminBtn.addEventListener(
