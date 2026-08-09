@@ -12,7 +12,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260809-9" />
+    <link rel="stylesheet" href="styles.css?v=20260809-10" />
   </head>
 
   <body>
@@ -2595,6 +2595,53 @@
               </div>
 
               <section
+                id="tournament-round-complete-notice"
+                class="tournament-round-complete-notice"
+                style="display: none"
+                role="alert"
+                aria-live="assertive"
+                aria-labelledby="tournament-round-complete-title"
+              >
+                <div class="tournament-round-complete-icon" aria-hidden="true">!</div>
+                <div>
+                  <h3 id="tournament-round-complete-title">Todas las mesas finalizaron</h3>
+                  <p id="tournament-round-complete-text"></p>
+                </div>
+              </section>
+
+              <section
+                class="card"
+                id="tournament-official-roles-panel"
+                style="display: none; border-left: 4px solid #5b9bd5"
+                aria-labelledby="tournament-official-roles-title"
+              >
+                <h3 id="tournament-official-roles-title" style="margin: 0 0 6px">
+                  Responsabilidades de gestion
+                </h3>
+                <p id="tournament-official-roles-summary" class="muted" style="margin: 0 0 10px"></p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px">
+                  <div style="padding: 9px 10px; border: 1px solid var(--surface2); border-radius: 8px">
+                    <strong>Administrador</strong>
+                    <p class="muted" style="font-size: 12px; margin: 5px 0 0">
+                      Configura el torneo, gestiona roles e inscripciones, define el modo automatico y puede finalizar, reabrir o reiniciar.
+                    </p>
+                  </div>
+                  <div style="padding: 9px 10px; border: 1px solid var(--surface2); border-radius: 8px">
+                    <strong>Arbitro</strong>
+                    <p class="muted" style="font-size: 12px; margin: 5px 0 0">
+                      Controla resultados, W.O., suspensiones, estados de jugadores y recalculo de posiciones.
+                    </p>
+                  </div>
+                  <div style="padding: 9px 10px; border: 1px solid var(--surface2); border-radius: 8px">
+                    <strong>Control de ronda</strong>
+                    <p class="muted" style="font-size: 12px; margin: 5px 0 0">
+                      Administrador y arbitro pueden revisar, cerrar, aprobar y publicar rondas para no detener el torneo.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section
                 class="tournament-diagnostics card"
                 id="tournament-diagnostics-panel"
                 aria-labelledby="tournament-diagnostics-title"
@@ -3820,7 +3867,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260809-35"></script>
+    <script defer src="app.js?v=20260809-37"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

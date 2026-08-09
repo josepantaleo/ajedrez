@@ -13,6 +13,7 @@ let tournamentWOGraceTimer = null,
   alertedDoubleNoShowBoards_ = new Set();
 let tournamentJoinReminderTimer_ = null,
   tournamentJoinReminderSent_ = new Set();
+let tournamentRoundCompleteNoticeKey_ = "";
 function stopTournamentJoinReminder_() {
   (clearInterval(tournamentJoinReminderTimer),
     (tournamentJoinReminderTimer_ = null));
@@ -148,7 +149,7 @@ function renderApprovalPanel(e, t, a) {
   ((n.style.display = ""),
     (r.style.display = t && !i ? "" : "none"),
     (o.textContent = i
-      ? "El árbitro ya cerró esta ronda: los resultados quedaron bloqueados y solo él puede corregirlos. Falta generar la ronda siguiente."
+      ? "La ronda está cerrada y los resultados quedaron bloqueados. La publicación de la siguiente ronda sigue disponible para administración o arbitraje."
       : t
         ? "Ya están cargados todos los resultados de esta ronda. Revisá la tabla de posiciones y los resultados abajo; el administrador o el árbitro pueden aprobarla."
         : "Ya terminaron todas las partidas de esta ronda. Falta que el administrador o el árbitro la revisen y aprueben para generar la ronda siguiente."));
@@ -408,6 +409,48 @@ function renderTournamentDiagnostics_(e) {
           ? `Ultima sincronizacion recibida ${formatTournamentDiagnosticTime_(g)}.`
           : "Esperando la primera actualizacion de Firebase.");
 }
+function renderTournamentOfficialRoles_(e) {
+  const t = document.getElementById("tournament-official-roles-panel"),
+    a = document.getElementById("tournament-official-roles-summary");
+  if (!t || !a) return;
+  const n = isCurrentUserAdmin(e),
+    o = isCurrentUserReferee(e);
+  if (!n && !o) return void (t.style.display = "none");
+  ((t.style.display = ""),
+    (a.textContent =
+      n && o
+        ? "Tu cuenta tiene ambos roles. Conserva las responsabilidades separadas: configuracion como administrador y decisiones operativas como arbitro."
+        : n
+          ? "Tu cuenta administra el torneo y tambien puede usar el control compartido de ronda. Las sanciones y correcciones operativas siguen reservadas al arbitro."
+        : "Tu cuenta arbitra la competencia y puede usar el control compartido de ronda. La configuracion institucional y los roles siguen reservados a administracion."));
+}
+function renderTournamentRoundCompleteNotice_(e) {
+  const t = document.getElementById("tournament-round-complete-notice"),
+    a = document.getElementById("tournament-round-complete-text");
+  if (!t || !a) return;
+  const n =
+    e &&
+    e.meta &&
+    "active" === e.meta.status &&
+    "pending_approval" === e.meta.roundStatus &&
+    isCurrentUserOfficial(e);
+  if (!n)
+    return (
+      (t.style.display = "none"),
+      void (tournamentRoundCompleteNoticeKey_ = "")
+    );
+  const o = `${e.meta.name || "torneo"}:${e.meta.round}`,
+    r =
+      e.meta.totalRounds && e.meta.round >= e.meta.totalRounds
+        ? `La ronda final ${e.meta.round} está lista para validar y cerrar el torneo.`
+        : `La ronda ${e.meta.round} está completa. Revisá los resultados y aprobá la publicación de la siguiente ronda.`;
+  ((t.style.display = "flex"),
+    (a.textContent = r),
+    tournamentRoundCompleteNoticeKey_ !== o &&
+      ((tournamentRoundCompleteNoticeKey_ = o),
+      SoundFX.announcement(),
+      toast(`Atención: todas las mesas de la ronda ${e.meta.round} finalizaron.`, 7000)));
+}
 function renderTournamentState(e) {
   const t = document.getElementById("tournament-setup-box"),
     a = document.getElementById("tournament-active-box");
@@ -438,6 +481,8 @@ function renderTournamentState(e) {
         "closed" === e.meta.roundStatus),
     s = e.meta.totalRounds ? ` de ${e.meta.totalRounds}` : "";
   renderTournamentDiagnostics_(e);
+  renderTournamentOfficialRoles_(e);
+  renderTournamentRoundCompleteNotice_(e);
   ((document.getElementById("tournament-title-display").textContent =
     "🏆 " + e.meta.name),
     (document.getElementById("tournament-round-display").textContent = o
@@ -534,10 +579,15 @@ function renderTournamentState(e) {
       else if ("pending_approval" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} lista para avanzar`),
           (F.textContent =
-            "Todos los resultados estan cargados. El administrador o arbitro pueden aprobar la ronda actual y publicar la siguiente."),
+            e.meta.totalRounds && e.meta.round >= e.meta.totalRounds
+              ? "Todos los resultados estan cargados. El administrador o arbitro deben validar la ronda final para cerrar el torneo."
+              : "Todos los resultados estan cargados. El administrador o arbitro pueden aprobar la ronda actual y publicar la siguiente."),
           H &&
             ((G.style.display = ""),
-            (G.textContent = "Aprobar y publicar nueva ronda"),
+            (G.textContent =
+              e.meta.totalRounds && e.meta.round >= e.meta.totalRounds
+                ? "Validar ronda final y cerrar torneo"
+                : "Aprobar y publicar nueva ronda"),
             (G.dataset.roundAction = "approve")));
       else if ("closed" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} cerrada`),

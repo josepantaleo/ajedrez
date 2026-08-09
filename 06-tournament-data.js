@@ -1203,18 +1203,9 @@ async function fbSubmitResult(e, t, a) {
         "pending_approval" !== f.roundStatus &&
         "closed" !== f.roundStatus &&
         i.filter((e) => e.round === f.round).every((e) => e.result) &&
-        (h && f.round >= h
-          ? ((f.statusBeforeFinish = "playing"),
-            (f.status = "finished"),
-            (f.roundStatus = "closed"),
-            (f.finishedAt = syncedNow_()),
-            (f.finishedBy = currentUser ? currentUser.email : null),
-            i.forEach((e) => {
-              e.round === f.round && (e.locked = !0);
-            }))
-          : ((f.roundStatus = "pending_approval"),
-            (f.pendingApprovalAt = syncedNow_()),
-            (f.autoApprovalCancelled = !1))),
+        ((f.roundStatus = "pending_approval"),
+        (f.pendingApprovalAt = syncedNow_()),
+        (f.autoApprovalCancelled = !1))),
         n.update(fbRoomRef, { players: s, pairings: i, meta: f }),
         g && n.update(p, g));
     }),

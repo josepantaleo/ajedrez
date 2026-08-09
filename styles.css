@@ -6060,6 +6060,44 @@ body.tournament-board-max .tournament-opponent-indicator {
   line-height: 1.35;
 }
 
+.tournament-round-complete-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(247, 201, 72, 0.7);
+  border-left: 5px solid #f7c948;
+  border-radius: 8px;
+  background: rgba(247, 201, 72, 0.14);
+  box-shadow: 0 8px 24px rgba(247, 201, 72, 0.12);
+}
+
+.tournament-round-complete-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f7c948;
+  color: #1a1200;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.tournament-round-complete-notice h3 {
+  margin: 0 0 3px;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.tournament-round-complete-notice p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
 @media (max-width: 680px) {
   .tournament-diagnostics-heading {
     align-items: flex-start;
@@ -6068,5 +6106,9 @@ body.tournament-board-max .tournament-opponent-indicator {
 
   .tournament-diagnostics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tournament-round-complete-notice {
+    align-items: flex-start;
   }
 }
