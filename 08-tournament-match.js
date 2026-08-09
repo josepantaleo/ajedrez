@@ -76,12 +76,44 @@ let tournamentMovesCardHome_ = null,
 let tournamentSyncState_ = "online",
   tournamentLastLatencyMs_ = null,
   tournamentSyncSlowTimer_ = null,
+  tournamentClockStartNoticeKey_ = "",
+  tournamentClockStartNoticeTimer_ = null,
   tournamentPresenceHeartbeatTimer_ = null,
   tournamentPresenceDisplayTimer_ = null,
   tournamentPresenceLastSentAt_ = 0,
   tournamentLastConfirmedSnapshotAt_ = 0,
   tournamentRecoveryBusy_ = !1,
   tournamentWasOffline_ = !1;
+function announceTournamentClockStart_(e) {
+  if (
+    !tournamentMatchActive ||
+    !tournamentMyColor() ||
+    !e ||
+    "ongoing" !== e.status ||
+    !e.clock ||
+    !getTimestampMs(e.turnStartAt)
+  )
+    return;
+  const t = (e.joined || { w: !1, b: !1 }).w && (e.joined || { w: !1, b: !1 }).b;
+  if (!t) return;
+  const a = `${e.round}:${e.board}:${getTimestampMs(e.turnStartAt)}`;
+  if (tournamentClockStartNoticeKey_ === a) return;
+  tournamentClockStartNoticeKey_ = a;
+  const n = document.getElementById("tournament-clock-start-notice");
+  (n &&
+    ((n.hidden = !1),
+    n.classList.remove("show"),
+    void n.offsetWidth,
+    n.classList.add("show"),
+    clearTimeout(tournamentClockStartNoticeTimer_),
+    (tournamentClockStartNoticeTimer_ = setTimeout(() => {
+      n.classList.remove("show");
+      n.hidden = !0;
+    }, 5e3))),
+    SoundFX.unlock(),
+    SoundFX.gameStart(),
+    toast("Reloj iniciado: juegan blancas.", 2600));
+}
 function renderTournamentSyncIndicator_() {
   const e = document.getElementById("tournament-sync-indicator"),
     t = document.getElementById("tournament-sync-text");
@@ -278,11 +310,13 @@ async function recoverTournamentMatch_() {
     let n = t.data({ serverTimestamps: "estimate" });
     const o = tournamentMyColor();
     if (o && "ongoing" === n.status) {
-      await fbMarkJoined(e.round, e.board, o);
-      n = {
-        ...n,
-        joined: { ...(n.joined || { w: !1, b: !1 }), [o]: !0 },
-      };
+      const t = await fbMarkJoined(e.round, e.board, o);
+      n =
+        t ||
+        {
+          ...n,
+          joined: { ...(n.joined || { w: !1, b: !1 }), [o]: !0 },
+        };
     }
     const r = lastRoundGames.findIndex(
       (t) => t.round === e.round && t.board === e.board,
@@ -398,6 +432,9 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
       (tournamentLastConfirmedSnapshotAt_ = 0),
       (tournamentRecoveryBusy_ = !1),
       (tournamentWasOffline_ = !navigator.onLine),
+      (tournamentClockStartNoticeKey_ = ""),
+      clearTimeout(tournamentClockStartNoticeTimer_),
+      (tournamentClockStartNoticeTimer_ = null),
       setTournamentSyncState_(navigator.onLine ? "online" : "offline"),
       setTournamentMatchBusy_(!1),
       (tournamentSelectionLastSent_ = null),
@@ -448,17 +485,21 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
       p = document.getElementById("tournament-match-controls");
     if (u && !h) {
       if (((m.style.display = "none"), (p.style.display = "flex"), s.clock)) {
-        const a = { ...(s.joined || { w: !1, b: !1 }), [u]: !0 },
-          n = a.w && a.b;
-        ((tournamentCurrentGameRow = {
-          ...s,
-          joined: a,
-          turnStartAt: s.turnStartAt || (n ? syncedNow_() : null),
-        }),
-          updateTournamentClockDisplay(),
-          fbMarkJoined(e, t, u).catch((e) => {
-            showError(e, "No se pudo registrar tu entrada a la partida");
-          }));
+        try {
+          const a = await fbMarkJoined(e, t, u);
+          if (a) {
+            const n = lastRoundGames.findIndex(
+              (a) => a.round === e && a.board === t,
+            );
+            ((s = a),
+              n >= 0 ? (lastRoundGames[n] = a) : lastRoundGames.push(a),
+              (tournamentCurrentGameRow = a),
+              updateTournamentClockDisplay(),
+              announceTournamentClockStart_(a));
+          }
+        } catch (e) {
+          showError(e, "No se pudo registrar tu entrada a la partida");
+        }
       }
     } else
       ((m.style.display = ""),
@@ -482,6 +523,9 @@ function exitTournamentMatch() {
     syncTournamentSelection_(null),
     clearTimeout(tournamentSyncSlowTimer_),
     (tournamentSyncSlowTimer_ = null),
+    clearTimeout(tournamentClockStartNoticeTimer_),
+    (tournamentClockStartNoticeTimer_ = null),
+    (tournamentClockStartNoticeKey_ = ""),
     stopTournamentPresence_(),
     (tournamentSyncState_ = "online"),
     (tournamentLastLatencyMs_ = null),

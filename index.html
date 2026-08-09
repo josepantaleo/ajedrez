@@ -12,7 +12,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260809-4" />
+    <link rel="stylesheet" href="styles.css?v=20260809-7" />
   </head>
 
   <body>
@@ -325,8 +325,18 @@
                 <div id="tournament-match-bar" style="display: none; margin-bottom: 14px">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px">
                     <div>
-                      <strong id="tournament-match-title">🏆 Partida de torneo</strong>
-                      <p class="muted" id="tournament-match-status" style="margin: 4px 0 0"></p>
+                        <strong id="tournament-match-title">🏆 Partida de torneo</strong>
+                        <p class="muted" id="tournament-match-status" style="margin: 4px 0 0"></p>
+                        <div
+                          id="tournament-clock-start-notice"
+                          class="tournament-clock-start-notice"
+                          role="status"
+                          aria-live="assertive"
+                          hidden
+                        >
+                          <span aria-hidden="true">⏱</span>
+                          <span>Partida iniciada. El reloj de blancas esta en marcha.</span>
+                        </div>
                       <span
                         id="tournament-sync-indicator"
                         class="tournament-sync-indicator"
@@ -1302,6 +1312,35 @@
             </button>
           </div>
 
+          <div class="card exercise-timed-panel" id="exercise-timed-panel">
+            <div class="exercise-timed-copy">
+              <div class="learning-kicker">Modo contrarreloj</div>
+              <h3>Resolvé tácticas antes de que termine el tiempo</h3>
+              <p>
+                Cada posición tendrá su propia cuenta regresiva. Los errores no
+                detienen el reloj y se guarda tu mejor tiempo.
+              </p>
+            </div>
+            <label class="exercise-timed-setting">
+              <span>Tiempo por ejercicio</span>
+              <select id="exercise-timer-seconds">
+                <option value="30">30 segundos</option>
+                <option value="45" selected>45 segundos</option>
+                <option value="60">60 segundos</option>
+                <option value="90">90 segundos</option>
+              </select>
+            </label>
+            <div class="exercise-timed-actions">
+              <button class="btn primary" id="exercise-timer-start" type="button">
+                Iniciar contrarreloj
+              </button>
+              <button class="btn" id="exercise-timer-stop" type="button" style="display: none">
+                Desactivar
+              </button>
+              <span class="exercise-timed-status" id="exercise-timed-status">Inactivo</span>
+            </div>
+          </div>
+
           <div class="exercise-controls">
             <button
               class="btn exercise-filter active"
@@ -1339,7 +1378,18 @@
                 <button class="btn exercise-status" data-exercise-status="completed" type="button">Resueltos</button>
               </div>
             </div>
-            <div class="learning-results" id="exercise-results-count">20 ejercicios</div>
+            <div class="learning-toolbar-group">
+              <span class="learning-toolbar-label">Nivel</span>
+              <select class="exercise-level-select" id="exercise-level" aria-label="Filtrar ejercicios por nivel">
+                <option value="all">Todos los niveles</option>
+                <option value="facil">Fácil</option>
+                <option value="medio">Medio</option>
+                <option value="dificil">Difícil</option>
+                <option value="experto">Experto</option>
+                <option value="maestro">Maestro</option>
+              </select>
+            </div>
+            <div class="learning-results" id="exercise-results-count">32 ejercicios</div>
           </div>
 
           <div class="exercise-list" id="exercise-list">
@@ -1863,6 +1913,138 @@
                 Resolver
               </button>
             </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-level="facil" data-exercise-id="21">
+              <div class="exercise-icon">🔎</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐ Fácil</span><span class="badge">Nuevo</span></div>
+                <h3>Pieza indefensa</h3>
+                <p class="exercise-description">Detectá una torre que quedó sin protección.</p>
+                <div class="exercise-xp">🎁 +25 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="21">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-level="facil" data-exercise-id="22">
+              <div class="exercise-icon">🏁</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐ Fácil</span><span class="badge">Nuevo</span></div>
+                <h3>Mate de última fila</h3>
+                <p class="exercise-description">Aprovechá un rey encerrado por sus propios peones.</p>
+                <div class="exercise-xp">🎁 +30 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="22">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-level="facil" data-exercise-id="23">
+              <div class="exercise-icon">♙</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Final</span><span class="badge">⭐ Fácil</span><span class="badge">Nuevo</span></div>
+                <h3>Oposición básica</h3>
+                <p class="exercise-description">Avanzá el peón cuando los reyes están enfrentados.</p>
+                <div class="exercise-xp">🎁 +30 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="23">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-level="medio" data-exercise-id="24">
+              <div class="exercise-icon">♞</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐ Medio</span><span class="badge">Nuevo</span></div>
+                <h3>Horquilla real</h3>
+                <p class="exercise-description">Dá jaque y ganá la dama con el mismo caballo.</p>
+                <div class="exercise-xp">🎁 +45 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="24">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-level="medio" data-exercise-id="25">
+              <div class="exercise-icon">👑</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Final</span><span class="badge">⭐⭐ Medio</span><span class="badge">Nuevo</span></div>
+                <h3>Jaque de peón</h3>
+                <p class="exercise-description">Ganale un tiempo al rey y mejorá tu posición.</p>
+                <div class="exercise-xp">🎁 +45 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="25">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-level="medio" data-exercise-id="26">
+              <div class="exercise-icon">♜</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Final</span><span class="badge">⭐⭐ Medio</span><span class="badge">Nuevo</span></div>
+                <h3>Torre detrás del peón</h3>
+                <p class="exercise-description">Aplicá una regla esencial de los finales de torre.</p>
+                <div class="exercise-xp">🎁 +45 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="26">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-level="dificil" data-exercise-id="27">
+              <div class="exercise-icon">📍</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Difícil</span><span class="badge">Nuevo</span></div>
+                <h3>Dama alineada con el rey</h3>
+                <p class="exercise-description">Ganale la dama con una captura protegida y jaque.</p>
+                <div class="exercise-xp">🎁 +60 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="27">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-level="dificil" data-exercise-id="28">
+              <div class="exercise-icon">🏃</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Final</span><span class="badge">⭐⭐⭐ Difícil</span><span class="badge">Nuevo</span></div>
+                <h3>Carrera de promoción</h3>
+                <p class="exercise-description">Calculá si el rey rival alcanza a detener el peón.</p>
+                <div class="exercise-xp">🎁 +65 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="28">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-level="dificil" data-exercise-id="29">
+              <div class="exercise-icon">⚖️</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐ Difícil</span><span class="badge">Nuevo</span></div>
+                <h3>Defensor sobrecargado</h3>
+                <p class="exercise-description">Desviá la torre que cumple dos tareas defensivas.</p>
+                <div class="exercise-xp">🎁 +70 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="29">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-level="experto" data-exercise-id="30">
+              <div class="exercise-icon">✂️</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Final</span><span class="badge">⭐⭐⭐⭐ Experto</span><span class="badge">Nuevo</span></div>
+                <h3>Cortar al rey</h3>
+                <p class="exercise-description">Usá un jaque lateral para separar rey y peón.</p>
+                <div class="exercise-xp">🎁 +75 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="30">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="tactica" data-level="experto" data-exercise-id="31">
+              <div class="exercise-icon">♛</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Táctica</span><span class="badge">⭐⭐⭐⭐ Experto</span><span class="badge">Nuevo</span></div>
+                <h3>Coordinación de dama y alfil</h3>
+                <p class="exercise-description">Encontrá el mate apoyando la dama a distancia.</p>
+                <div class="exercise-xp">🎁 +80 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="31">Resolver</button>
+            </article>
+
+            <article class="card exercise-card" data-exercise-card data-category="estrategia" data-level="maestro" data-exercise-id="32">
+              <div class="exercise-icon">🏆</div>
+              <div>
+                <div class="exercise-meta"><span class="badge">Final</span><span class="badge">⭐⭐⭐⭐⭐ Maestro</span><span class="badge">Nuevo</span></div>
+                <h3>Coronación protegida</h3>
+                <p class="exercise-description">Coroná comprobando que la nueva pieza no pueda caer.</p>
+                <div class="exercise-xp">🎁 +100 XP</div>
+              </div>
+              <button class="btn primary exercise-action exercise-start" data-exercise="32">Resolver</button>
+            </article>
           </div>
 
           <div class="card learning-empty" id="exercise-empty">
@@ -1878,6 +2060,15 @@
               <h3 id="exercise-modal-title">Ejercicio</h3>
               <div class="exercise-streak" id="exercise-modal-streak">
                 🔥 Racha: 0
+              </div>
+              <div class="exercise-timer" id="exercise-timer" style="display: none">
+                <div class="exercise-timer-head">
+                  <strong id="exercise-timer-text">00:45</strong>
+                  <span id="exercise-timer-best">Sin marca anterior</span>
+                </div>
+                <div class="exercise-timer-track">
+                  <i id="exercise-timer-bar"></i>
+                </div>
               </div>
               <div class="exercise-question" id="exercise-question"></div>
               <div class="puzzle-box">
@@ -3533,7 +3724,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260809-15"></script>
+    <script defer src="app.js?v=20260809-18"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

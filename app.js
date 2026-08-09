@@ -3672,6 +3672,175 @@ const LESSONS = {
       fail: "Esa jugada no es mate. Pensá en llevar la dama a la última fila por una columna despejada.",
       hint: "La columna 'd' está completamente libre hasta la última fila.",
     },
+    21: {
+      category: "tactica",
+      level: "facil",
+      xp: 25,
+      fen: "4k3/8/8/3r4/2B5/8/8/4K3 w - - 0 1",
+      solution: ["c4d5"],
+      prompt:
+        "La torre negra quedó sin defensa. Encontrá la captura directa que gana material.",
+      success:
+        "¡Correcto! Axd5 gana una torre limpia. Antes de calcular variantes largas, revisá siempre las piezas indefensas.",
+      fail: "Hay una pieza negra de mucho valor que puede capturarse inmediatamente.",
+      hint: "Seguí la diagonal del alfil desde c4 hasta la torre en d5.",
+    },
+    22: {
+      category: "tactica",
+      level: "facil",
+      xp: 30,
+      fen: "6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1",
+      solution: ["d1d8"],
+      checkmate: !0,
+      prompt:
+        "El rey negro está encerrado por sus peones. Encontrá el mate de última fila.",
+      success:
+        "¡Jaque mate! Td8 controla toda la octava fila y los peones negros bloquean las casillas de escape.",
+      fail: "Buscá un jaque de torre que controle toda la última fila.",
+      hint: "La columna d está libre: llevá la torre hasta d8.",
+    },
+    23: {
+      category: "estrategia",
+      level: "facil",
+      xp: 30,
+      fen: "8/4k3/8/3K4/4P3/8/8/8 w - - 0 1",
+      sequence: ["e4e5", "e7d7", "e5e6"],
+      midMessage:
+        "El rey negro se aparta. Ahora ganá espacio y acercá el peón a la promoción.",
+      prompt:
+        "Final básico: aprovechá la oposición de los reyes y avanzá el peón en el momento correcto.",
+      success:
+        "¡Bien jugado! Con los reyes enfrentados, avanzar el peón conserva el progreso y obliga al rey rival a ceder terreno.",
+      fail: "No abandones la estructura: el avance del peón es la jugada que aprovecha la oposición.",
+      hint: "Primero avanzá el peón de e4 a e5 y continuá empujándolo cuando el rey rival se aparte.",
+    },
+    24: {
+      category: "tactica",
+      level: "medio",
+      xp: 45,
+      fen: "8/4k1q1/8/8/3N4/8/8/7K w - - 0 1",
+      sequence: ["d4f5", "e7f8", "f5g7"],
+      midMessage:
+        "Cf5+ obliga al rey a moverse. La segunda punta de la horquilla sigue atacada.",
+      prompt:
+        "Encontrá la horquilla de caballo que da jaque y, después, capturá la dama.",
+      success:
+        "¡Horquilla completa! El jaque ganó un tiempo y permitió capturar la dama en la jugada siguiente.",
+      fail: "Buscá un salto de caballo que ataque simultáneamente al rey y a la dama.",
+      hint: "Desde f5, el caballo ataca e7 y g7 al mismo tiempo.",
+    },
+    25: {
+      category: "estrategia",
+      level: "medio",
+      xp: 45,
+      fen: "8/3k4/8/2PK4/8/8/8/8 w - - 0 1",
+      sequence: ["c5c6", "d7c7", "d5c5"],
+      midMessage:
+        "El jaque de peón desplazó al rey. Ahora colocá tu rey delante del peón.",
+      prompt:
+        "Usá un jaque de peón para ganar un tiempo y mejorar la posición de tu rey.",
+      success:
+        "¡Técnica correcta! El peón ganó un tiempo con jaque y el rey quedó preparado para escoltarlo.",
+      fail: "Necesitás obligar primero al rey negro a cambiar de casilla.",
+      hint: "El peón en c5 puede avanzar dando jaque al rey de d7.",
+    },
+    26: {
+      category: "estrategia",
+      level: "medio",
+      xp: 45,
+      fen: "8/6k1/4P3/8/8/8/8/R5K1 w - - 0 1",
+      solution: ["a1e1"],
+      prompt:
+        "Tu peón pasado necesita apoyo. Colocá la torre detrás del peón para acompañar su avance.",
+      success:
+        "¡Correcto! Te1 aplica una regla fundamental: la torre trabaja mejor detrás del peón pasado.",
+      fail: "La torre debe quedar alineada detrás del peón, no a un costado.",
+      hint: "El peón está en la columna e. Llevá la torre a esa misma columna.",
+    },
+    27: {
+      category: "tactica",
+      level: "dificil",
+      xp: 60,
+      fen: "4k3/4q3/8/8/1B6/8/8/4R1K1 w - - 0 1",
+      solution: ["e1e7"],
+      prompt:
+        "La dama negra está delante de su rey. Aprovechá la alineación y la protección de tu alfil.",
+      success:
+        "¡Excelente! Txe7+ gana la dama con jaque, y el rey no puede capturar la torre porque el alfil protege e7.",
+      fail: "Buscá una captura de torre sobre la columna e que llegue con jaque.",
+      hint: "La torre puede capturar en e7; el alfil de b4 protege esa casilla.",
+    },
+    28: {
+      category: "estrategia",
+      level: "dificil",
+      xp: 65,
+      fen: "8/8/1PK1k3/8/8/8/8/8 w - - 0 1",
+      sequence: ["b6b7", "e6e7", "b7b8"],
+      midMessage:
+        "El rey negro se acerca, pero llega tarde. Completá la carrera.",
+      prompt:
+        "Calculá la carrera de peones y llevá el peón hasta la coronación.",
+      success:
+        "¡Cálculo correcto! El peón coronó antes de que el rey negro pudiera detenerlo.",
+      fail: "No pierdas tiempos con el rey: el peón ya tiene vía libre hacia la última fila.",
+      hint: "Avanzá el peón de b6 a b7 y prepará la coronación en b8.",
+    },
+    29: {
+      category: "tactica",
+      level: "dificil",
+      xp: 70,
+      fen: "3r2k1/5ppp/8/3n4/8/1B6/8/4R1K1 w - - 0 1",
+      sequence: ["b3d5", "d8d5", "e1e8"],
+      checkmate: !0,
+      midMessage:
+        "La torre recapturó y abandonó la última fila. Terminá la combinación.",
+      prompt:
+        "La torre negra está sobrecargada: defiende al caballo y evita el mate. Explotá las dos tareas.",
+      success:
+        "¡Sobrecarga resuelta! Axd5 desvió la torre y Te8 terminó la partida con mate.",
+      fail: "Buscá capturar el caballo para obligar a la torre a abandonar la última fila.",
+      hint: "El alfil de b3 puede capturar en d5. Si la torre recaptura, la octava fila queda libre.",
+    },
+    30: {
+      category: "estrategia",
+      level: "experto",
+      xp: 75,
+      fen: "8/8/7k/7p/4K3/8/8/R7 w - - 0 1",
+      solution: ["a1a6"],
+      prompt:
+        "En este final de torre, cortá al rey rival para que no pueda acompañar su peón.",
+      success:
+        "¡Muy bien! Ta6+ obliga al rey a retroceder y lo separa del peón: la actividad de la torre decide el final.",
+      fail: "Necesitás un jaque lateral que, además, corte el avance del rey.",
+      hint: "La sexta fila permite dar jaque desde lejos y limitar al rey negro.",
+    },
+    31: {
+      category: "tactica",
+      level: "experto",
+      xp: 80,
+      fen: "7k/6pp/5Q2/8/3B4/8/8/6K1 w - - 0 1",
+      solution: ["f6g7"],
+      checkmate: !0,
+      prompt:
+        "Coordiná dama y alfil para dar mate junto al rey negro.",
+      success:
+        "¡Jaque mate! Dxg7 está protegida por el alfil y controla todas las casillas de escape.",
+      fail: "Buscá una captura con la dama que quede protegida por el alfil de d4.",
+      hint: "La diagonal del alfil termina en g7. La dama puede capturar allí con jaque.",
+    },
+    32: {
+      category: "estrategia",
+      level: "maestro",
+      xp: 100,
+      fen: "8/5KPk/8/8/8/8/8/8 w - - 0 1",
+      solution: ["g7g8"],
+      prompt:
+        "Coroná sin perder la nueva pieza: comprobá primero que el rey protege la casilla de promoción.",
+      success:
+        "¡Final resuelto! El peón corona con jaque y el rey blanco protege g8, por lo que la nueva pieza no puede ser capturada.",
+      fail: "La promoción es inmediata y la casilla g8 está protegida por tu rey.",
+      hint: "Avanzá el peón de g7 a g8 y elegí la pieza con la que querés coronar.",
+    },
   },
   LESSON_CATEGORY_LABEL = {
     fundamentos: "Fundamentos",
@@ -3691,6 +3860,7 @@ const learningView = {
   exerciseView = {
     category: "all",
     status: "all",
+    level: "all",
     search: "",
   };
 function normalizeStudyText(e) {
@@ -3708,6 +3878,15 @@ function setActiveStudyButton(e, t) {
 function getCardTitle(e) {
   const t = e && e.querySelector("h3");
   return t ? t.textContent.trim() : "";
+}
+function getExerciseCardLevel(e) {
+  if (e.dataset.level) return e.dataset.level;
+  const t = normalizeStudyText(e.textContent);
+  if (t.includes("maestro")) return "maestro";
+  if (t.includes("experto") || t.includes("desafio")) return "experto";
+  if (t.includes("dificil")) return "dificil";
+  if (t.includes("medio")) return "medio";
+  return "facil";
 }
 function getRecommendedLessonId() {
   const e = state.lessonsCompleted || [],
@@ -3794,9 +3973,12 @@ function applyExerciseFilters() {
       s =
         "all" === exerciseView.status ||
         ("completed" === exerciseView.status ? o : !o),
-      l = !t || normalizeStudyText(n.textContent).includes(t),
-      i = r && s && l;
-    ((n.style.display = i ? "" : "none"), i && a++);
+      l =
+        "all" === exerciseView.level ||
+        getExerciseCardLevel(n) === exerciseView.level,
+      i = !t || normalizeStudyText(n.textContent).includes(t),
+      c = r && s && l && i;
+    ((n.style.display = c ? "" : "none"), c && a++);
   });
   const n = document.getElementById("exercise-empty"),
     o = document.getElementById("exercise-results-count");
@@ -3843,6 +4025,11 @@ function wireExerciseControls() {
   e &&
     e.addEventListener("input", () => {
       ((exerciseView.search = e.value), applyExerciseFilters());
+    });
+  const t = document.getElementById("exercise-level");
+  t &&
+    t.addEventListener("change", () => {
+      ((exerciseView.level = t.value), applyExerciseFilters());
     });
 }
 function updateLearningProgress() {
@@ -3894,7 +4081,12 @@ function updateExerciseDashboard() {
     a = document.getElementById("exercise-correct-stat"),
     n = document.getElementById("exercise-streak-stat"),
     o = document.getElementById("exercise-best-stat");
-  if ((t && (t.textContent = (e.solved || []).length), a)) {
+  if (
+    (t &&
+      (t.textContent =
+        (e.solved || []).length + "/" + Object.keys(EXERCISES).length),
+    a)
+  ) {
     const t = e.attempts ? Math.round((e.firstTry / e.attempts) * 100) : 0;
     a.textContent = t + "%";
   }
@@ -3934,7 +4126,12 @@ function ensureLearningState() {
     Number.isFinite(state.exerciseStats.streak) ||
       (state.exerciseStats.streak = 0),
     Number.isFinite(state.exerciseStats.bestStreak) ||
-      (state.exerciseStats.bestStreak = 0));
+      (state.exerciseStats.bestStreak = 0),
+    state.exerciseStats.timedBest &&
+      "object" == typeof state.exerciseStats.timedBest ||
+      (state.exerciseStats.timedBest = {}),
+    [30, 45, 60, 90].includes(state.exerciseStats.timerSeconds) ||
+      (state.exerciseStats.timerSeconds = 45));
 }
 function renderBoardGrid(e, t, a = {}) {
   e.innerHTML = "";
@@ -4226,6 +4423,157 @@ const exerciseRunner = makeSequenceRunner(
   document.getElementById("puzzle-feedback"),
   document.getElementById("exercise-puzzle-retry"),
 );
+const exerciseTimedMode = {
+  enabled: !1,
+  applies: !1,
+  duration: 45,
+  remaining: 0,
+  intervalId: null,
+};
+function getNextTacticalExerciseId(e = null) {
+  const t = Object.keys(EXERCISES).filter(
+      (e) => "tactica" === EXERCISES[e].category,
+    ),
+    a = (state.exerciseStats && state.exerciseStats.solved) || [],
+    n = null == e ? -1 : t.indexOf(String(e));
+  for (let e = 1; e <= t.length; e++) {
+    const o = t[(Math.max(-1, n) + e) % t.length];
+    if (!a.includes(String(o))) return o;
+  }
+  return t[(Math.max(-1, n) + 1) % t.length] || null;
+}
+function formatExerciseTime(e) {
+  const t = Math.max(0, Math.ceil(e));
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+function updateTimedModeControls() {
+  const e = document.getElementById("exercise-timed-panel"),
+    t = document.getElementById("exercise-timed-status"),
+    a = document.getElementById("exercise-timer-start"),
+    n = document.getElementById("exercise-timer-stop"),
+    o = document.getElementById("exercise-timer-seconds");
+  (e && e.classList.toggle("active", exerciseTimedMode.enabled),
+    t &&
+      (t.textContent = exerciseTimedMode.enabled
+        ? `Activo · ${exerciseTimedMode.duration} segundos por táctica`
+        : "Inactivo"),
+    a && (a.style.display = exerciseTimedMode.enabled ? "none" : ""),
+    n && (n.style.display = exerciseTimedMode.enabled ? "" : "none"),
+    o && (o.disabled = exerciseTimedMode.enabled));
+}
+function stopExerciseCountdown(e = !1) {
+  (exerciseTimedMode.intervalId &&
+    clearInterval(exerciseTimedMode.intervalId),
+    (exerciseTimedMode.intervalId = null),
+    (exerciseTimedMode.applies = !1));
+  const t = document.getElementById("exercise-timer");
+  e && t && (t.style.display = "none");
+}
+function renderExerciseCountdown() {
+  const e = document.getElementById("exercise-timer"),
+    t = document.getElementById("exercise-timer-text"),
+    a = document.getElementById("exercise-timer-bar"),
+    n = exerciseTimedMode.duration
+      ? (exerciseTimedMode.remaining / exerciseTimedMode.duration) * 100
+      : 0;
+  (t && (t.textContent = formatExerciseTime(exerciseTimedMode.remaining)),
+    a && (a.style.width = Math.max(0, n) + "%"),
+    e &&
+      (e.classList.toggle("warning", n <= 40 && n > 18),
+      e.classList.toggle("danger", n <= 18)));
+}
+function countExerciseFailure(e) {
+  ensureLearningState();
+  const t = state.exerciseStats,
+    a = String(e);
+  (t.solved || []).includes(a) ||
+    exerciseAttemptCounted ||
+    ((t.attempts = (t.attempts || 0) + 1),
+    (exerciseAttemptCounted = !0),
+    (t.streak = 0),
+    save(),
+    (document.getElementById("exercise-modal-streak").textContent =
+      "🔥 Racha: 0"),
+    updateExerciseDashboard());
+}
+function expireTimedExercise() {
+  if (!exerciseTimedMode.applies || !currentExerciseId) return;
+  (stopExerciseCountdown(),
+    (exerciseTimedMode.remaining = 0),
+    renderExerciseCountdown(),
+    (exerciseBoardCtx.solvedOrFailed = !0),
+    (exerciseRunner.resolved = !0));
+  const e = document.getElementById("puzzle-feedback"),
+    t = document.getElementById("exercise-result-text");
+  (e &&
+    ((e.textContent = "⏱ Tiempo agotado. Revisá la posición y volvé a intentarlo."),
+    (e.className = "puzzle-feedback wrong")),
+    (document.getElementById("exercise-puzzle-retry").style.display = ""),
+    (document.getElementById("exercise-result-score").textContent = "0/1"),
+    t &&
+      (t.textContent =
+        "El tiempo terminó. Podés reintentar o pasar a la siguiente táctica."),
+    (document.getElementById("exercise-result").style.display = ""),
+    (document.getElementById("exercise-next").style.display = ""),
+    countExerciseFailure(currentExerciseId));
+}
+function startExerciseCountdown(e) {
+  stopExerciseCountdown(!0);
+  const t = EXERCISES[e],
+    a = document.getElementById("exercise-timer"),
+    n = document.getElementById("exercise-timer-best");
+  if (!exerciseTimedMode.enabled || !t || "tactica" !== t.category) return;
+  (ensureLearningState(),
+    (exerciseTimedMode.applies = !0),
+    (exerciseTimedMode.remaining = exerciseTimedMode.duration),
+    a && (a.style.display = ""));
+  const o = state.exerciseStats.timedBest[String(e)];
+  (n &&
+    (n.textContent = o
+      ? `Mejor marca: ${o} s`
+      : "Sin marca anterior"),
+    renderExerciseCountdown(),
+    (exerciseTimedMode.intervalId = setInterval(() => {
+      (exerciseTimedMode.remaining--,
+        renderExerciseCountdown(),
+        exerciseTimedMode.remaining <= 0 && expireTimedExercise());
+    }, 1e3)));
+}
+function finishExerciseCountdown(e) {
+  if (!exerciseTimedMode.applies) return null;
+  const t = Math.max(
+      1,
+      exerciseTimedMode.duration - exerciseTimedMode.remaining,
+    ),
+    a = state.exerciseStats.timedBest[String(e)],
+    n = !a || t < a;
+  return (
+    exerciseTimedMode.intervalId &&
+      clearInterval(exerciseTimedMode.intervalId),
+    (exerciseTimedMode.intervalId = null),
+    (exerciseTimedMode.applies = !1),
+    n && (state.exerciseStats.timedBest[String(e)] = t),
+    save(),
+    { seconds: t, isBest: n, previousBest: a || null }
+  );
+}
+function enableTimedTraining() {
+  ensureLearningState();
+  const e = document.getElementById("exercise-timer-seconds"),
+    t = Number(e && e.value);
+  ((exerciseTimedMode.duration = [30, 45, 60, 90].includes(t) ? t : 45),
+    (exerciseTimedMode.enabled = !0),
+    (state.exerciseStats.timerSeconds = exerciseTimedMode.duration),
+    save(),
+    updateTimedModeControls());
+  const a = document.querySelector('[data-exercise-filter="tactica"]');
+  (a && a.click(), openExerciseModal(getNextTacticalExerciseId()));
+}
+function disableTimedTraining() {
+  (stopExerciseCountdown(!0),
+    (exerciseTimedMode.enabled = !1),
+    updateTimedModeControls());
+}
 function openExerciseModal(e) {
   const t = EXERCISES[e];
   if (!t) return;
@@ -4246,13 +4594,15 @@ function openExerciseModal(e) {
     (document.getElementById("exercise-result").style.display = "none"),
     (document.getElementById("exercise-next").style.display = "none"),
     exerciseRunner.start(t),
+    startExerciseCountdown(e),
     (exerciseBoardCtx.onAttempt = function (a, n) {
       exerciseRunner.attempt(a, n, {
         onSolved: () => {
           ensureLearningState();
           const a = state.exerciseStats,
             n = String(e),
-            o = (a.solved || []).includes(n);
+            o = (a.solved || []).includes(n),
+            r = finishExerciseCountdown(e);
           (o ||
             (exerciseAttemptCounted ||
               ((a.attempts = (a.attempts || 0) + 1),
@@ -4273,31 +4623,23 @@ function openExerciseModal(e) {
             (document.getElementById("exercise-result-text").textContent = o
               ? "Ya habías resuelto este ejercicio antes. ¡Repaso completado!"
               : `¡Resuelto! Ganaste ${t.xp} XP.`),
+            r &&
+              (document.getElementById("exercise-result-text").textContent +=
+                ` Tiempo: ${r.seconds} s${r.isBest ? " · nueva mejor marca." : "."}`),
             (document.getElementById("exercise-result").style.display = ""),
             (document.getElementById("exercise-next").style.display = ""),
             updateExerciseDashboard());
         },
         onWrong: (t) => {
-          if (!t) return;
-          ensureLearningState();
-          const a = state.exerciseStats,
-            n = String(e);
-          (a.solved || []).includes(n) ||
-            exerciseAttemptCounted ||
-            ((a.attempts = (a.attempts || 0) + 1),
-            (exerciseAttemptCounted = !0),
-            (a.streak = 0),
-            save(),
-            (document.getElementById("exercise-modal-streak").textContent =
-              "🔥 Racha: 0"),
-            updateExerciseDashboard());
+          t && countExerciseFailure(e);
         },
       });
     }),
     (document.getElementById("exercise-modal").style.display = "flex"));
 }
 function closeExerciseModal() {
-  ((document.getElementById("exercise-modal").style.display = "none"),
+  (stopExerciseCountdown(!0),
+    (document.getElementById("exercise-modal").style.display = "none"),
     (currentExerciseId = null));
 }
 (document.querySelectorAll(".exercise-start").forEach((e) => {
@@ -4307,7 +4649,9 @@ function closeExerciseModal() {
     .getElementById("exercise-close")
     .addEventListener("click", closeExerciseModal),
   document.getElementById("exercise-next").addEventListener("click", () => {
-    const e = getRecommendedExerciseId(currentExerciseId);
+    const e = exerciseTimedMode.enabled
+      ? getNextTacticalExerciseId(currentExerciseId)
+      : getRecommendedExerciseId(currentExerciseId);
     e && openExerciseModal(e);
   }),
   document.getElementById("exercise-modal").addEventListener("click", (e) => {
@@ -4326,8 +4670,19 @@ function closeExerciseModal() {
       e &&
         ((document.getElementById("exercise-result").style.display = "none"),
         (document.getElementById("exercise-next").style.display = "none"),
-        exerciseRunner.start(e));
+        exerciseRunner.start(e),
+        startExerciseCountdown(currentExerciseId));
     }),
+  document
+    .getElementById("exercise-timer-start")
+    .addEventListener("click", enableTimedTraining),
+  document
+    .getElementById("exercise-timer-stop")
+    .addEventListener("click", disableTimedTraining),
+  (exerciseTimedMode.duration = state.exerciseStats.timerSeconds || 45),
+  (document.getElementById("exercise-timer-seconds").value =
+    String(exerciseTimedMode.duration)),
+  updateTimedModeControls(),
   updateLearningProgress(),
   updateExerciseDashboard());
 
@@ -7142,7 +7497,7 @@ async function fbMarkJoined(e, t, a) {
     return;
   ((e = Number(e)), (t = Number(t)));
   const n = gamesCollectionRef.doc(gameDocId_(e, t));
-  await fbDb.runTransaction(async (i) => {
+  return await fbDb.runTransaction(async (i) => {
     const c = await i.get(fbRoomRef);
     if (!c.exists) return;
     const d = c.data();
@@ -7154,14 +7509,16 @@ async function fbMarkJoined(e, t, a) {
       s = { ...r, [a]: !0 },
       l = r.w && r.b,
       m = s.w && s.b;
-    if (r[a])
-      return void (
-        o.clock &&
+    if (r[a]) {
+      const e = {};
+      (o.clock &&
         "ongoing" === o.status &&
         m &&
         !o.turnStartAt &&
-        i.update(n, { turnStartAt: syncedNow_() })
-      );
+        (e.turnStartAt = syncedNow_()),
+        Object.keys(e).length && i.update(n, e));
+      return { ...o, ...e };
+    }
     const p = { joined: s };
     (o.clock &&
       "ongoing" === o.status &&
@@ -7169,6 +7526,7 @@ async function fbMarkJoined(e, t, a) {
       (!l || !o.turnStartAt) &&
       (p.turnStartAt = syncedNow_()),
       i.update(n, p));
+    return { ...o, ...p };
   });
 }
 async function fbTouchGamePresence_(e, t, a) {
@@ -8820,6 +9178,7 @@ function handleLiveMatchUpdate(e) {
       e.board === tournamentMatchCtx.board,
   );
   if (!t) return;
+  const previous = tournamentCurrentGameRow;
   "function" == typeof markTournamentConnectionAlive_ &&
     markTournamentConnectionAlive_();
   tournamentCurrentGameRow = t;
@@ -8844,7 +9203,11 @@ function handleLiveMatchUpdate(e) {
     renderMatchChat(),
     renderCallUI(),
     ("ongoing" !== t.status && "idle" !== callState) && teardownCallLocal_(),
-    updateTournamentClockDisplay());
+    updateTournamentClockDisplay(),
+    previous &&
+      !getTimestampMs(previous.turnStartAt) &&
+      "function" == typeof announceTournamentClockStart_ &&
+      announceTournamentClockStart_(t));
 }
 function updateTournamentClockDisplay() {
   const e = tournamentCurrentGameRow,
@@ -8998,12 +9361,44 @@ let tournamentMovesCardHome_ = null,
 let tournamentSyncState_ = "online",
   tournamentLastLatencyMs_ = null,
   tournamentSyncSlowTimer_ = null,
+  tournamentClockStartNoticeKey_ = "",
+  tournamentClockStartNoticeTimer_ = null,
   tournamentPresenceHeartbeatTimer_ = null,
   tournamentPresenceDisplayTimer_ = null,
   tournamentPresenceLastSentAt_ = 0,
   tournamentLastConfirmedSnapshotAt_ = 0,
   tournamentRecoveryBusy_ = !1,
   tournamentWasOffline_ = !1;
+function announceTournamentClockStart_(e) {
+  if (
+    !tournamentMatchActive ||
+    !tournamentMyColor() ||
+    !e ||
+    "ongoing" !== e.status ||
+    !e.clock ||
+    !getTimestampMs(e.turnStartAt)
+  )
+    return;
+  const t = (e.joined || { w: !1, b: !1 }).w && (e.joined || { w: !1, b: !1 }).b;
+  if (!t) return;
+  const a = `${e.round}:${e.board}:${getTimestampMs(e.turnStartAt)}`;
+  if (tournamentClockStartNoticeKey_ === a) return;
+  tournamentClockStartNoticeKey_ = a;
+  const n = document.getElementById("tournament-clock-start-notice");
+  (n &&
+    ((n.hidden = !1),
+    n.classList.remove("show"),
+    void n.offsetWidth,
+    n.classList.add("show"),
+    clearTimeout(tournamentClockStartNoticeTimer_),
+    (tournamentClockStartNoticeTimer_ = setTimeout(() => {
+      n.classList.remove("show");
+      n.hidden = !0;
+    }, 5e3))),
+    SoundFX.unlock(),
+    SoundFX.gameStart(),
+    toast("Reloj iniciado: juegan blancas.", 2600));
+}
 function renderTournamentSyncIndicator_() {
   const e = document.getElementById("tournament-sync-indicator"),
     t = document.getElementById("tournament-sync-text");
@@ -9200,11 +9595,13 @@ async function recoverTournamentMatch_() {
     let n = t.data({ serverTimestamps: "estimate" });
     const o = tournamentMyColor();
     if (o && "ongoing" === n.status) {
-      await fbMarkJoined(e.round, e.board, o);
-      n = {
-        ...n,
-        joined: { ...(n.joined || { w: !1, b: !1 }), [o]: !0 },
-      };
+      const t = await fbMarkJoined(e.round, e.board, o);
+      n =
+        t ||
+        {
+          ...n,
+          joined: { ...(n.joined || { w: !1, b: !1 }), [o]: !0 },
+        };
     }
     const r = lastRoundGames.findIndex(
       (t) => t.round === e.round && t.board === e.board,
@@ -9320,6 +9717,9 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
       (tournamentLastConfirmedSnapshotAt_ = 0),
       (tournamentRecoveryBusy_ = !1),
       (tournamentWasOffline_ = !navigator.onLine),
+      (tournamentClockStartNoticeKey_ = ""),
+      clearTimeout(tournamentClockStartNoticeTimer_),
+      (tournamentClockStartNoticeTimer_ = null),
       setTournamentSyncState_(navigator.onLine ? "online" : "offline"),
       setTournamentMatchBusy_(!1),
       (tournamentSelectionLastSent_ = null),
@@ -9370,17 +9770,21 @@ async function enterTournamentMatch(e, t, a, n, o, r) {
       p = document.getElementById("tournament-match-controls");
     if (u && !h) {
       if (((m.style.display = "none"), (p.style.display = "flex"), s.clock)) {
-        const a = { ...(s.joined || { w: !1, b: !1 }), [u]: !0 },
-          n = a.w && a.b;
-        ((tournamentCurrentGameRow = {
-          ...s,
-          joined: a,
-          turnStartAt: s.turnStartAt || (n ? syncedNow_() : null),
-        }),
-          updateTournamentClockDisplay(),
-          fbMarkJoined(e, t, u).catch((e) => {
-            showError(e, "No se pudo registrar tu entrada a la partida");
-          }));
+        try {
+          const a = await fbMarkJoined(e, t, u);
+          if (a) {
+            const n = lastRoundGames.findIndex(
+              (a) => a.round === e && a.board === t,
+            );
+            ((s = a),
+              n >= 0 ? (lastRoundGames[n] = a) : lastRoundGames.push(a),
+              (tournamentCurrentGameRow = a),
+              updateTournamentClockDisplay(),
+              announceTournamentClockStart_(a));
+          }
+        } catch (e) {
+          showError(e, "No se pudo registrar tu entrada a la partida");
+        }
       }
     } else
       ((m.style.display = ""),
@@ -9404,6 +9808,9 @@ function exitTournamentMatch() {
     syncTournamentSelection_(null),
     clearTimeout(tournamentSyncSlowTimer_),
     (tournamentSyncSlowTimer_ = null),
+    clearTimeout(tournamentClockStartNoticeTimer_),
+    (tournamentClockStartNoticeTimer_ = null),
+    (tournamentClockStartNoticeKey_ = ""),
     stopTournamentPresence_(),
     (tournamentSyncState_ = "online"),
     (tournamentLastLatencyMs_ = null),

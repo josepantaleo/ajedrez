@@ -1665,7 +1665,7 @@ async function fbMarkJoined(e, t, a) {
     return;
   ((e = Number(e)), (t = Number(t)));
   const n = gamesCollectionRef.doc(gameDocId_(e, t));
-  await fbDb.runTransaction(async (i) => {
+  return await fbDb.runTransaction(async (i) => {
     const c = await i.get(fbRoomRef);
     if (!c.exists) return;
     const d = c.data();
@@ -1677,14 +1677,16 @@ async function fbMarkJoined(e, t, a) {
       s = { ...r, [a]: !0 },
       l = r.w && r.b,
       m = s.w && s.b;
-    if (r[a])
-      return void (
-        o.clock &&
+    if (r[a]) {
+      const e = {};
+      (o.clock &&
         "ongoing" === o.status &&
         m &&
         !o.turnStartAt &&
-        i.update(n, { turnStartAt: syncedNow_() })
-      );
+        (e.turnStartAt = syncedNow_()),
+        Object.keys(e).length && i.update(n, e));
+      return { ...o, ...e };
+    }
     const p = { joined: s };
     (o.clock &&
       "ongoing" === o.status &&
@@ -1692,6 +1694,7 @@ async function fbMarkJoined(e, t, a) {
       (!l || !o.turnStartAt) &&
       (p.turnStartAt = syncedNow_()),
       i.update(n, p));
+    return { ...o, ...p };
   });
 }
 async function fbTouchGamePresence_(e, t, a) {

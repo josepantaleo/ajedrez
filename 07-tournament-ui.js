@@ -1185,6 +1185,7 @@ function handleLiveMatchUpdate(e) {
       e.board === tournamentMatchCtx.board,
   );
   if (!t) return;
+  const previous = tournamentCurrentGameRow;
   "function" == typeof markTournamentConnectionAlive_ &&
     markTournamentConnectionAlive_();
   tournamentCurrentGameRow = t;
@@ -1209,7 +1210,11 @@ function handleLiveMatchUpdate(e) {
     renderMatchChat(),
     renderCallUI(),
     ("ongoing" !== t.status && "idle" !== callState) && teardownCallLocal_(),
-    updateTournamentClockDisplay());
+    updateTournamentClockDisplay(),
+    previous &&
+      !getTimestampMs(previous.turnStartAt) &&
+      "function" == typeof announceTournamentClockStart_ &&
+      announceTournamentClockStart_(t));
 }
 function updateTournamentClockDisplay() {
   const e = tournamentCurrentGameRow,
