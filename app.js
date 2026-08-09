@@ -6969,21 +6969,10 @@ async function fbAutoDeclareForfeits() {
         }),
         0 !== s.length)
       ) {
-        if (i.filter((e) => e.round === n.round).every((e) => e.result)) {
-          const e = n.totalRounds;
-          e && n.round >= e
-            ? ((n.statusBeforeFinish = "playing"),
-              (n.status = "finished"),
-              (n.roundStatus = "closed"),
-              (n.finishedAt = syncedNow_()),
-              (n.finishedBy = currentUser ? currentUser.email : null),
-              i.forEach((e) => {
-                e.round === n.round && (e.locked = !0);
-              }))
-            : ((n.roundStatus = "pending_approval"),
-              (n.pendingApprovalAt = syncedNow_()),
-              (n.autoApprovalCancelled = !1));
-        }
+        i.filter((e) => e.round === n.round).every((e) => e.result) &&
+          ((n.roundStatus = "pending_approval"),
+          (n.pendingApprovalAt = syncedNow_()),
+          (n.autoApprovalCancelled = !1));
         e.update(fbRoomRef, { players: o, pairings: i, meta: n });
       }
     }),
@@ -7023,11 +7012,30 @@ async function fbSubmitResult(e, t, a) {
             (c.blackEmail || "").toLowerCase() === d);
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
-        E = ["wo-black", "wo-white"];
+        E = ["wo-black", "wo-white", "double-wo"];
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
         throw new Error("Solo el árbitro puede declarar un resultado por W.O.");
+      if ("double-wo" === a) {
+        const pRef = gamesCollectionRef.doc(gameDocId_(e, t)),
+          pSnap = await n.get(pRef),
+          o = pSnap.exists ? pSnap.data() : null,
+          r = Number(m.meta.woGraceMinutes) || 0,
+          s = (o && o.joined) || { w: !1, b: !1 };
+        if (
+          !o ||
+          "ongoing" !== o.status ||
+          !o.startedAt ||
+          s.w ||
+          s.b ||
+          !r ||
+          syncedNow_() - getTimestampMs(o.startedAt) < 6e4 * r
+        )
+          throw new Error(
+            "El doble W.O. solo puede declararse cuando venció la tolerancia y ningún jugador ingresó",
+          );
+      }
       if (
         !isCurrentUserAdmin(m) &&
         !isCurrentUserReferee(m) &&
@@ -7054,7 +7062,11 @@ async function fbSubmitResult(e, t, a) {
               status: "finished",
               result: a,
               resultReason:
-                "wo-white" === a || "wo-black" === a ? "wo" : "official",
+                "double-wo" === a
+                  ? "double-wo"
+                  : "wo-white" === a || "wo-black" === a
+                    ? "wo"
+                    : "official",
               drawOfferBy: "",
               drawOfferAt: null,
               selectedSquare: "",
@@ -7679,6 +7691,8 @@ function resultLabel(e) {
           ? "WO Blancas (1-0)"
           : "wo-white" === e
             ? "WO Negras (0-1)"
+            : "double-wo" === e
+              ? "Doble W.O. (0-0)"
             : "";
 }
 let _rankPlayersCache_ = { players: null, pairings: null, result: null };
@@ -8329,9 +8343,11 @@ function setupPairingsListDelegation_(e) {
                 throw new Error("No tenés permiso para cargar resultados");
               const t = n.dataset.result;
               if (
-                ("wo-black" === t || "wo-white" === t) &&
+                ["wo-black", "wo-white", "double-wo"].includes(t) &&
                 !confirm(
-                  "¿Confirmás declarar esta partida como W.O. (incomparecencia)?",
+                  "double-wo" === t
+                    ? "¿Confirmás declarar doble W.O.? Ningún jugador recibirá puntos."
+                    : "¿Confirmás declarar esta partida como W.O. (incomparecencia)?",
                 )
               )
                 return void (tournamentBusy = !1);
@@ -8722,6 +8738,14 @@ function renderTournamentState(e) {
         i = Number(e.meta.woGraceMinutes) || 0,
         c = (o && o.joined) || { w: !1, b: !1 },
         d = o && "ongoing" === o.status && c.w !== c.b,
+        q =
+          i > 0 &&
+          o &&
+          "ongoing" === o.status &&
+          o.startedAt &&
+          !c.w &&
+          !c.b &&
+          syncedNow_() - o.startedAt >= 6e4 * i,
         u =
           i > 0 && d && o.startedAt
             ? (() => {
@@ -8746,7 +8770,9 @@ function renderTournamentState(e) {
       let h, y;
       t.result
         ? ("pending_approval" !== e.meta.roundStatus || t.locked
-            ? "wo-black" === t.result || "wo-white" === t.result
+            ? "double-wo" === t.result
+              ? ((h = "no-show"), (y = "🚫 Doble W.O. · sin puntos"))
+              : "wo-black" === t.result || "wo-white" === t.result
               ? ((h = "wo"), (y = "⚫ Incomparecencia"))
               : "1/2-1/2" === t.result
                 ? ((h = "draw"), (y = "🔵 Tablas acordadas"))
@@ -8754,16 +8780,10 @@ function renderTournamentState(e) {
             : ((h = "pending"), (y = "🟣 Resultado pendiente de confirmar")),
           t.locked && (y += " 🔒"))
         : o && "finished" === o.status && o.result
-          ? ((h = "pending"), (y = "🟣 Resultado pendiente del árbitro"))
+            ? ((h = "pending"), (y = "🟣 Resultado pendiente del árbitro"))
         : o && "suspended" === o.status
           ? ((h = "suspended"), (y = "⏸️ Suspendida"))
-          : i > 0 &&
-              o &&
-              "ongoing" === o.status &&
-              o.startedAt &&
-              !c.w &&
-              !c.b &&
-              syncedNow_() - o.startedAt >= 6e4 * i
+          : q
             ? ((h = "no-show"), (y = "🔴 Nadie se presentó"))
             : o && o.clock && !l
               ? ((h = "waiting"), (y = "🟡 Esperando jugadores"))
@@ -8782,7 +8802,9 @@ function renderTournamentState(e) {
           ["0-1", "0-1"],
         ];
       p &&
-        (x.push(["wo-black", "WO Blancas"]), x.push(["wo-white", "WO Negras"]));
+        (x.push(["wo-black", "WO Blancas"]),
+        x.push(["wo-white", "WO Negras"]),
+        q && x.push(["double-wo", "Doble W.O. (0-0)"]));
       const I =
           "finished" === e.meta.status || (!n && !p) || (t.locked && !p)
             ? t.result
@@ -8856,6 +8878,8 @@ function resultLabelForPairing_(e) {
       return "1 - 0 (WO)";
     case "wo-white":
       return "0 - 1 (WO)";
+    case "double-wo":
+      return "0 - 0 (Doble W.O.)";
     default:
       return e.result;
   }

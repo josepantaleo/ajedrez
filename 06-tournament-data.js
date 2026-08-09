@@ -1104,21 +1104,10 @@ async function fbAutoDeclareForfeits() {
         }),
         0 !== s.length)
       ) {
-        if (i.filter((e) => e.round === n.round).every((e) => e.result)) {
-          const e = n.totalRounds;
-          e && n.round >= e
-            ? ((n.statusBeforeFinish = "playing"),
-              (n.status = "finished"),
-              (n.roundStatus = "closed"),
-              (n.finishedAt = syncedNow_()),
-              (n.finishedBy = currentUser ? currentUser.email : null),
-              i.forEach((e) => {
-                e.round === n.round && (e.locked = !0);
-              }))
-            : ((n.roundStatus = "pending_approval"),
-              (n.pendingApprovalAt = syncedNow_()),
-              (n.autoApprovalCancelled = !1));
-        }
+        i.filter((e) => e.round === n.round).every((e) => e.result) &&
+          ((n.roundStatus = "pending_approval"),
+          (n.pendingApprovalAt = syncedNow_()),
+          (n.autoApprovalCancelled = !1));
         e.update(fbRoomRef, { players: o, pairings: i, meta: n });
       }
     }),
@@ -1158,11 +1147,30 @@ async function fbSubmitResult(e, t, a) {
             (c.blackEmail || "").toLowerCase() === d);
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
-        E = ["wo-black", "wo-white"];
+        E = ["wo-black", "wo-white", "double-wo"];
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
         throw new Error("Solo el árbitro puede declarar un resultado por W.O.");
+      if ("double-wo" === a) {
+        const pRef = gamesCollectionRef.doc(gameDocId_(e, t)),
+          pSnap = await n.get(pRef),
+          o = pSnap.exists ? pSnap.data() : null,
+          r = Number(m.meta.woGraceMinutes) || 0,
+          s = (o && o.joined) || { w: !1, b: !1 };
+        if (
+          !o ||
+          "ongoing" !== o.status ||
+          !o.startedAt ||
+          s.w ||
+          s.b ||
+          !r ||
+          syncedNow_() - getTimestampMs(o.startedAt) < 6e4 * r
+        )
+          throw new Error(
+            "El doble W.O. solo puede declararse cuando venció la tolerancia y ningún jugador ingresó",
+          );
+      }
       if (
         !isCurrentUserAdmin(m) &&
         !isCurrentUserReferee(m) &&
@@ -1189,7 +1197,11 @@ async function fbSubmitResult(e, t, a) {
               status: "finished",
               result: a,
               resultReason:
-                "wo-white" === a || "wo-black" === a ? "wo" : "official",
+                "double-wo" === a
+                  ? "double-wo"
+                  : "wo-white" === a || "wo-black" === a
+                    ? "wo"
+                    : "official",
               drawOfferBy: "",
               drawOfferAt: null,
               selectedSquare: "",
@@ -1814,6 +1826,8 @@ function resultLabel(e) {
           ? "WO Blancas (1-0)"
           : "wo-white" === e
             ? "WO Negras (0-1)"
+            : "double-wo" === e
+              ? "Doble W.O. (0-0)"
             : "";
 }
 let _rankPlayersCache_ = { players: null, pairings: null, result: null };
