@@ -882,10 +882,12 @@ function normalizeRoleEmail_(e) {
 }
 function tournamentRoleEmails_(e, t, a) {
   const n = e && e.meta;
-  if (n && Object.prototype.hasOwnProperty.call(n, t) && Array.isArray(n[t]))
-    return Array.from(new Set(n[t].map(normalizeRoleEmail_).filter(Boolean)));
-  const o = normalizeRoleEmail_(a);
-  return o ? [o] : [];
+  const o =
+    n && Object.prototype.hasOwnProperty.call(n, t) && Array.isArray(n[t])
+      ? n[t].map(normalizeRoleEmail_).filter(Boolean)
+      : [];
+  const r = normalizeRoleEmail_(a);
+  return Array.from(new Set(r ? o.concat(r) : o));
 }
 function isCurrentUserReferee(e) {
   if (!currentUser || !currentUser.email) return !1;

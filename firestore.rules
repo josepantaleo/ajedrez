@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Revision 20260808-3: adds participant-scoped presence heartbeats.
+// Revision 20260809-4: preserves the institutional tournament administrator.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -32,7 +32,11 @@ service cloud.firestore {
     }
 
     function isAdminFor(data) {
-      return signedIn() && adminEmails(data).hasAny([email()]);
+      return signedIn()
+        && (
+          email() == 'ipem146centenario@gmail.com'
+          || adminEmails(data).hasAny([email()])
+        );
     }
 
     function isRefereeFor(data) {
