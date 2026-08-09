@@ -423,6 +423,45 @@ function renderTournamentState(e) {
         "auto" === e.meta.roundApprovalMode
           ? "Activo: cuando finalicen todas las partidas, la siguiente ronda se publicara automaticamente despues de 30 segundos."
           : "Manual: al finalizar una ronda, el administrador o arbitro debe aprobarla."));
+  const C = document.getElementById("tournament-round-command-center"),
+    D = document.getElementById("tournament-round-command-title"),
+    F = document.getElementById("tournament-round-command-status"),
+    G = document.getElementById("tournament-round-command-action"),
+    H = isCurrentUserOfficial(e);
+  if (C && D && F && G) {
+    ((C.style.display = H ? "" : "none"), (G.style.display = "none"));
+    if (H)
+      if (o)
+        ((D.textContent = "Torneo finalizado"),
+          (F.textContent =
+            "La ultima ronda quedo cerrada. Podes consultar resultados o reabrir el torneo como administrador."));
+      else if (0 === e.meta.round)
+        ((D.textContent = "Ronda inicial pendiente"),
+          (F.textContent =
+            "Todavia no se genero la ronda 1. El administrador puede crear los emparejamientos."),
+          n &&
+            ((G.style.display = ""),
+            (G.textContent = "Generar ronda 1"),
+            (G.dataset.roundAction = "generate-first")));
+      else if ("pending_approval" === e.meta.roundStatus)
+        ((D.textContent = `Ronda ${e.meta.round} lista para avanzar`),
+          (F.textContent =
+            "Todos los resultados estan cargados. Revisa la tabla y aproba la nueva ronda."),
+          ((G.style.display = ""),
+          (G.textContent = "Aprobar y publicar nueva ronda"),
+          (G.dataset.roundAction = "approve")));
+      else if ("closed" === e.meta.roundStatus)
+        ((D.textContent = `Ronda ${e.meta.round} cerrada`),
+          (F.textContent =
+            "Los resultados fueron bloqueados. Ya se puede publicar la ronda siguiente."),
+          ((G.style.display = ""),
+          (G.textContent = "Generar nueva ronda"),
+          (G.dataset.roundAction = "generate-closed")));
+      else
+        ((D.textContent = `Ronda ${e.meta.round} en juego`),
+          (F.textContent =
+            "Esperando que finalicen todas las partidas. El estado se actualiza automaticamente."));
+  }
   const u = document.getElementById("tournament-champion-banner");
   if (o) {
     const t = rankPlayers_(e.players, e.pairings),

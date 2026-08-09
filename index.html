@@ -2582,6 +2582,18 @@
                 <p class="muted" id="tournament-round-display"></p>
               </div>
 
+              <div
+                class="card"
+                id="tournament-round-command-center"
+                style="display: none; border-left: 4px solid var(--accent)"
+              >
+                <h3 id="tournament-round-command-title" style="margin: 0 0 6px">Estado de la ronda</h3>
+                <p id="tournament-round-command-status" class="muted" style="margin: 0 0 10px"></p>
+                <button class="btn primary" id="tournament-round-command-action" type="button" style="display: none">
+                  Generar nueva ronda
+                </button>
+              </div>
+
               <div class="card" id="tournament-self-register-card" style="display: none">
                 <h3>📝 Inscripción</h3>
                 <p class="muted" id="tournament-self-register-status" style="display: none; margin: 0"></p>
@@ -3758,7 +3770,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260809-30"></script>
+    <script defer src="app.js?v=20260809-31"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

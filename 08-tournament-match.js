@@ -575,6 +575,27 @@ function exitTournamentMatch() {
     (validMoves = []),
     render(),
     showPage("torneo"));
+  fbRoomRef &&
+    currentUser &&
+    getTournamentStateOnce()
+      .then((e) => {
+        ((lastTournamentState = e),
+          renderTournamentState(e),
+          "function" == typeof renderPublicScreen && renderPublicScreen(e));
+      })
+      .catch(() => {});
+}
+async function runTournamentRoundPrimaryAction_() {
+  const e = lastTournamentState && lastTournamentState.meta;
+  if (!e) throw new Error("No se pudo leer el estado actual del torneo");
+  if (0 === e.round) return void (await fbGenerateRound());
+  if ("pending_approval" === e.roundStatus)
+    return void (await fbApproveRound());
+  if ("closed" === e.roundStatus)
+    return void (await fbGenerateRoundFromClosed());
+  throw new Error(
+    "La ronda actual todavía está en juego o no está lista para generar la siguiente.",
+  );
 }
 async function syncTournamentMove() {
   if (!tournamentMatchActive || !tournamentMatchCtx) return;
@@ -944,23 +965,22 @@ configSignoutBtn &&
     .addEventListener("click", async () => {
       try {
         const e = lastTournamentState && lastTournamentState.meta;
-        if (!e) throw new Error("No se pudo leer el estado actual del torneo");
-        0 === e.round
-          ? await fbGenerateRound()
-          : "pending_approval" === e.roundStatus
-            ? await fbApproveRound()
-            : "closed" === e.roundStatus
-              ? await fbGenerateRoundFromClosed()
-              : (() => {
-                  throw new Error(
-                    "La ronda actual todavía está en juego o no está lista para generar la siguiente.",
-                  );
-                })();
+        await runTournamentRoundPrimaryAction_();
         toast(
           0 === e.round
             ? "Ronda 1 generada y publicada."
             : "Nueva ronda generada y publicada.",
         );
+      } catch (e) {
+        showError(e);
+      }
+    }),
+  document
+    .getElementById("tournament-round-command-action")
+    .addEventListener("click", async () => {
+      try {
+        await runTournamentRoundPrimaryAction_();
+        toast("Nueva ronda generada y publicada.");
       } catch (e) {
         showError(e);
       }
