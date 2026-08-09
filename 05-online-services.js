@@ -1106,6 +1106,7 @@ function updateConfigAccountUI_() {
 function isCurrentUserAdmin(e) {
   if (!currentUser || !currentUser.email) return !1;
   const t = normalizeRoleEmail_(currentUser.email);
+  if (t === normalizeRoleEmail_(TOURNAMENT_ADMIN_EMAIL)) return !0;
   return tournamentRoleEmails_(
     e || lastTournamentState,
     "adminEmails",

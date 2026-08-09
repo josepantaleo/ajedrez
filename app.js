@@ -5797,6 +5797,7 @@ function updateConfigAccountUI_() {
 function isCurrentUserAdmin(e) {
   if (!currentUser || !currentUser.email) return !1;
   const t = normalizeRoleEmail_(currentUser.email);
+  if (t === normalizeRoleEmail_(TOURNAMENT_ADMIN_EMAIL)) return !0;
   return tournamentRoleEmails_(
     e || lastTournamentState,
     "adminEmails",
@@ -8397,6 +8398,9 @@ function renderTournamentState(e) {
     (document.getElementById("tournament-admin-panel").style.display = n
       ? ""
       : "none"),
+    (document.getElementById("tournament-open-admin-btn").style.display = n
+      ? ""
+      : "none"),
     (document.getElementById("tournament-next-round-btn").style.display =
       o || 0 !== e.meta.round ? "none" : ""),
     (document.getElementById("tournament-finish-btn").style.display = o
@@ -10714,6 +10718,14 @@ configSignoutBtn &&
   document
     .getElementById("tournament-refresh-btn")
     .addEventListener("click", refreshTournament));
+const tournamentOpenAdminBtn = document.getElementById(
+  "tournament-open-admin-btn",
+);
+if (tournamentOpenAdminBtn)
+  tournamentOpenAdminBtn.addEventListener("click", () => {
+    const e = document.getElementById("tournament-admin-panel");
+    e && e.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {

@@ -370,6 +370,9 @@ function renderTournamentState(e) {
     (document.getElementById("tournament-admin-panel").style.display = n
       ? ""
       : "none"),
+    (document.getElementById("tournament-open-admin-btn").style.display = n
+      ? ""
+      : "none"),
     (document.getElementById("tournament-next-round-btn").style.display =
       o || 0 !== e.meta.round ? "none" : ""),
     (document.getElementById("tournament-finish-btn").style.display = o

@@ -1281,6 +1281,14 @@ configSignoutBtn &&
   document
     .getElementById("tournament-refresh-btn")
     .addEventListener("click", refreshTournament));
+const tournamentOpenAdminBtn = document.getElementById(
+  "tournament-open-admin-btn",
+);
+if (tournamentOpenAdminBtn)
+  tournamentOpenAdminBtn.addEventListener("click", () => {
+    const e = document.getElementById("tournament-admin-panel");
+    e && e.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {
