@@ -146,7 +146,9 @@ function setTournamentSyncState_(e, t) {
     (tournamentSyncSlowTimer_ = null),
     Number.isFinite(t) && (tournamentLastLatencyMs_ = t),
     (tournamentSyncState_ = e),
-    renderTournamentSyncIndicator_());
+    renderTournamentSyncIndicator_(),
+    "function" == typeof renderTournamentDiagnostics_ &&
+      renderTournamentDiagnostics_(lastTournamentState));
   "syncing" === e &&
     (tournamentSyncSlowTimer_ = setTimeout(() => {
       "syncing" === tournamentSyncState_ &&
@@ -168,7 +170,9 @@ function markTournamentConnectionAlive_() {
     tournamentMatchBusy ||
     ("error" !== tournamentSyncState_ && "delayed" !== tournamentSyncState_
       ? renderTournamentSyncIndicator_()
-      : setTournamentSyncState_("online")));
+      : setTournamentSyncState_("online")),
+    "function" == typeof renderTournamentDiagnostics_ &&
+      renderTournamentDiagnostics_(lastTournamentState));
 }
 function renderTournamentOpponentPresence_(e) {
   const t = document.getElementById("tournament-opponent-indicator"),

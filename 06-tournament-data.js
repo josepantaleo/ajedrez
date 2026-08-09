@@ -9,6 +9,7 @@ function subscribeRoundGames(e) {
           .onSnapshot(
             (e) => {
               try {
+                recordTournamentFirebaseSync_("games");
                 const t = new Map(
                   lastRoundGames.map((e) => [gameDocId_(e.round, e.board), e]),
                 );
@@ -59,9 +60,12 @@ function subscribeRoundGames(e) {
                   "[subscribeRoundGames] error procesando snapshot:",
                   e,
                 );
+                recordTournamentFirebaseError_(e);
               }
             },
-            () => {},
+            (e) => {
+              recordTournamentFirebaseError_(e);
+            },
           ))
       : (lastRoundGames = []));
 }
@@ -73,6 +77,7 @@ function subscribeTournament() {
   const e = document.getElementById("tournament-connect-status");
   tournamentUnsub = fbRoomRef.onSnapshot(
     (t) => {
+      recordTournamentFirebaseSync_("room");
       ((e.textContent = "✓ Conectado."), e.classList.add("correct"));
       const a = normalizeTournamentState(
           t.exists ? t.data({ serverTimestamps: "estimate" }) : null,
@@ -109,14 +114,20 @@ function subscribeTournament() {
               )));
     },
     (t) => {
+      recordTournamentFirebaseError_(t);
       ((e.textContent = "❌ No se pudo conectar: " + t.message),
         e.classList.remove("correct"));
     },
   );
 }
 async function getTournamentStateOnce() {
-  const e = await fbRoomRef.get();
-  return normalizeTournamentState(e.exists ? e.data() : null);
+  try {
+    const e = await fbRoomRef.get();
+    return (recordTournamentFirebaseSync_("room"),
+    normalizeTournamentState(e.exists ? e.data() : null));
+  } catch (e) {
+    throw (recordTournamentFirebaseError_(e), e);
+  }
 }
 function parsePlayersInput(e) {
   return e

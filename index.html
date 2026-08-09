@@ -12,7 +12,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260809-8" />
+    <link rel="stylesheet" href="styles.css?v=20260809-9" />
   </head>
 
   <body>
@@ -2594,6 +2594,56 @@
                 </button>
               </div>
 
+              <section
+                class="tournament-diagnostics card"
+                id="tournament-diagnostics-panel"
+                aria-labelledby="tournament-diagnostics-title"
+                style="display: none"
+              >
+                <div class="tournament-diagnostics-heading">
+                  <div>
+                    <h3 id="tournament-diagnostics-title">Diagnostico del torneo</h3>
+                    <p class="muted">Estado local de la cuenta y de la sincronizacion con Firebase.</p>
+                  </div>
+                  <span
+                    id="tournament-diagnostics-connection"
+                    class="tournament-diagnostics-connection"
+                    data-state="waiting"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Esperando datos
+                  </span>
+                </div>
+                <div class="tournament-diagnostics-grid">
+                  <div class="tournament-diagnostics-item">
+                    <span class="tournament-diagnostics-label">Ronda</span>
+                    <strong id="tournament-diagnostics-round">-</strong>
+                  </div>
+                  <div class="tournament-diagnostics-item">
+                    <span class="tournament-diagnostics-label">Estado</span>
+                    <strong id="tournament-diagnostics-round-status">-</strong>
+                  </div>
+                  <div class="tournament-diagnostics-item">
+                    <span class="tournament-diagnostics-label">Cuenta</span>
+                    <strong id="tournament-diagnostics-account">-</strong>
+                  </div>
+                  <div class="tournament-diagnostics-item">
+                    <span class="tournament-diagnostics-label">Permisos</span>
+                    <strong id="tournament-diagnostics-role">-</strong>
+                  </div>
+                  <div class="tournament-diagnostics-item">
+                    <span class="tournament-diagnostics-label">Sala Firebase</span>
+                    <strong id="tournament-diagnostics-room-sync">Aun sin datos</strong>
+                  </div>
+                  <div class="tournament-diagnostics-item">
+                    <span class="tournament-diagnostics-label">Partidas Firebase</span>
+                    <strong id="tournament-diagnostics-games-sync">Aun sin datos</strong>
+                  </div>
+                </div>
+                <p id="tournament-diagnostics-detail" class="tournament-diagnostics-detail"></p>
+              </section>
+
               <div class="card" id="tournament-self-register-card" style="display: none">
                 <h3>📝 Inscripción</h3>
                 <p class="muted" id="tournament-self-register-status" style="display: none; margin: 0"></p>
@@ -3770,7 +3820,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260809-34"></script>
+    <script defer src="app.js?v=20260809-35"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

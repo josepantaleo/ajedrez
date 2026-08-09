@@ -791,7 +791,28 @@ let subscribedRound_,
 lastTournamentState = null;
 let lastKnownTournamentStatus_ = null,
   tournamentEditingPlayerId = null;
+let tournamentLastRoomSnapshotAt_ = 0,
+  tournamentLastGamesSnapshotAt_ = 0,
+  tournamentLastFirebaseError_ = "",
+  tournamentLastFirebaseErrorAt_ = 0;
 currentUser = null;
+function recordTournamentFirebaseSync_(e) {
+  ("room" === e
+    ? (tournamentLastRoomSnapshotAt_ = Date.now())
+    : (tournamentLastGamesSnapshotAt_ = Date.now()),
+    (tournamentLastFirebaseError_ = ""),
+    (tournamentLastFirebaseErrorAt_ = 0),
+    "function" == typeof renderTournamentDiagnostics_ &&
+      renderTournamentDiagnostics_(lastTournamentState));
+}
+function recordTournamentFirebaseError_(e) {
+  ((tournamentLastFirebaseError_ = String(
+    (e && e.message) || "No se pudo sincronizar con Firebase",
+  ).slice(0, 180)),
+    (tournamentLastFirebaseErrorAt_ = Date.now()),
+    "function" == typeof renderTournamentDiagnostics_ &&
+      renderTournamentDiagnostics_(lastTournamentState));
+}
 function srvTimestamp() {
   return firebase.firestore.FieldValue.serverTimestamp();
 }

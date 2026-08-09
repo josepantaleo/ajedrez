@@ -321,6 +321,93 @@ function renderTournamentRoleSummary_(e) {
     );
   t.textContent = `${a.length} administrador${1 === a.length ? "" : "es"} · ${n.length} árbitro${1 === n.length ? "" : "s"}`;
 }
+function formatTournamentDiagnosticTime_(e) {
+  if (!e) return "Aun sin datos";
+  const t = Date.now() - e;
+  if (t >= 0 && t < 6e4) return `Hace ${Math.max(1, Math.round(t / 1e3))} s`;
+  if (t >= 0 && t < 36e5) return `Hace ${Math.round(t / 6e4)} min`;
+  return new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(e));
+}
+function tournamentRoundStatusLabel_(e) {
+  return {
+    playing: "En juego",
+    pending_approval: "Pendiente de aprobacion",
+    closed: "Cerrada",
+  }[e] || "Sin ronda activa";
+}
+function renderTournamentDiagnostics_(e) {
+  const t = document.getElementById("tournament-diagnostics-panel");
+  if (!t) return;
+  const a = isCurrentUserAdmin(e),
+    n = isCurrentUserReferee(e),
+    o = !!currentUser && (a || n);
+  if (!o) return void (t.style.display = "none");
+  t.style.display = "";
+  const r = document.getElementById("tournament-diagnostics-round"),
+    s = document.getElementById("tournament-diagnostics-round-status"),
+    l = document.getElementById("tournament-diagnostics-account"),
+    i = document.getElementById("tournament-diagnostics-role"),
+    c = document.getElementById("tournament-diagnostics-room-sync"),
+    d = document.getElementById("tournament-diagnostics-games-sync"),
+    u = document.getElementById("tournament-diagnostics-connection"),
+    m = document.getElementById("tournament-diagnostics-detail"),
+    g = Math.max(
+      tournamentLastRoomSnapshotAt_ || 0,
+      tournamentLastGamesSnapshotAt_ || 0,
+    ),
+    f =
+      tournamentLastFirebaseErrorAt_ > g
+        ? tournamentLastFirebaseError_
+        : "";
+  (r && (r.textContent = e && e.meta ? String(e.meta.round || 0) : "-"),
+    s &&
+      (s.textContent =
+        e && e.meta
+          ? `${e.meta.status === "finished" ? "Torneo finalizado · " : ""}${tournamentRoundStatusLabel_(e.meta.roundStatus)}`
+          : "Sin torneo activo"),
+    l && (l.textContent = currentUser.email || "Cuenta sin email"),
+    i &&
+      (i.textContent =
+        a && n ? "Administrador y arbitro" : a ? "Administrador" : "Arbitro"),
+    c &&
+      (c.textContent = formatTournamentDiagnosticTime_(
+        tournamentLastRoomSnapshotAt_,
+      )),
+    d &&
+      (d.textContent = formatTournamentDiagnosticTime_(
+        tournamentLastGamesSnapshotAt_,
+      )));
+  if (u) {
+    const e = !navigator.onLine
+        ? "offline"
+        : f
+          ? "error"
+          : g
+            ? "online"
+            : "waiting",
+      t =
+        "offline" === e
+          ? "Sin conexion"
+          : "error" === e
+            ? "Error de Firebase"
+            : "online" === e
+              ? "Firebase conectado"
+              : "Esperando datos";
+    ((u.dataset.state = e), (u.textContent = t));
+  }
+  m &&
+    (m.textContent = f
+      ? `Ultimo error: ${f}`
+      : tournamentMatchActive && tournamentLastConfirmedSnapshotAt_
+        ? `Partida actual: confirmada ${formatTournamentDiagnosticTime_(tournamentLastConfirmedSnapshotAt_)}${Number.isFinite(tournamentLastLatencyMs_) ? ` · latencia ${Math.max(0, Math.round(tournamentLastLatencyMs_))} ms` : ""}.`
+        : g
+          ? `Ultima sincronizacion recibida ${formatTournamentDiagnosticTime_(g)}.`
+          : "Esperando la primera actualizacion de Firebase.");
+}
 function renderTournamentState(e) {
   const t = document.getElementById("tournament-setup-box"),
     a = document.getElementById("tournament-active-box");
@@ -350,6 +437,7 @@ function renderTournamentState(e) {
       ("pending_approval" === e.meta.roundStatus ||
         "closed" === e.meta.roundStatus),
     s = e.meta.totalRounds ? ` de ${e.meta.totalRounds}` : "";
+  renderTournamentDiagnostics_(e);
   ((document.getElementById("tournament-title-display").textContent =
     "🏆 " + e.meta.name),
     (document.getElementById("tournament-round-display").textContent = o

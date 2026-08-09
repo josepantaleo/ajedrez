@@ -5973,3 +5973,100 @@ body.tournament-board-max .tournament-opponent-indicator {
     transition-duration: 0.01ms !important;
   }
 }
+
+.tournament-diagnostics {
+  border-left: 4px solid #4aa3df;
+}
+
+.tournament-diagnostics-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tournament-diagnostics-heading h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.tournament-diagnostics-heading .muted {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.tournament-diagnostics-connection {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid rgba(139, 155, 180, 0.4);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.tournament-diagnostics-connection[data-state="online"] {
+  border-color: rgba(88, 214, 141, 0.45);
+  color: #63d994;
+}
+
+.tournament-diagnostics-connection[data-state="offline"],
+.tournament-diagnostics-connection[data-state="error"] {
+  border-color: rgba(255, 123, 114, 0.45);
+  color: #ff9b91;
+}
+
+.tournament-diagnostics-connection[data-state="waiting"] {
+  border-color: rgba(247, 201, 72, 0.45);
+  color: #f7c948;
+}
+
+.tournament-diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tournament-diagnostics-item {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--surface2);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+}
+
+.tournament-diagnostics-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.tournament-diagnostics-item strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.83rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tournament-diagnostics-detail {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 680px) {
+  .tournament-diagnostics-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tournament-diagnostics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
