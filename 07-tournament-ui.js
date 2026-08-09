@@ -146,7 +146,7 @@ function renderApprovalPanel(e, t, a) {
     return void (e && (e.style.display = "none"));
   }
   ((n.style.display = ""),
-    (r.style.display = t && !i ? "" : "none"),
+    (r.style.display = t && i ? "" : "none"),
     (o.textContent = i
       ? "El árbitro ya cerró esta ronda: los resultados quedaron bloqueados y solo él puede corregirlos. Falta generar la ronda siguiente."
       : t
@@ -181,7 +181,7 @@ function renderApprovalPanel(e, t, a) {
   }
   const d =
     "auto" === e.meta.roundApprovalMode && !e.meta.autoApprovalCancelled;
-  if (!t || !d || i)
+  if (!t || !d || !i)
     return ((s.style.display = "none"), void stopAutoApproveTimer());
   if (((s.style.display = ""), tournamentAutoApproveTimer)) return;
   const u = document.getElementById("tournament-auto-approve-countdown"),
@@ -191,7 +191,7 @@ function renderApprovalPanel(e, t, a) {
       const t = e.meta;
       if (
         "active" !== t.status ||
-        "pending_approval" !== t.roundStatus ||
+        "closed" !== t.roundStatus ||
         "auto" !== t.roundApprovalMode ||
         t.autoApprovalCancelled
       )
@@ -201,7 +201,7 @@ function renderApprovalPanel(e, t, a) {
       if (((u.textContent = `⏱️ Se va a aprobar sola en ${n}s...`), n <= 0)) {
         stopAutoApproveTimer();
         try {
-          (await fbApproveRound(),
+          (await fbGenerateRoundFromClosed(),
             toast(
               "✅ Ronda aprobada automáticamente: se generó la ronda siguiente.",
             ));
@@ -383,17 +383,13 @@ function renderTournamentState(e) {
         a =
           n &&
           !o &&
-          (0 === e.meta.round ||
-            "pending_approval" === e.meta.roundStatus ||
-            "closed" === e.meta.roundStatus);
+          (0 === e.meta.round || "closed" === e.meta.roundStatus);
       t &&
         ((t.style.display = a ? "" : "none"),
         (t.textContent =
           0 === e.meta.round
             ? "Generar ronda 1"
-            : "pending_approval" === e.meta.roundStatus
-              ? "Aprobar y generar nueva ronda"
-              : "Generar nueva ronda"));
+            : "Generar nueva ronda"));
     })(),
     (document.getElementById("tournament-finish-btn").style.display = o
       ? "none"
@@ -447,12 +443,12 @@ function renderTournamentState(e) {
         ((D.textContent = `Ronda ${e.meta.round} lista para avanzar`),
           (F.textContent =
             n
-              ? "Todos los resultados estan cargados. Revisa la tabla y aproba la nueva ronda."
-              : "Todos los resultados estan cargados. El administrador debe aprobar la ronda actual y publicar la siguiente."),
-          n &&
+              ? "Todos los resultados estan cargados. Esperando que el árbitro valide y cierre la ronda."
+              : "Todos los resultados estan cargados. El árbitro debe validar y cerrar la ronda antes de que el administrador publique la siguiente."),
+          p &&
             ((G.style.display = ""),
-            (G.textContent = "Aprobar y publicar nueva ronda"),
-            (G.dataset.roundAction = "approve")));
+            (G.textContent = "Validar y cerrar ronda"),
+            (G.dataset.roundAction = "validate")));
       else if ("closed" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} cerrada`),
           (F.textContent =

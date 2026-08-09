@@ -822,9 +822,9 @@ async function fbApproveRound() {
       const a = t.data(),
         n = { ...a.meta };
       assertAdminForState_(a);
-      if ("active" !== n.status || "pending_approval" !== n.roundStatus)
+      if ("active" !== n.status || "closed" !== n.roundStatus)
         throw new Error(
-          "No hay ninguna ronda pendiente de aprobación en este momento",
+          "La ronda debe ser validada y cerrada por el árbitro antes de publicar la siguiente",
         );
       const o = (a.players || []).map((e) => ({
           ...e,
