@@ -8045,9 +8045,14 @@ async function exportFullTournamentPDF(e) {
 
 /* Tournament timers, rendering, public screen, and result UI. Generated from the verified legacy bundle. */
 let tournamentAutoApproveTimer = null;
+let tournamentResultReturnTimer_ = null;
 function stopAutoApproveTimer() {
   (clearInterval(tournamentAutoApproveTimer),
     (tournamentAutoApproveTimer = null));
+}
+function clearTournamentResultReturnTimer_() {
+  (clearTimeout(tournamentResultReturnTimer_),
+    (tournamentResultReturnTimer_ = null));
 }
 let tournamentWOGraceTimer = null,
   alertedDoubleNoShowBoards_ = new Set();
@@ -9210,28 +9215,8 @@ function showTournamentRoundApprovalPopup_(e, t) {
       "<strong>Resultado pendiente de validacion</strong><span>Un arbitro debe confirmar el resultado antes de revisar la aprobacion de la ronda.</span>";
   else if (o) {
     n.innerHTML = r
-      ? "<strong>Ronda lista para aprobar</strong><span>Todos los resultados fueron cargados. Podes aprobarla ahora y publicar la siguiente ronda.</span>"
+      ? "<strong>Ronda lista para aprobar</strong><span>Todos los resultados fueron cargados. Usa el boton de aprobacion del panel del torneo para publicar la siguiente ronda.</span>"
       : "<strong>Ronda pendiente de aprobacion</strong><span>Todos los resultados fueron cargados. Espera a que el administrador o arbitro apruebe la ronda.</span>";
-    if (r) {
-      const e = document.createElement("button");
-      ((e.className = "btn primary"),
-        (e.type = "button"),
-        (e.textContent = "Aprobar ronda y generar la siguiente"),
-        e.addEventListener("click", async () => {
-          if (e.disabled) return;
-          ((e.disabled = !0), (e.textContent = "Aprobando ronda..."));
-          try {
-            (await fbApproveRound(),
-              toast("Ronda aprobada y siguiente ronda publicada."),
-              closeAlert_());
-          } catch (t) {
-            ((e.disabled = !1),
-              (e.textContent = "Aprobar ronda y generar la siguiente"),
-              showError(t));
-          }
-        }),
-        n.appendChild(e));
-    }
   } else if (e && "finished" === e.status)
     n.innerHTML =
       "<strong>Torneo finalizado</strong><span>La ultima ronda ya quedo cerrada. No hay una ronda nueva para aprobar.</span>";
@@ -9248,7 +9233,13 @@ function showTournamentResult(e, t, n, o) {
   (showTournamentRoundApprovalPopup_(r, o),
     s && offerAnalysis(s.id),
     showAlertBackToTournamentButton_(),
-    (alertOnClose_ = () => exitTournamentMatch()));
+    clearTournamentResultReturnTimer_(),
+    (alertOnClose_ = () => {
+      (clearTournamentResultReturnTimer_(), exitTournamentMatch());
+    }),
+    (tournamentResultReturnTimer_ = setTimeout(() => {
+      closeAlert_();
+    }, 3500)));
 }
 function tournamentMyColor() {
   if (!tournamentMatchCtx || !currentUser || !currentUser.email) return "";
