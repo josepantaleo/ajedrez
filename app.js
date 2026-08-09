@@ -7059,7 +7059,7 @@ async function fbSubmitResult(e, t, a) {
         i.filter((e) => e.round === f.round).every((e) => e.result) &&
         ((f.roundStatus = "pending_approval"),
         (f.pendingApprovalAt = syncedNow_()),
-        (f.autoApprovalCancelled = !1))),
+        (f.autoApprovalCancelled = !1)),
         n.update(fbRoomRef, { players: s, pairings: i, meta: f }),
         g && n.update(p, g));
     }),
