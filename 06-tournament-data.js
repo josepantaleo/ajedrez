@@ -815,13 +815,13 @@ async function fbApproveRound() {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertAdminOrReferee(),
+    assertAdmin(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertAdminOrRefereeForState_(a);
+      assertAdminForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "No hay ninguna ronda pendiente de aprobación en este momento",
@@ -875,12 +875,12 @@ async function fbApproveRound() {
 }
 async function fbCancelAutoApproval() {
   return (
-    assertAdminOrReferee(),
+    assertAdmin(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data();
-      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
+      (assertAdminForState_(a), assertTournamentNotFinished_(a));
       "pending_approval" === a.meta.roundStatus &&
         e.update(fbRoomRef, { meta: { ...a.meta, autoApprovalCancelled: !0 } });
     }),
@@ -889,13 +889,13 @@ async function fbCancelAutoApproval() {
 }
 async function fbCloseRound() {
   return (
-    assertAdminOrReferee(),
+    assertReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertAdminOrRefereeForState_(a);
+      assertRefereeForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "Solo se puede cerrar una ronda que ya tiene todos los resultados cargados",
@@ -916,13 +916,13 @@ async function fbGenerateRoundFromClosed(e) {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertAdminOrReferee(),
+    assertAdmin(),
     await fbDb.runTransaction(async (t) => {
       const a = await t.get(fbRoomRef);
       if (!a.exists) throw new Error("Todavía no creaste un torneo");
       const n = a.data(),
         o = { ...n.meta };
-      assertAdminOrRefereeForState_(n);
+      assertAdminForState_(n);
       if ("active" !== o.status || "closed" !== o.roundStatus)
         throw new Error(
           'Primero hay que "Cerrar ronda" antes de generar la próxima',
@@ -978,7 +978,7 @@ async function fbGenerateRoundFromClosed(e) {
   );
 }
 async function fbSetGameSuspended(e, t, a) {
-  (assertAdminOrReferee(), (e = Number(e)), (t = Number(t)));
+  (assertReferee(), (e = Number(e)), (t = Number(t)));
   if (
     lastTournamentState &&
     "finished" === lastTournamentState.meta.status
@@ -990,7 +990,7 @@ async function fbSetGameSuspended(e, t, a) {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const o = t.data();
-      (assertAdminOrRefereeForState_(o), assertTournamentNotFinished_(o));
+      (assertRefereeForState_(o), assertTournamentNotFinished_(o));
       const r = await e.get(n);
       if (!r.exists) throw new Error("No se encontró esa partida");
       const s = { ...r.data() };
@@ -1019,7 +1019,7 @@ async function fbSetGameSuspended(e, t, a) {
   );
 }
 async function fbAutoDeclareForfeits() {
-  assertAdminOrReferee();
+  assertReferee();
   const e = lastTournamentState && lastTournamentState.meta;
   if (!e) return [];
   const t = Number(e.woGraceMinutes) || 0;
@@ -1042,7 +1042,7 @@ async function fbAutoDeclareForfeits() {
         const a = await t.get(fbRoomRef);
         if (!a.exists) return;
         const n = a.data();
-        (assertAdminOrRefereeForState_(n), assertTournamentNotFinished_(n));
+        (assertRefereeForState_(n), assertTournamentNotFinished_(n));
         const o = await t.get(e);
         if (!o.exists) return;
         const s = { ...o.data() };
@@ -1070,7 +1070,7 @@ async function fbAutoDeclareForfeits() {
           played: (e.played || []).slice(),
         })),
         l = {};
-      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
+      (assertRefereeForState_(a), assertTournamentNotFinished_(a));
       o.forEach((e) => (l[e.id] = e));
       const i = (a.pairings || []).map((e) => ({ ...e }));
       if (

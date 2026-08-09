@@ -6659,13 +6659,13 @@ async function fbApproveRound() {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertAdminOrReferee(),
+    assertAdmin(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertAdminOrRefereeForState_(a);
+      assertAdminForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "No hay ninguna ronda pendiente de aprobación en este momento",
@@ -6719,12 +6719,12 @@ async function fbApproveRound() {
 }
 async function fbCancelAutoApproval() {
   return (
-    assertAdminOrReferee(),
+    assertAdmin(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data();
-      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
+      (assertAdminForState_(a), assertTournamentNotFinished_(a));
       "pending_approval" === a.meta.roundStatus &&
         e.update(fbRoomRef, { meta: { ...a.meta, autoApprovalCancelled: !0 } });
     }),
@@ -6733,13 +6733,13 @@ async function fbCancelAutoApproval() {
 }
 async function fbCloseRound() {
   return (
-    assertAdminOrReferee(),
+    assertReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertAdminOrRefereeForState_(a);
+      assertRefereeForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "Solo se puede cerrar una ronda que ya tiene todos los resultados cargados",
@@ -6760,13 +6760,13 @@ async function fbGenerateRoundFromClosed(e) {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertAdminOrReferee(),
+    assertAdmin(),
     await fbDb.runTransaction(async (t) => {
       const a = await t.get(fbRoomRef);
       if (!a.exists) throw new Error("Todavía no creaste un torneo");
       const n = a.data(),
         o = { ...n.meta };
-      assertAdminOrRefereeForState_(n);
+      assertAdminForState_(n);
       if ("active" !== o.status || "closed" !== o.roundStatus)
         throw new Error(
           'Primero hay que "Cerrar ronda" antes de generar la próxima',
@@ -6822,7 +6822,7 @@ async function fbGenerateRoundFromClosed(e) {
   );
 }
 async function fbSetGameSuspended(e, t, a) {
-  (assertAdminOrReferee(), (e = Number(e)), (t = Number(t)));
+  (assertReferee(), (e = Number(e)), (t = Number(t)));
   if (
     lastTournamentState &&
     "finished" === lastTournamentState.meta.status
@@ -6834,7 +6834,7 @@ async function fbSetGameSuspended(e, t, a) {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const o = t.data();
-      (assertAdminOrRefereeForState_(o), assertTournamentNotFinished_(o));
+      (assertRefereeForState_(o), assertTournamentNotFinished_(o));
       const r = await e.get(n);
       if (!r.exists) throw new Error("No se encontró esa partida");
       const s = { ...r.data() };
@@ -6863,7 +6863,7 @@ async function fbSetGameSuspended(e, t, a) {
   );
 }
 async function fbAutoDeclareForfeits() {
-  assertAdminOrReferee();
+  assertReferee();
   const e = lastTournamentState && lastTournamentState.meta;
   if (!e) return [];
   const t = Number(e.woGraceMinutes) || 0;
@@ -6886,7 +6886,7 @@ async function fbAutoDeclareForfeits() {
         const a = await t.get(fbRoomRef);
         if (!a.exists) return;
         const n = a.data();
-        (assertAdminOrRefereeForState_(n), assertTournamentNotFinished_(n));
+        (assertRefereeForState_(n), assertTournamentNotFinished_(n));
         const o = await t.get(e);
         if (!o.exists) return;
         const s = { ...o.data() };
@@ -6914,7 +6914,7 @@ async function fbAutoDeclareForfeits() {
           played: (e.played || []).slice(),
         })),
         l = {};
-      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
+      (assertRefereeForState_(a), assertTournamentNotFinished_(a));
       o.forEach((e) => (l[e.id] = e));
       const i = (a.pairings || []).map((e) => ({ ...e }));
       if (
@@ -8153,7 +8153,7 @@ function startWOGraceTimerIfNeeded(e) {
   const t = Number(e.meta.woGraceMinutes) || 0;
   if (
     !(
-      isCurrentUserOfficial(e) &&
+      isCurrentUserReferee(e) &&
       t > 0 &&
       "active" === e.meta.status &&
       "playing" === e.meta.roundStatus
@@ -8183,7 +8183,7 @@ function renderApprovalPanel(e, t, a) {
     o = document.getElementById("tournament-approval-status"),
     r = document.getElementById("tournament-approval-admin-controls"),
     s = document.getElementById("tournament-auto-approve-box"),
-    l = isCurrentUserOfficial(e),
+    l = isCurrentUserReferee(e),
     i = "closed" === e.meta.roundStatus;
   if (!a) {
     ((n.style.display = "none"), stopAutoApproveTimer());
@@ -8203,7 +8203,7 @@ function renderApprovalPanel(e, t, a) {
     const t = document.getElementById("tournament-close-round-btn"),
       a = document.getElementById("tournament-generate-round-btn");
     (t && (t.style.display = i ? "none" : ""),
-      a && (a.style.display = i ? "" : "none"));
+      a && (a.style.display = "none"));
     const n = document.getElementById("tournament-manual-bye-box"),
       o = document.getElementById("tournament-manual-bye-select");
     if (n && o) {
@@ -8456,7 +8456,7 @@ function renderTournamentState(e) {
         "none")),
     renderTournamentRoleSummary_(e),
     renderSelfRegisterCard(e, o),
-    renderApprovalPanel(e, n || p, r));
+    renderApprovalPanel(e, n, r));
   const z = document.getElementById("tournament-auto-round-control"),
     A = document.getElementById("tournament-auto-round-mode"),
     B = document.getElementById("tournament-auto-round-status");
@@ -8491,17 +8491,23 @@ function renderTournamentState(e) {
       else if ("pending_approval" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} lista para avanzar`),
           (F.textContent =
-            "Todos los resultados estan cargados. Revisa la tabla y aproba la nueva ronda."),
-          ((G.style.display = ""),
-          (G.textContent = "Aprobar y publicar nueva ronda"),
-          (G.dataset.roundAction = "approve")));
+            n
+              ? "Todos los resultados estan cargados. Revisa la tabla y aproba la nueva ronda."
+              : "Todos los resultados estan cargados. El administrador debe aprobar la ronda actual y publicar la siguiente."),
+          n &&
+            ((G.style.display = ""),
+            (G.textContent = "Aprobar y publicar nueva ronda"),
+            (G.dataset.roundAction = "approve")));
       else if ("closed" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} cerrada`),
           (F.textContent =
-            "Los resultados fueron bloqueados. Ya se puede publicar la ronda siguiente."),
-          ((G.style.display = ""),
-          (G.textContent = "Generar nueva ronda"),
-          (G.dataset.roundAction = "generate-closed")));
+            n
+              ? "Los resultados fueron bloqueados. Ya se puede publicar la ronda siguiente."
+              : "Los resultados fueron validados y bloqueados. El administrador debe publicar la ronda siguiente."),
+          n &&
+            ((G.style.display = ""),
+            (G.textContent = "Generar nueva ronda"),
+            (G.dataset.roundAction = "generate-closed")));
       else
         ((D.textContent = `Ronda ${e.meta.round} en juego`),
           (F.textContent =
@@ -10729,7 +10735,7 @@ configSignoutBtn &&
     .getElementById("tournament-approve-round-btn")
     .addEventListener("click", async () => {
       try {
-        (assertAdminOrReferee(),
+        (assertAdmin(),
           await fbApproveRound(),
           toast("✅ Ronda aprobada: se generó y publicó la ronda siguiente."));
       } catch (e) {
@@ -10740,7 +10746,7 @@ configSignoutBtn &&
     .getElementById("tournament-cancel-auto-approve-btn")
     .addEventListener("click", async () => {
       try {
-        (assertAdminOrReferee(),
+        (assertAdmin(),
           await fbCancelAutoApproval(),
           toast(
             "✖️ Aprobación automática cancelada. Aprobá la ronda a mano cuando quieras.",

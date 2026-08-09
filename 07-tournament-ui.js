@@ -108,7 +108,7 @@ function startWOGraceTimerIfNeeded(e) {
   const t = Number(e.meta.woGraceMinutes) || 0;
   if (
     !(
-      isCurrentUserOfficial(e) &&
+      isCurrentUserReferee(e) &&
       t > 0 &&
       "active" === e.meta.status &&
       "playing" === e.meta.roundStatus
@@ -138,7 +138,7 @@ function renderApprovalPanel(e, t, a) {
     o = document.getElementById("tournament-approval-status"),
     r = document.getElementById("tournament-approval-admin-controls"),
     s = document.getElementById("tournament-auto-approve-box"),
-    l = isCurrentUserOfficial(e),
+    l = isCurrentUserReferee(e),
     i = "closed" === e.meta.roundStatus;
   if (!a) {
     ((n.style.display = "none"), stopAutoApproveTimer());
@@ -158,7 +158,7 @@ function renderApprovalPanel(e, t, a) {
     const t = document.getElementById("tournament-close-round-btn"),
       a = document.getElementById("tournament-generate-round-btn");
     (t && (t.style.display = i ? "none" : ""),
-      a && (a.style.display = i ? "" : "none"));
+      a && (a.style.display = "none"));
     const n = document.getElementById("tournament-manual-bye-box"),
       o = document.getElementById("tournament-manual-bye-select");
     if (n && o) {
@@ -411,7 +411,7 @@ function renderTournamentState(e) {
         "none")),
     renderTournamentRoleSummary_(e),
     renderSelfRegisterCard(e, o),
-    renderApprovalPanel(e, n || p, r));
+    renderApprovalPanel(e, n, r));
   const z = document.getElementById("tournament-auto-round-control"),
     A = document.getElementById("tournament-auto-round-mode"),
     B = document.getElementById("tournament-auto-round-status");
@@ -446,17 +446,23 @@ function renderTournamentState(e) {
       else if ("pending_approval" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} lista para avanzar`),
           (F.textContent =
-            "Todos los resultados estan cargados. Revisa la tabla y aproba la nueva ronda."),
-          ((G.style.display = ""),
-          (G.textContent = "Aprobar y publicar nueva ronda"),
-          (G.dataset.roundAction = "approve")));
+            n
+              ? "Todos los resultados estan cargados. Revisa la tabla y aproba la nueva ronda."
+              : "Todos los resultados estan cargados. El administrador debe aprobar la ronda actual y publicar la siguiente."),
+          n &&
+            ((G.style.display = ""),
+            (G.textContent = "Aprobar y publicar nueva ronda"),
+            (G.dataset.roundAction = "approve")));
       else if ("closed" === e.meta.roundStatus)
         ((D.textContent = `Ronda ${e.meta.round} cerrada`),
           (F.textContent =
-            "Los resultados fueron bloqueados. Ya se puede publicar la ronda siguiente."),
-          ((G.style.display = ""),
-          (G.textContent = "Generar nueva ronda"),
-          (G.dataset.roundAction = "generate-closed")));
+            n
+              ? "Los resultados fueron bloqueados. Ya se puede publicar la ronda siguiente."
+              : "Los resultados fueron validados y bloqueados. El administrador debe publicar la ronda siguiente."),
+          n &&
+            ((G.style.display = ""),
+            (G.textContent = "Generar nueva ronda"),
+            (G.dataset.roundAction = "generate-closed")));
       else
         ((D.textContent = `Ronda ${e.meta.round} en juego`),
           (F.textContent =
