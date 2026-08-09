@@ -898,6 +898,9 @@ function isCurrentUserReferee(e) {
     TOURNAMENT_REFEREE_EMAIL,
   ).includes(t);
 }
+function isCurrentUserOfficial(e) {
+  return isCurrentUserAdmin(e) || isCurrentUserReferee(e);
+}
 function assertReferee() {
   if (!isCurrentUserReferee())
     throw new Error("Esta acción es exclusiva del árbitro del torneo");

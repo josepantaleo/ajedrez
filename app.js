@@ -5589,6 +5589,9 @@ function isCurrentUserReferee(e) {
     TOURNAMENT_REFEREE_EMAIL,
   ).includes(t);
 }
+function isCurrentUserOfficial(e) {
+  return isCurrentUserAdmin(e) || isCurrentUserReferee(e);
+}
 function assertReferee() {
   if (!isCurrentUserReferee())
     throw new Error("Esta acción es exclusiva del árbitro del torneo");
@@ -6149,9 +6152,18 @@ async function fbBackfillGameAccessFields_(e) {
   }
 }
 async function fbUpdateTournamentRoles(e, t) {
-  const a = parseRoleEmails_(e),
+  const a = Array.from(
+      new Set(
+        [TOURNAMENT_ADMIN_EMAIL].concat(parseRoleEmails_(e)).map(
+          normalizeRoleEmail_,
+        ),
+      ),
+    ).filter(Boolean),
     n = parseRoleEmails_(t);
   if (!a.length) throw new Error("El torneo necesita al menos un administrador");
+  if (a.length > 20)
+    throw new Error("Se permiten como máximo 20 administradores");
+  if (n.length > 50) throw new Error("Se permiten como máximo 50 árbitros");
   return (
     assertAdmin(),
     await fbDb.runTransaction(async (e) => {
@@ -6721,13 +6733,13 @@ async function fbCancelAutoApproval() {
 }
 async function fbCloseRound() {
   return (
-    assertReferee(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertRefereeForState_(a);
+      assertAdminOrRefereeForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "Solo se puede cerrar una ronda que ya tiene todos los resultados cargados",
@@ -6810,7 +6822,7 @@ async function fbGenerateRoundFromClosed(e) {
   );
 }
 async function fbSetGameSuspended(e, t, a) {
-  (assertReferee(), (e = Number(e)), (t = Number(t)));
+  (assertAdminOrReferee(), (e = Number(e)), (t = Number(t)));
   if (
     lastTournamentState &&
     "finished" === lastTournamentState.meta.status
@@ -6822,7 +6834,7 @@ async function fbSetGameSuspended(e, t, a) {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const o = t.data();
-      (assertRefereeForState_(o), assertTournamentNotFinished_(o));
+      (assertAdminOrRefereeForState_(o), assertTournamentNotFinished_(o));
       const r = await e.get(n);
       if (!r.exists) throw new Error("No se encontró esa partida");
       const s = { ...r.data() };
@@ -6851,7 +6863,7 @@ async function fbSetGameSuspended(e, t, a) {
   );
 }
 async function fbAutoDeclareForfeits() {
-  assertReferee();
+  assertAdminOrReferee();
   const e = lastTournamentState && lastTournamentState.meta;
   if (!e) return [];
   const t = Number(e.woGraceMinutes) || 0;
@@ -6874,7 +6886,7 @@ async function fbAutoDeclareForfeits() {
         const a = await t.get(fbRoomRef);
         if (!a.exists) return;
         const n = a.data();
-        (assertRefereeForState_(n), assertTournamentNotFinished_(n));
+        (assertAdminOrRefereeForState_(n), assertTournamentNotFinished_(n));
         const o = await t.get(e);
         if (!o.exists) return;
         const s = { ...o.data() };
@@ -6902,7 +6914,7 @@ async function fbAutoDeclareForfeits() {
           played: (e.played || []).slice(),
         })),
         l = {};
-      (assertRefereeForState_(a), assertTournamentNotFinished_(a));
+      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
       o.forEach((e) => (l[e.id] = e));
       const i = (a.pairings || []).map((e) => ({ ...e }));
       if (
@@ -7130,6 +7142,7 @@ async function fbUpdateSettings(e, t, n, o, r) {
           timeControlMinutes: d,
           timeControlIncrement: u,
           roundApprovalMode: "auto" === o ? "auto" : "manual",
+          autoApprovalCancelled: "auto" === o ? !1 : l.meta.autoApprovalCancelled,
           woGraceMinutes: m,
         },
       });
@@ -8135,7 +8148,7 @@ function startWOGraceTimerIfNeeded(e) {
   const t = Number(e.meta.woGraceMinutes) || 0;
   if (
     !(
-      isCurrentUserReferee() &&
+      isCurrentUserOfficial(e) &&
       t > 0 &&
       "active" === e.meta.status &&
       "playing" === e.meta.roundStatus
@@ -8165,7 +8178,7 @@ function renderApprovalPanel(e, t, a) {
     o = document.getElementById("tournament-approval-status"),
     r = document.getElementById("tournament-approval-admin-controls"),
     s = document.getElementById("tournament-auto-approve-box"),
-    l = isCurrentUserReferee(),
+    l = isCurrentUserOfficial(e),
     i = "closed" === e.meta.roundStatus;
   if (!a) {
     ((n.style.display = "none"), stopAutoApproveTimer());
@@ -10594,6 +10607,7 @@ configSignoutBtn &&
           n = normalizeRoleEmail_(currentUser && currentUser.email);
         if (
           n &&
+          n !== normalizeRoleEmail_(TOURNAMENT_ADMIN_EMAIL) &&
           !a.includes(n) &&
           !confirm(
             "Tu correo no está en la nueva lista de administradores. Si guardás, perderás acceso a este panel. ¿Continuar?",

@@ -1127,6 +1127,7 @@ configSignoutBtn &&
           n = normalizeRoleEmail_(currentUser && currentUser.email);
         if (
           n &&
+          n !== normalizeRoleEmail_(TOURNAMENT_ADMIN_EMAIL) &&
           !a.includes(n) &&
           !confirm(
             "Tu correo no está en la nueva lista de administradores. Si guardás, perderás acceso a este panel. ¿Continuar?",
