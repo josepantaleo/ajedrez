@@ -966,6 +966,33 @@ configSignoutBtn &&
       }
     }),
   document
+    .getElementById("tournament-auto-round-save-btn")
+    .addEventListener("click", async () => {
+      try {
+        const e = lastTournamentState && lastTournamentState.meta;
+        if (!e) throw new Error("No se pudo leer el estado actual del torneo");
+        const t = document.getElementById("tournament-auto-round-mode").value;
+        (await fbUpdateSettings(
+          e.name || "Torneo",
+          e.totalRounds || null,
+          {
+            minutes: e.timeControlMinutes || 0,
+            increment: e.timeControlIncrement || 0,
+          },
+          t,
+          e.woGraceMinutes || 0,
+        ),
+          toast(
+            "auto" === t
+              ? "Avance automatico activado. La proxima ronda se generara 30 segundos despues de completar los resultados."
+              : "Avance automatico desactivado. Las siguientes rondas requeriran aprobacion manual.",
+            6e3,
+          ));
+      } catch (e) {
+        showError(e);
+      }
+    }),
+  document
     .getElementById("tournament-finish-btn")
     .addEventListener("click", async () => {
       const e = lastTournamentState,

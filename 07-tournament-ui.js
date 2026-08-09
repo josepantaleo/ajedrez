@@ -407,6 +407,17 @@ function renderTournamentState(e) {
     renderTournamentRoleSummary_(e),
     renderSelfRegisterCard(e, o),
     renderApprovalPanel(e, n || p, r));
+  const z = document.getElementById("tournament-auto-round-control"),
+    A = document.getElementById("tournament-auto-round-mode"),
+    B = document.getElementById("tournament-auto-round-status");
+  z &&
+    ((z.style.display = n && !o ? "" : "none"),
+    A && (A.value = "auto" === e.meta.roundApprovalMode ? "auto" : "manual"),
+    B &&
+      (B.textContent =
+        "auto" === e.meta.roundApprovalMode
+          ? "Activo: cuando finalicen todas las partidas, la siguiente ronda se publicara automaticamente despues de 30 segundos."
+          : "Manual: al finalizar una ronda, el administrador o arbitro debe aprobarla."));
   const u = document.getElementById("tournament-champion-banner");
   if (o) {
     const t = rankPlayers_(e.players, e.pairings),

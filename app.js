@@ -8439,6 +8439,17 @@ function renderTournamentState(e) {
     renderTournamentRoleSummary_(e),
     renderSelfRegisterCard(e, o),
     renderApprovalPanel(e, n || p, r));
+  const z = document.getElementById("tournament-auto-round-control"),
+    A = document.getElementById("tournament-auto-round-mode"),
+    B = document.getElementById("tournament-auto-round-status");
+  z &&
+    ((z.style.display = n && !o ? "" : "none"),
+    A && (A.value = "auto" === e.meta.roundApprovalMode ? "auto" : "manual"),
+    B &&
+      (B.textContent =
+        "auto" === e.meta.roundApprovalMode
+          ? "Activo: cuando finalicen todas las partidas, la siguiente ronda se publicara automaticamente despues de 30 segundos."
+          : "Manual: al finalizar una ronda, el administrador o arbitro debe aprobarla."));
   const u = document.getElementById("tournament-champion-banner");
   if (o) {
     const t = rankPlayers_(e.players, e.pairings),
@@ -10417,6 +10428,33 @@ configSignoutBtn &&
             ? "Ronda 1 generada y publicada."
             : "Nueva ronda generada y publicada.",
         );
+      } catch (e) {
+        showError(e);
+      }
+    }),
+  document
+    .getElementById("tournament-auto-round-save-btn")
+    .addEventListener("click", async () => {
+      try {
+        const e = lastTournamentState && lastTournamentState.meta;
+        if (!e) throw new Error("No se pudo leer el estado actual del torneo");
+        const t = document.getElementById("tournament-auto-round-mode").value;
+        (await fbUpdateSettings(
+          e.name || "Torneo",
+          e.totalRounds || null,
+          {
+            minutes: e.timeControlMinutes || 0,
+            increment: e.timeControlIncrement || 0,
+          },
+          t,
+          e.woGraceMinutes || 0,
+        ),
+          toast(
+            "auto" === t
+              ? "Avance automatico activado. La proxima ronda se generara 30 segundos despues de completar los resultados."
+              : "Avance automatico desactivado. Las siguientes rondas requeriran aprobacion manual.",
+            6e3,
+          ));
       } catch (e) {
         showError(e);
       }

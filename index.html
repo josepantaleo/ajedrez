@@ -2622,6 +2622,34 @@
                   <button class="btn" id="tournament-export-full-pdf-btn">📄 Imprimir resultados del torneo (PDF)</button>
                   <button class="btn" id="tournament-reset-btn">🗑️ Reiniciar torneo</button>
                 </div>
+                <div
+                  id="tournament-auto-round-control"
+                  style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--surface2)"
+                >
+                  <label for="tournament-auto-round-mode" style="display: block; margin-bottom: 6px; font-weight: 600">
+                    Generacion de nueva ronda
+                  </label>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+                    <select
+                      id="tournament-auto-round-mode"
+                      style="
+                        min-width: 250px;
+                        padding: 8px 10px;
+                        border-radius: 8px;
+                        border: 1px solid var(--surface2);
+                        background: var(--surface);
+                        color: var(--text);
+                      "
+                    >
+                      <option value="manual">Manual: requiere aprobacion</option>
+                      <option value="auto">Automatica: publicar tras 30 segundos</option>
+                    </select>
+                    <button class="btn primary" id="tournament-auto-round-save-btn" type="button">
+                      Guardar modo
+                    </button>
+                  </div>
+                  <p id="tournament-auto-round-status" class="muted" style="font-size: 12px; margin: 8px 0 0"></p>
+                </div>
               </div>
 
               <div class="card" id="tournament-roles-panel" style="display: none">
@@ -3730,7 +3758,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260809-26"></script>
+    <script defer src="app.js?v=20260809-27"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>
