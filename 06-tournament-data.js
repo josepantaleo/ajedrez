@@ -154,7 +154,7 @@ function applyResultToPlayers_(e, t, a, n) {
         : "1/2-1/2" === a && ((e.points += 0.5 * n), (t.points += 0.5 * n)));
 }
 async function fbCreateTournament(e, t, a, n, o, r, s) {
-  isBootstrapping(lastTournamentState) || assertAdmin();
+  assertAdmin();
   const adminEmails = tournamentRoleEmails_(
       lastTournamentState,
       "adminEmails",
@@ -1067,7 +1067,12 @@ async function fbAutoDeclareForfeits() {
           t.update(e, { status: s.status, resultReason: s.resultReason }),
           r.push({ round: s.round, board: s.board, whiteJoined: l.w }));
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error(
+        "[fbAutoDeclareForfeits] No se pudo declarar W.O. automático:",
+        e,
+      );
+    }
   if (0 === r.length) return [];
   const s = [];
   return (
@@ -1186,8 +1191,7 @@ async function fbSubmitResult(e, t, a) {
               selectedAt: null,
             }
           : null;
-      const f = { ...r.meta },
-        h = f.totalRounds;
+      const f = { ...r.meta };
       ("active" === f.status &&
         "pending_approval" !== f.roundStatus &&
         "closed" !== f.roundStatus &&

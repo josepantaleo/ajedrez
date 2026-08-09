@@ -5832,9 +5832,6 @@ function isCurrentUserAdmin(e) {
     TOURNAMENT_ADMIN_EMAIL,
   ).includes(t);
 }
-function isBootstrapping(e) {
-  return !1;
-}
 function assertAdmin() {
   if (!isCurrentUserAdmin(lastTournamentState))
     throw new Error(
@@ -6019,7 +6016,7 @@ function applyResultToPlayers_(e, t, a, n) {
         : "1/2-1/2" === a && ((e.points += 0.5 * n), (t.points += 0.5 * n)));
 }
 async function fbCreateTournament(e, t, a, n, o, r, s) {
-  isBootstrapping(lastTournamentState) || assertAdmin();
+  assertAdmin();
   const adminEmails = tournamentRoleEmails_(
       lastTournamentState,
       "adminEmails",
@@ -6932,7 +6929,12 @@ async function fbAutoDeclareForfeits() {
           t.update(e, { status: s.status, resultReason: s.resultReason }),
           r.push({ round: s.round, board: s.board, whiteJoined: l.w }));
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error(
+        "[fbAutoDeclareForfeits] No se pudo declarar W.O. automático:",
+        e,
+      );
+    }
   if (0 === r.length) return [];
   const s = [];
   return (
@@ -7051,8 +7053,7 @@ async function fbSubmitResult(e, t, a) {
               selectedAt: null,
             }
           : null;
-      const f = { ...r.meta },
-        h = f.totalRounds;
+      const f = { ...r.meta };
       ("active" === f.status &&
         "pending_approval" !== f.roundStatus &&
         "closed" !== f.roundStatus &&
@@ -8071,6 +8072,7 @@ let tournamentWOGraceTimer = null,
 let tournamentJoinReminderTimer_ = null,
   tournamentJoinReminderSent_ = new Set();
 let tournamentRoundCompleteNoticeKey_ = "";
+let tournamentWOAutoFailureCount_ = 0;
 function stopTournamentJoinReminder_() {
   (clearInterval(tournamentJoinReminderTimer),
     (tournamentJoinReminderTimer_ = null));
@@ -8177,6 +8179,7 @@ function startWOGraceTimerIfNeeded(e) {
   const a = async () => {
     try {
       const e = await fbAutoDeclareForfeits();
+      tournamentWOAutoFailureCount_ = 0;
       e &&
         e.length > 0 &&
         e.forEach((e) => {
@@ -8184,7 +8187,15 @@ function startWOGraceTimerIfNeeded(e) {
             `⏱️ WO automático — mesa #${e.board}: gana ${e.winner} (${e.absent} no se presentó a tiempo)`,
           );
         });
-    } catch (e) {}
+    } catch (e) {
+      (console.error("[WO automático] Falló la verificación:", e),
+        (tournamentWOAutoFailureCount_ += 1),
+        2 === tournamentWOAutoFailureCount_ &&
+          toast(
+            "⚠️ No se pudieron verificar W.O. automáticos. Revisá la conexión con Firebase.",
+            7e3,
+          ));
+    }
     try {
       lastTournamentState && checkDoubleNoShowBoards_(lastTournamentState);
     } catch (e) {}

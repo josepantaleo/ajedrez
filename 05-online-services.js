@@ -1141,9 +1141,6 @@ function isCurrentUserAdmin(e) {
     TOURNAMENT_ADMIN_EMAIL,
   ).includes(t);
 }
-function isBootstrapping(e) {
-  return !1;
-}
 function assertAdmin() {
   if (!isCurrentUserAdmin(lastTournamentState))
     throw new Error(

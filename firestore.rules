@@ -209,16 +209,10 @@ service cloud.firestore {
             'selectedAt',
             'joined',
             'drawOfferBy',
-            'drawOfferAt',
-            'status',
-            'result'
+            'drawOfferAt'
           ])
-        && ['ongoing', 'finished'].hasAny([
-          request.resource.data.status
-        ])
-        && ['', '1-0', '0-1', '1/2-1/2'].hasAny([
-          request.resource.data.get('result', '')
-        ])
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.get('result', '') == resource.data.get('result', '')
         && ['', 'w', 'b'].hasAny([
           request.resource.data.get('selectedColor', '')
         ])
