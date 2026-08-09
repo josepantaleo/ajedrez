@@ -589,10 +589,12 @@ async function runTournamentRoundPrimaryAction_() {
   const e = lastTournamentState && lastTournamentState.meta;
   if (!e) throw new Error("No se pudo leer el estado actual del torneo");
   if (0 === e.round) return void (await fbGenerateRound());
+  if ("pending_approval" === e.roundStatus)
+    return void (await fbApproveRound());
   if ("closed" === e.roundStatus)
     return void (await fbGenerateRoundFromClosed());
   throw new Error(
-    "La ronda debe ser validada y cerrada por el árbitro antes de generar la siguiente.",
+    "La ronda actual todavía está en juego o no está lista para generar la siguiente.",
   );
 }
 async function syncTournamentMove() {
@@ -977,11 +979,8 @@ configSignoutBtn &&
     .getElementById("tournament-round-command-action")
     .addEventListener("click", async () => {
       try {
-        const e = document.getElementById("tournament-round-command-action");
-        "validate" === e.dataset.roundAction
-          ? (await fbCloseRound(), toast("Ronda validada y cerrada."))
-          : (await runTournamentRoundPrimaryAction_(),
-            toast("Nueva ronda generada y publicada."));
+        await runTournamentRoundPrimaryAction_();
+        toast("Nueva ronda generada y publicada.");
       } catch (e) {
         showError(e);
       }
@@ -1108,7 +1107,7 @@ configSignoutBtn &&
     .getElementById("tournament-roles-btn")
     .addEventListener("click", () => {
       try {
-        (assertAdmin(),
+        (assertAdminOrReferee(),
           (document.getElementById("tournament-settings-panel").style.display =
             "none"));
         const e = lastTournamentState,
@@ -1221,8 +1220,8 @@ configSignoutBtn &&
     .addEventListener("click", async () => {
       try {
         (assertAdmin(),
-          await fbGenerateRoundFromClosed(),
-          toast("✅ Ronda aprobada y siguiente ronda publicada."));
+          await fbApproveRound(),
+          toast("✅ Ronda aprobada: se generó y publicó la ronda siguiente."));
       } catch (e) {
         showError(e);
       }

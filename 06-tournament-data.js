@@ -815,16 +815,16 @@ async function fbApproveRound() {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertAdmin(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertAdminForState_(a);
-      if ("active" !== n.status || "closed" !== n.roundStatus)
+      assertAdminOrRefereeForState_(a);
+      if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
-          "La ronda debe ser validada y cerrada por el árbitro antes de publicar la siguiente",
+          "No hay ninguna ronda pendiente de aprobación en este momento",
         );
       const o = (a.players || []).map((e) => ({
           ...e,
@@ -875,12 +875,12 @@ async function fbApproveRound() {
 }
 async function fbCancelAutoApproval() {
   return (
-    assertAdmin(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data();
-      (assertAdminForState_(a), assertTournamentNotFinished_(a));
+      (assertAdminOrRefereeForState_(a), assertTournamentNotFinished_(a));
       "pending_approval" === a.meta.roundStatus &&
         e.update(fbRoomRef, { meta: { ...a.meta, autoApprovalCancelled: !0 } });
     }),
@@ -889,13 +889,13 @@ async function fbCancelAutoApproval() {
 }
 async function fbCloseRound() {
   return (
-    assertReferee(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (e) => {
       const t = await e.get(fbRoomRef);
       if (!t.exists) throw new Error("Todavía no creaste un torneo");
       const a = t.data(),
         n = { ...a.meta };
-      assertRefereeForState_(a);
+      assertAdminOrRefereeForState_(a);
       if ("active" !== n.status || "pending_approval" !== n.roundStatus)
         throw new Error(
           "Solo se puede cerrar una ronda que ya tiene todos los resultados cargados",
@@ -916,13 +916,13 @@ async function fbGenerateRoundFromClosed(e) {
       Number(lastTournamentState.meta.round)) ||
     0;
   return (
-    assertAdmin(),
+    assertAdminOrReferee(),
     await fbDb.runTransaction(async (t) => {
       const a = await t.get(fbRoomRef);
       if (!a.exists) throw new Error("Todavía no creaste un torneo");
       const n = a.data(),
         o = { ...n.meta };
-      assertAdminForState_(n);
+      assertAdminOrRefereeForState_(n);
       if ("active" !== o.status || "closed" !== o.roundStatus)
         throw new Error(
           'Primero hay que "Cerrar ronda" antes de generar la próxima',
