@@ -6497,6 +6497,20 @@ function buildFallbackPairingPlan_(e) {
   }
   return a;
 }
+function pairingRepeatWarnings_(e, t) {
+  return e
+    .filter(
+      ([e, a]) =>
+        -1 !== (e.played || []).indexOf(a.id) ||
+        -1 !== (a.played || []).indexOf(e.id),
+    )
+    .map(([e, a]) => ({
+      whiteId: e.id,
+      whiteName: e.name,
+      blackId: a.id,
+      blackName: a.name,
+    }));
+}
 function buildNextRoundPairings_(e, t, a, n, o) {
   const r = t + 1,
     s = e.filter((e) => "active" === (e.status || "active"));
@@ -6528,13 +6542,14 @@ function buildNextRoundPairings_(e, t, a, n, o) {
     }
     l = l.filter((e) => e.id !== i.id);
   }
-  const c =
-      findNonRepeatingPairingPlan_(l) || buildFallbackPairingPlan_(l),
+  const c = findNonRepeatingPairingPlan_(l),
+    b = c || buildFallbackPairingPlan_(l),
+    v = pairingRepeatWarnings_(b),
     d = [],
     u = {};
   e.forEach((e) => (u[e.id] = e.colorBalance || 0));
   let m = 1;
-  for (const [e, a] of c) {
+  for (const [e, a] of b) {
     const n =
         Math.abs((u[e.id] || 0) + 1) + Math.abs((u[a.id] || 0) - 1),
       o = Math.abs((u[e.id] || 0) - 1) + Math.abs((u[a.id] || 0) + 1),
@@ -6593,7 +6608,13 @@ function buildNextRoundPairings_(e, t, a, n, o) {
         joined: { w: !1, b: !1 },
         startedAt: syncedNow_(),
       }));
-  return { nextRound: r, newPairings: d, updatedPlayers: p, newGames: h };
+  return {
+    nextRound: r,
+    newPairings: d,
+    updatedPlayers: p,
+    newGames: h,
+    pairingWarnings: v,
+  };
 }
 async function fbGenerateRound() {
   return (
@@ -6635,6 +6656,7 @@ async function fbGenerateRound() {
           newPairings: d,
           updatedPlayers: u,
           newGames: m,
+          pairingWarnings: v,
         } = buildNextRoundPairings_(n, r, i, o);
       (e.set(fbRoomRef, {
         meta: {
@@ -6646,6 +6668,7 @@ async function fbGenerateRound() {
             "auto" === a.meta.roundApprovalMode ? "auto" : "manual",
           pendingApprovalAt: null,
           autoApprovalCancelled: !1,
+          pairingWarnings: v,
           totalRounds: s || null,
           timeControlMinutes: i.minutes,
           timeControlIncrement: i.increment,
@@ -6679,6 +6702,13 @@ async function notifyPublishedRound_(e, t) {
   } catch (e) {
     console.warn("No se pudo publicar el anuncio de la nueva ronda:", e);
   }
+  const o = Array.isArray(a.pairingWarnings) ? a.pairingWarnings : [];
+  o.length &&
+    isCurrentUserOfficial(e) &&
+    toast(
+      `⚠️ La ronda ${n} incluye ${o.length} emparejamiento${1 === o.length ? "" : "s"} repetido${1 === o.length ? "" : "s"}. Revisalo antes de iniciar las partidas.`,
+      8e3,
+    );
   return e;
 }
 async function fbApproveRound() {
@@ -6733,11 +6763,13 @@ async function fbApproveRound() {
           newPairings: i,
           updatedPlayers: c,
           newGames: d,
+          pairingWarnings: u,
         } = buildNextRoundPairings_(o, n.round, s, r);
       ((n.round = l),
         (n.roundStatus = "playing"),
         (n.pendingApprovalAt = null),
         (n.autoApprovalCancelled = !1),
+        (n.pairingWarnings = u),
         e.update(fbRoomRef, { meta: n, players: c, pairings: r.concat(i) }),
         d.forEach((t) =>
           e.set(gamesCollectionRef.doc(gameDocId_(t.round, t.board)), t),
@@ -6837,11 +6869,13 @@ async function fbGenerateRoundFromClosed(e) {
           newPairings: c,
           updatedPlayers: d,
           newGames: u,
+          pairingWarnings: m,
         } = buildNextRoundPairings_(r, o.round, l, s, e || void 0);
       ((o.round = i),
         (o.roundStatus = "playing"),
         (o.pendingApprovalAt = null),
         (o.autoApprovalCancelled = !1),
+        (o.pairingWarnings = m),
         t.update(fbRoomRef, { meta: o, players: d, pairings: s.concat(c) }),
         u.forEach((e) =>
           t.set(gamesCollectionRef.doc(gameDocId_(e.round, e.board)), e),
@@ -7004,14 +7038,6 @@ async function fbSubmitResult(e, t, a) {
       if (!c) throw new Error("No se encontró esa partida");
       if ("" === c.blackId)
         throw new Error("Esa fila es un BYE, no se puede cambiar");
-      const d =
-          currentUser && currentUser.email
-            ? currentUser.email.toLowerCase()
-            : "",
-        u =
-          d &&
-          ((c.whiteEmail || "").toLowerCase() === d ||
-            (c.blackEmail || "").toLowerCase() === d);
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
         E = ["wo-black", "wo-white", "double-wo"];
@@ -7019,13 +7045,16 @@ async function fbSubmitResult(e, t, a) {
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
         throw new Error("Solo el árbitro puede declarar un resultado por W.O.");
+      if (!isCurrentUserAdmin(m) && !isCurrentUserReferee(m))
+        throw new Error(
+          "Solo el administrador o el árbitro pueden cargar resultados oficiales",
+        );
       if (
-        !isCurrentUserAdmin(m) &&
-        !isCurrentUserReferee(m) &&
-        !u
+        ["wo-black", "wo-white", "double-wo"].includes(c.result) &&
+        !isCurrentUserReferee(m)
       )
         throw new Error(
-          "No tenés permiso para cargar el resultado de esta partida",
+          "Un resultado por W.O. solo puede ser corregido por el árbitro",
         );
       if (c.locked && !isCurrentUserReferee(m))
         throw new Error(
@@ -7695,12 +7724,8 @@ function resultLabel(e) {
               ? "Doble W.O. (0-0)"
               : "";
 }
-let _rankPlayersCache_ = { players: null, pairings: null, result: null };
 function rankPlayers_(e, t) {
-  if (_rankPlayersCache_.players === e && _rankPlayersCache_.pairings === t)
-    return _rankPlayersCache_.result;
-  const a = rankPlayersCompute_(e, t);
-  return ((_rankPlayersCache_ = { players: e, pairings: t, result: a }), a);
+  return rankPlayersCompute_(e, t);
 }
 function rankPlayersCompute_(e, t) {
   const a = {};
