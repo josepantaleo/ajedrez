@@ -5413,6 +5413,92 @@
   color: var(--text);
 }
 
+.tournament-admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--surface2);
+}
+
+.tournament-admin-metric {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--surface2);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+
+.tournament-admin-metric-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tournament-admin-metric-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+}
+
+.tournament-admin-metric[data-tone="live"] .tournament-admin-metric-dot {
+  background: var(--accent2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent2) 14%, transparent);
+}
+
+.tournament-admin-metric[data-tone="success"] .tournament-admin-metric-dot {
+  background: var(--success);
+}
+
+.tournament-admin-metric[data-tone="warning"] .tournament-admin-metric-dot {
+  background: var(--accent);
+}
+
+.tournament-admin-metric[data-tone="progress"] .tournament-admin-metric-dot {
+  background: var(--text);
+}
+
+.tournament-admin-metric > strong {
+  display: block;
+  margin-top: 9px;
+  color: var(--text);
+  font-size: 1.55rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tournament-admin-metric > small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tournament-admin-progress-track {
+  width: 100%;
+  height: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface2);
+}
+
+.tournament-admin-progress-track > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
 .tournament-admin-sections {
   display: grid;
   gap: 14px;
@@ -5590,6 +5676,11 @@
 
   .tournament-admin-sections {
     padding: 14px 16px 18px;
+  }
+
+  .tournament-admin-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px 16px;
   }
 
   .tournament-admin-secondary-grid,

@@ -2780,6 +2780,55 @@
                   </span>
                 </div>
 
+                <div class="tournament-admin-metrics" aria-label="Métricas rápidas del torneo">
+                  <article class="tournament-admin-metric" data-tone="live">
+                    <div class="tournament-admin-metric-heading">
+                      <span class="tournament-admin-metric-dot" aria-hidden="true"></span>
+                      <span>Partidas activas</span>
+                    </div>
+                    <strong id="tournament-admin-active-games">0</strong>
+                    <small>En juego en la ronda actual</small>
+                  </article>
+
+                  <article class="tournament-admin-metric" data-tone="success">
+                    <div class="tournament-admin-metric-heading">
+                      <span class="tournament-admin-metric-dot" aria-hidden="true"></span>
+                      <span>Finalizadas</span>
+                    </div>
+                    <strong id="tournament-admin-finished-games">0</strong>
+                    <small>Resultados cargados en esta ronda</small>
+                  </article>
+
+                  <article class="tournament-admin-metric" data-tone="warning">
+                    <div class="tournament-admin-metric-heading">
+                      <span class="tournament-admin-metric-dot" aria-hidden="true"></span>
+                      <span>Jugadores pendientes</span>
+                    </div>
+                    <strong id="tournament-admin-pending-players">0</strong>
+                    <small>Inscripciones por autorizar</small>
+                  </article>
+
+                  <article class="tournament-admin-metric" data-tone="progress">
+                    <div class="tournament-admin-metric-heading">
+                      <span class="tournament-admin-metric-dot" aria-hidden="true"></span>
+                      <span>Progreso de rondas</span>
+                    </div>
+                    <strong id="tournament-admin-round-progress">0 / ∞</strong>
+                    <div
+                      class="tournament-admin-progress-track"
+                      id="tournament-admin-round-progress-track"
+                      role="progressbar"
+                      aria-label="Progreso de rondas"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="0"
+                    >
+                      <span id="tournament-admin-round-progress-bar"></span>
+                    </div>
+                    <small id="tournament-admin-round-progress-detail">Sin límite de rondas</small>
+                  </article>
+                </div>
+
                 <div id="tournament-admin-controls" class="tournament-admin-sections">
                   <section class="tournament-admin-section tournament-admin-round-section">
                     <div class="tournament-admin-section-heading">
@@ -3958,7 +4007,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260810-8"></script>
+    <script defer src="app.js?v=20260810-9"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

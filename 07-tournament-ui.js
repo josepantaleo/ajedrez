@@ -668,15 +668,29 @@ function renderTournamentOfficialTabs_(e) {
 function renderTournamentAdminSummary_(e) {
   const t = document.getElementById("tournament-admin-status-title"),
     a = document.getElementById("tournament-admin-status-detail"),
-    n = document.getElementById("tournament-admin-mode-pill");
+    n = document.getElementById("tournament-admin-mode-pill"),
+    d = document.getElementById("tournament-admin-active-games"),
+    u = document.getElementById("tournament-admin-finished-games"),
+    m = document.getElementById("tournament-admin-pending-players"),
+    g = document.getElementById("tournament-admin-round-progress"),
+    f = document.getElementById("tournament-admin-round-progress-track"),
+    h = document.getElementById("tournament-admin-round-progress-bar"),
+    y = document.getElementById("tournament-admin-round-progress-detail");
   if (!t || !a || !n || !e || !e.meta) return;
   const o = Number(e.meta.round || 0),
     r = e.players.filter((e) => "active" === (e.status || "active")).length,
     s = e.players.filter((e) => "pending" === e.status).length,
     l = (e.pairings || []).filter(
-      (t) => t.round === o && "" !== t.blackId && !t.result,
+      (t) => t.round === o && "" !== t.blackId,
+    ),
+    i = l.filter((e) => e.result).length,
+    p = lastRoundGames.filter(
+      (e) => Number(e.round) === o && "ongoing" === e.status,
     ).length,
-    i = "auto" === e.meta.roundApprovalMode,
+    E = Number(e.meta.totalRounds) || 0,
+    b = E > 0 ? Math.min(100, Math.round((100 * o) / E)) : 0,
+    v = l.length - i,
+    k = "auto" === e.meta.roundApprovalMode,
     c =
       "finished" === e.meta.status
         ? "Torneo finalizado"
@@ -688,9 +702,22 @@ function renderTournamentAdminSummary_(e) {
               ? `Ronda ${o} cerrada`
               : `Ronda ${o} en juego`;
   ((t.textContent = c),
-    (a.textContent = `${r} jugador${1 === r ? "" : "es"} activo${1 === r ? "" : "s"} · ${s} pendiente${1 === s ? "" : "s"} · ${l} mesa${1 === l ? "" : "s"} sin resultado`),
-    (n.textContent = i ? "Avance automático" : "Avance manual"),
-    (n.dataset.mode = i ? "auto" : "manual"));
+    (a.textContent = `${r} jugador${1 === r ? "" : "es"} activo${1 === r ? "" : "s"} · ${s} pendiente${1 === s ? "" : "s"} · ${v} mesa${1 === v ? "" : "s"} sin resultado`),
+    (n.textContent = k ? "Avance automático" : "Avance manual"),
+    (n.dataset.mode = k ? "auto" : "manual"),
+    d && (d.textContent = p),
+    u && (u.textContent = i),
+    m && (m.textContent = s),
+    g && (g.textContent = E > 0 ? `${o} / ${E}` : `${o} / ∞`),
+    f &&
+      ((f.style.display = E > 0 ? "" : "none"),
+      f.setAttribute("aria-valuenow", String(b))),
+    h && (h.style.width = `${b}%`),
+    y &&
+      (y.textContent =
+        E > 0
+          ? `${b}% del calendario programado`
+          : "Sin límite de rondas configurado"));
 }
 function renderTournamentState(e) {
   const t = document.getElementById("tournament-setup-box"),
