@@ -36,10 +36,8 @@ let announcementsCollectionRef = null,
   publicScreenZoomKey_ = null,
   roundCountdownTimer_ = null;
 function assertAdminOrReferee() {
-  if (!isCurrentUserAdmin(lastTournamentState) && !isCurrentUserReferee())
-    throw new Error(
-      "Esta acción es exclusiva del administrador o del árbitro del torneo",
-    );
+  if (!isCurrentUserAdmin(lastTournamentState))
+    throw new Error("Esta acción es exclusiva del administrador del torneo");
 }
 function subscribeAnnouncements() {
   (announcementsUnsub && (announcementsUnsub(), (announcementsUnsub = null)),
@@ -76,11 +74,7 @@ function tournamentAuditEventId_() {
   return `audit_${Date.now().toString(36)}_${e[0].toString(36)}${e[1].toString(36)}`;
 }
 function tournamentAuditActorRole_(e) {
-  return isCurrentUserAdmin(e)
-    ? isCurrentUserReferee(e)
-      ? "Administrador y arbitro"
-      : "Administrador"
-    : "Arbitro";
+  return "Administrador";
 }
 function tournamentAuditRecord_(e, t, a) {
   return {
@@ -1048,7 +1042,6 @@ function syncedNow_() {
 (syncInternetClock_(), setInterval(syncInternetClock_, 3e5));
 let authListenerAttached = !1,
   authRedirectChecked_ = !1;
-const TOURNAMENT_REFEREE_EMAIL = "josepantaleo@gmail.com";
 function normalizeRoleEmail_(e) {
   return (e || "").trim().toLowerCase();
 }
@@ -1062,20 +1055,13 @@ function tournamentRoleEmails_(e, t, a) {
   return Array.from(new Set(r ? o.concat(r) : o));
 }
 function isCurrentUserReferee(e) {
-  if (!currentUser || !currentUser.email) return !1;
-  const t = normalizeRoleEmail_(currentUser.email);
-  return tournamentRoleEmails_(
-    e || lastTournamentState,
-    "refereeEmails",
-    TOURNAMENT_REFEREE_EMAIL,
-  ).includes(t);
+  return isCurrentUserAdmin(e);
 }
 function isCurrentUserOfficial(e) {
-  return isCurrentUserAdmin(e) || isCurrentUserReferee(e);
+  return isCurrentUserAdmin(e);
 }
 function assertReferee() {
-  if (!isCurrentUserReferee())
-    throw new Error("Esta acción es exclusiva del árbitro del torneo");
+  assertAdmin();
 }
 function assertAdminForState_(e) {
   if (!isCurrentUserAdmin(normalizeTournamentState(e)))
@@ -1084,15 +1070,12 @@ function assertAdminForState_(e) {
     );
 }
 function assertRefereeForState_(e) {
-  if (!isCurrentUserReferee(normalizeTournamentState(e)))
-    throw new Error("Tu cuenta ya no tiene permisos de árbitro en este torneo");
+  assertAdminForState_(e);
 }
 function assertAdminOrRefereeForState_(e) {
   const t = normalizeTournamentState(e);
-  if (!isCurrentUserAdmin(t) && !isCurrentUserReferee(t))
-    throw new Error(
-      "Tu cuenta ya no tiene permisos de administrador ni de árbitro",
-    );
+  if (!isCurrentUserAdmin(t))
+    throw new Error("Tu cuenta ya no tiene permisos de administrador");
 }
 function assertTournamentNotFinished_(e, t) {
   if (e && e.meta && "finished" === e.meta.status)
@@ -1315,14 +1298,7 @@ function updateModeBadge() {
   if (!currentUser)
     return void e.forEach((e) => e && (e.style.display = "none"));
   const t = isCurrentUserAdmin(lastTournamentState),
-    n = isCurrentUserReferee(),
-    a = t && n
-      ? "🔐 Modo Administrador y Árbitro"
-      : n
-        ? "🧑‍⚖️ Modo Árbitro"
-      : t
-        ? "🛠️ Modo Administrador"
-        : "👤 Modo Jugador";
+    a = t ? "🛠️ Modo Administrador" : "👤 Modo Jugador";
   e.forEach((e) => {
     e && ((e.textContent = a), (e.style.display = ""));
   });

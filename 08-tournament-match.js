@@ -655,13 +655,13 @@ async function syncTournamentMove() {
       t &&
         n.resultPendingReferee &&
         toast(
-          "Resultado registrado en la partida. Un árbitro debe confirmarlo en la tabla del torneo.",
+          "Resultado registrado en la partida. Un administrador debe confirmarlo en la tabla del torneo.",
         ),
       t &&
         !n.resultPendingReferee &&
         "pending_approval" === n.meta.roundStatus &&
         toast(
-          "✅ Ya están todos los resultados de esta ronda; falta que el administrador o el árbitro la aprueben.",
+          "✅ Ya están todos los resultados de esta ronda; falta que el administrador la apruebe.",
         ),
       updateTournamentMatchBar(o));
   } catch (e) {
@@ -721,9 +721,9 @@ async function syncTournamentMove() {
             updateTournamentMatchBar(a),
             toast(
               t.resultPendingReferee
-                ? "Te rendiste. Un árbitro debe confirmar el resultado en la tabla."
+          ? "Te rendiste. Un administrador debe confirmar el resultado en la tabla."
                 : "pending_approval" === t.meta.roundStatus
-                ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador o el árbitro aprueben la ronda."
+          ? "🏳️ Te rendiste. Resultado cargado. Falta que el administrador apruebe la ronda."
                 : "🏳️ Te rendiste. Resultado cargado.",
             ));
         } catch (e) {
@@ -792,9 +792,9 @@ async function syncTournamentMove() {
             updateTournamentMatchBar(a),
             toast(
               t.resultPendingReferee
-                ? "Tablas acordadas. Un árbitro debe confirmar el resultado en la tabla."
+          ? "Tablas acordadas. Un administrador debe confirmar el resultado en la tabla."
                 : "pending_approval" === t.meta.roundStatus
-                ? "🤝 Tablas acordadas. Falta que el administrador o el árbitro aprueben la ronda."
+          ? "🤝 Tablas acordadas. Falta que el administrador apruebe la ronda."
                 : "🤝 Tablas acordadas.",
             ));
         }
@@ -1111,7 +1111,7 @@ configSignoutBtn &&
     .getElementById("tournament-roles-btn")
     .addEventListener("click", () => {
       try {
-        (assertAdminOrReferee(),
+        (assertAdmin(),
           (document.getElementById("tournament-settings-panel").style.display =
             "none"));
         const e = lastTournamentState,
@@ -1119,16 +1119,9 @@ configSignoutBtn &&
             e,
             "adminEmails",
             TOURNAMENT_ADMIN_EMAIL,
-          ),
-          a = tournamentRoleEmails_(
-            e,
-            "refereeEmails",
-            TOURNAMENT_REFEREE_EMAIL,
           );
         ((document.getElementById("tournament-admin-emails-input").value =
           t.join("\n")),
-          (document.getElementById("tournament-referee-emails-input").value =
-            a.join("\n")),
           (document.getElementById("tournament-roles-panel").style.display =
             ""),
           renderTournamentRoleSummary_(e));
@@ -1144,8 +1137,7 @@ configSignoutBtn &&
   document
     .getElementById("tournament-roles-save-btn")
     .addEventListener("click", async () => {
-      const e = document.getElementById("tournament-admin-emails-input").value,
-        t = document.getElementById("tournament-referee-emails-input").value;
+      const e = document.getElementById("tournament-admin-emails-input").value;
       try {
         const a = parseRoleEmails_(e),
           n = normalizeRoleEmail_(currentUser && currentUser.email);
@@ -1158,10 +1150,10 @@ configSignoutBtn &&
           )
         )
           return;
-        (await fbUpdateTournamentRoles(e, t),
+        (await fbUpdateTournamentRoles(e),
           (document.getElementById("tournament-roles-panel").style.display =
             "none"),
-          toast("🔐 Roles del torneo actualizados."));
+          toast("🔐 Administradores del torneo actualizados."));
       } catch (e) {
         showError(e);
       }
@@ -1431,7 +1423,7 @@ const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {
     "function" == typeof activateTournamentOfficialTab_ &&
-      activateTournamentOfficialTab_("referee", !1);
+      activateTournamentOfficialTab_("admin", !1);
     const e = document.getElementById("tournament-players-card");
     e && e.scrollIntoView({ behavior: "smooth", block: "start" });
   }),

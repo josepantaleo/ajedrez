@@ -565,7 +565,7 @@ function attachPieceDrag(e, t) {
       tournamentCurrentGameRow &&
       "suspended" === tournamentCurrentGameRow.status
     )
-      return void toast("⏸️ El árbitro suspendió esta partida.");
+      return void toast("⏸️ El administrador suspendió esta partida.");
     const n = game.get(t);
     if (!n || n.color !== game.turn()) return;
     const o = e.getBoundingClientRect();
@@ -924,7 +924,7 @@ async function clickSquare(e) {
     tournamentCurrentGameRow &&
     "suspended" === tournamentCurrentGameRow.status
   )
-    return void toast("⏸️ El árbitro suspendió esta partida.");
+    return void toast("⏸️ El administrador suspendió esta partida.");
   if (selected === e)
     return (
       (selected = null),

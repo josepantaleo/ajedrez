@@ -5413,6 +5413,180 @@
   color: var(--text);
 }
 
+.tournament-referee-dashboard {
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid var(--surface2);
+}
+
+.tournament-referee-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px 17px;
+  border-bottom: 1px solid var(--surface2);
+}
+
+.tournament-referee-header h3 {
+  margin: 3px 0 4px;
+}
+
+.tournament-referee-header p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.tournament-referee-eyebrow {
+  color: var(--accent2);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tournament-referee-role-badge,
+.tournament-referee-round-pill {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--accent2) 45%, var(--surface2));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent2) 10%, var(--surface));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.tournament-referee-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  background: color-mix(in srgb, var(--surface2) 55%, transparent);
+  border-bottom: 1px solid var(--surface2);
+}
+
+.tournament-referee-state {
+  display: grid;
+  gap: 3px;
+}
+
+.tournament-referee-state > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tournament-referee-state strong {
+  font-size: 16px;
+}
+
+.tournament-referee-state small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tournament-referee-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--surface2);
+}
+
+.tournament-referee-metric {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--surface2);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+
+.tournament-referee-metric-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tournament-referee-metric-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+}
+
+.tournament-referee-metric[data-tone="live"] .tournament-referee-metric-dot {
+  background: var(--success);
+}
+
+.tournament-referee-metric[data-tone="pending"] .tournament-referee-metric-dot {
+  background: var(--accent2);
+}
+
+.tournament-referee-metric[data-tone="suspended"] .tournament-referee-metric-dot {
+  background: var(--danger);
+}
+
+.tournament-referee-metric[data-tone="progress"] .tournament-referee-metric-dot {
+  background: var(--accent);
+}
+
+.tournament-referee-metric > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tournament-referee-metric > small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tournament-referee-progress-track {
+  height: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface2);
+}
+
+.tournament-referee-progress-track > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+.tournament-referee-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 22px 20px;
+}
+
+.tournament-referee-actions > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.tournament-referee-actions small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .tournament-admin-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5681,6 +5855,29 @@
   .tournament-admin-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 14px 16px;
+  }
+
+  .tournament-referee-header,
+  .tournament-referee-overview,
+  .tournament-referee-actions {
+    align-items: stretch;
+    flex-direction: column;
+    padding-inline: 16px;
+  }
+
+  .tournament-referee-role-badge,
+  .tournament-referee-round-pill {
+    align-self: flex-start;
+  }
+
+  .tournament-referee-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px 16px;
+  }
+
+  .tournament-referee-actions #tournament-referee-tools,
+  .tournament-referee-actions .btn {
+    width: 100%;
   }
 
   .tournament-admin-secondary-grid,

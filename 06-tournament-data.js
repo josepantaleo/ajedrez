@@ -258,15 +258,10 @@ function applyResultToPlayers_(e, t, a, n) {
 async function fbCreateTournament(e, t, a, n, o, r, s) {
   assertAdmin();
   const adminEmails = tournamentRoleEmails_(
-      lastTournamentState,
-      "adminEmails",
-      TOURNAMENT_ADMIN_EMAIL,
-    ),
-    refereeEmails = tournamentRoleEmails_(
-      lastTournamentState,
-      "refereeEmails",
-      TOURNAMENT_REFEREE_EMAIL,
-    );
+    lastTournamentState,
+    "adminEmails",
+    TOURNAMENT_ADMIN_EMAIL,
+  );
   const l = new Set();
   for (const e of t) {
     if (!e.name) continue;
@@ -305,7 +300,7 @@ async function fbCreateTournament(e, t, a, n, o, r, s) {
         autoApprovalCancelled: !1,
         totalRounds: c > 0 ? c : null,
         adminEmails,
-        refereeEmails,
+        refereeEmails: [],
         timeControlMinutes: d.minutes > 0 ? d.minutes : 0,
         timeControlIncrement: d.increment > 0 ? d.increment : 0,
         woGraceMinutes: Number(s) > 0 ? Number(s) : 0,
@@ -420,19 +415,17 @@ async function fbBackfillGameAccessFields_(e) {
     throw e;
   }
 }
-async function fbUpdateTournamentRoles(e, t) {
+async function fbUpdateTournamentRoles(e) {
   const a = Array.from(
       new Set(
         [TOURNAMENT_ADMIN_EMAIL].concat(parseRoleEmails_(e)).map(
           normalizeRoleEmail_,
         ),
       ),
-    ).filter(Boolean),
-    n = parseRoleEmails_(t);
+    ).filter(Boolean);
   if (!a.length) throw new Error("El torneo necesita al menos un administrador");
   if (a.length > 20)
     throw new Error("Se permiten como máximo 20 administradores");
-  if (n.length > 50) throw new Error("Se permiten como máximo 50 árbitros");
   return (
     assertAdmin(),
     await fbDb.runTransaction(async (e) => {
@@ -444,7 +437,7 @@ async function fbUpdateTournamentRoles(e, t) {
           meta: {
             ...o.meta,
             adminEmails: a,
-            refereeEmails: n,
+            refereeEmails: [],
             rolesUpdatedAt: syncedNow_(),
             rolesUpdatedBy: currentUser ? currentUser.email : null,
           },
@@ -1386,22 +1379,20 @@ async function fbSubmitResult(e, t, a, reason) {
         (reason = requireTournamentDecisionReason_(reason, "W.O."));
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
-      if (E.includes(a) && !isCurrentUserReferee(m))
-        throw new Error("Solo el árbitro puede declarar un resultado por W.O.");
-      if (!isCurrentUserAdmin(m) && !isCurrentUserReferee(m))
-        throw new Error(
-          "Solo el administrador o el árbitro pueden cargar resultados oficiales",
-        );
+      if (E.includes(a) && !isCurrentUserAdmin(m))
+        throw new Error("Solo el administrador puede declarar un resultado por W.O.");
+      if (!isCurrentUserAdmin(m))
+        throw new Error("Solo el administrador puede cargar resultados oficiales");
       if (
         ["wo-black", "wo-white", "double-wo"].includes(c.result) &&
-        !isCurrentUserReferee(m)
+        !isCurrentUserAdmin(m)
       )
         throw new Error(
-          "Un resultado por W.O. solo puede ser corregido por el árbitro",
+          "Un resultado por W.O. solo puede ser corregido por el administrador",
         );
-      if (c.locked && !isCurrentUserReferee(m))
+      if (c.locked && !isCurrentUserAdmin(m))
         throw new Error(
-          "Esta ronda ya fue cerrada por el árbitro; solo el árbitro puede corregir resultados de una ronda cerrada",
+          "Esta ronda ya fue cerrada; solo el administrador puede corregir resultados de una ronda cerrada",
         );
       const P = gamesCollectionRef.doc(gameDocId_(e, t)),
         gameSnap = await n.get(P),
@@ -1605,7 +1596,7 @@ async function fbToggleDrawOffer(e, t) {
     const i = { ...l.data() };
     if ("finished" === i.status) throw new Error("Esa partida ya terminó");
     if ("suspended" === i.status)
-      throw new Error("Esta partida está suspendida por el árbitro");
+      throw new Error("Esta partida está suspendida por el administrador");
     if (i.clock && i.turnStartAt) {
       const activeColor = new Chess(i.fen).turn(),
         elapsed = Math.max(
@@ -1657,7 +1648,7 @@ function expectedResultForPosition_(e, t) {
 }
 async function fbRegisterGameResult_(e, t, a, n) {
   const o = await getTournamentStateOnce();
-  if (isCurrentUserAdmin(o) || isCurrentUserReferee(o)) {
+  if (isCurrentUserAdmin(o)) {
     const r = await fbSubmitResult(e, t, a);
     return ((r.gameRow = n), r);
   }
@@ -1687,7 +1678,7 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
   if (m && !isTimeout) {
     if ("finished" === m.status) throw new Error("Esa partida ya terminó");
     if ("suspended" === m.status)
-      throw new Error("Esta partida está suspendida por el árbitro");
+      throw new Error("Esta partida está suspendida por el administrador");
     const l = a !== m.fen,
       h = Boolean(m.clock && l);
     if (h) {
@@ -1737,7 +1728,7 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
         if ("finished" === currentGame.status)
           throw new Error("Esa partida ya terminó");
         if ("suspended" === currentGame.status)
-          throw new Error("Esta partida está suspendida por el árbitro");
+          throw new Error("Esta partida está suspendida por el administrador");
         if (currentGame.fen !== m.fen)
           throw new Error(
             "La partida cambió en otro dispositivo. Actualizá antes de mover",
@@ -1848,7 +1839,7 @@ async function fbMakeMove(e, t, a, n, o, r, s, l, isTimeout, action) {
         h = Boolean(i.clock && l);
       if ("finished" === i.status) throw new Error("Esa partida ya terminó");
       if ("suspended" === i.status)
-        throw new Error("Esta partida está suspendida por el árbitro");
+        throw new Error("Esta partida está suspendida por el administrador");
       if (isTimeout) {
         if (!i.clock || !i.turnStartAt)
           throw new Error("No hay un reloj activo para reclamar tiempo");
@@ -2038,15 +2029,10 @@ async function fbResetAll() {
   const t = await getTournamentStateOnce();
   assertAdminForState_(t);
   const a = tournamentRoleEmails_(
-      t,
-      "adminEmails",
-      TOURNAMENT_ADMIN_EMAIL,
-    ),
-    n = tournamentRoleEmails_(
-      t,
-      "refereeEmails",
-      TOURNAMENT_REFEREE_EMAIL,
-    );
+    t,
+    "adminEmails",
+    TOURNAMENT_ADMIN_EMAIL,
+  );
   const e = (await gamesCollectionRef.get()).docs;
   for (let t = 0; t < e.length; t += 400) {
     const a = fbDb.batch();
@@ -2066,7 +2052,7 @@ async function fbResetAll() {
         round: 0,
         status: "setup",
         adminEmails: a,
-        refereeEmails: n,
+        refereeEmails: [],
         totalRounds: null,
       },
       players: [],

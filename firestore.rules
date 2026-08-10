@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Revision 20260809-4: preserves the institutional tournament administrator.
+// Revision 20260810-5: a single administrator role owns every official action.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -24,13 +24,6 @@ service cloud.firestore {
       );
     }
 
-    function refereeEmails(data) {
-      return data.meta.get(
-        'refereeEmails',
-        ['josepantaleo@gmail.com']
-      );
-    }
-
     function isAdminFor(data) {
       return signedIn()
         && (
@@ -39,12 +32,8 @@ service cloud.firestore {
         );
     }
 
-    function isRefereeFor(data) {
-      return signedIn() && refereeEmails(data).hasAny([email()]);
-    }
-
     function isOfficialFor(data) {
-      return isAdminFor(data) || isRefereeFor(data);
+      return isAdminFor(data);
     }
 
     function isAdmin(roomId) {
@@ -109,43 +98,7 @@ service cloud.firestore {
         && request.resource.data.meta.get(
           'adminEmails',
           ['ipem146centenario@gmail.com']
-        ).size() <= 20
-        && request.resource.data.meta.get(
-          'refereeEmails',
-          ['josepantaleo@gmail.com']
-        ) is list
-        && request.resource.data.meta.get(
-          'refereeEmails',
-          ['josepantaleo@gmail.com']
-        ).size() <= 50;
-    }
-
-    function validRefereeRoomUpdate() {
-      return request.resource.data
-          .diff(resource.data)
-          .affectedKeys()
-          .hasOnly(['players', 'pairings', 'meta'])
-        && request.resource.data.meta
-          .diff(resource.data.meta)
-          .affectedKeys()
-          .hasOnly([
-            'round',
-            'status',
-            'roundStatus',
-            'pendingApprovalAt',
-            'autoApprovalCancelled',
-            'statusBeforeFinish',
-            'finishedAt',
-            'finishedBy',
-            'roundCountdownSetAt',
-            'roundCountdownEndsAtMs',
-            'roundCountdownMs',
-            'roundCountdownDurationMs',
-            'roundCountdownRound',
-            'roundCountdownStartedBy',
-            'roundCountdownAdjustedBy',
-            'pairingWarnings'
-          ]);
+        ).size() <= 20;
     }
 
     function validSelfRegistration() {
@@ -248,7 +201,6 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if validBootstrapCreate();
       allow update: if (isAdminFor(resource.data) && validAdminRoomUpdate())
-        || (isRefereeFor(resource.data) && validRefereeRoomUpdate())
         || validSelfRegistration();
       allow delete: if false;
 
