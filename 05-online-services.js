@@ -25,6 +25,11 @@ let announcementsCollectionRef = null,
   announcementsUnsub = null,
   lastAnnouncementId_ = null,
   announcementHistory_ = [],
+  tournamentAuditCollectionRef_ = null,
+  tournamentAuditUnsub_ = null,
+  tournamentAuditHistory_ = [],
+  tournamentAuditSeenIds_ = new Set(),
+  tournamentDecisionBannerTimer_ = null,
   publicScreenActiveGames_ = [],
   publicScreenCycleIndex_ = 0,
   publicScreenCycleTimer_ = null,
@@ -61,6 +66,152 @@ function subscribeAnnouncements() {
           (e = !1));
       },
       () => {},
+    );
+}
+function tournamentAuditEventId_() {
+  const e =
+    "undefined" != typeof crypto && crypto.getRandomValues
+      ? crypto.getRandomValues(new Uint32Array(2))
+      : [Math.floor(4294967296 * Math.random()), Date.now() >>> 0];
+  return `audit_${Date.now().toString(36)}_${e[0].toString(36)}${e[1].toString(36)}`;
+}
+function tournamentAuditActorRole_(e) {
+  return isCurrentUserAdmin(e)
+    ? isCurrentUserReferee(e)
+      ? "Administrador y arbitro"
+      : "Administrador"
+    : "Arbitro";
+}
+function tournamentAuditRecord_(e, t, a) {
+  return {
+    type: String(e || "decision").slice(0, 40),
+    message: String(t || "Decision del torneo").slice(0, 500),
+    actorEmail: currentUser ? currentUser.email : "",
+    actorName: currentUser
+      ? String(currentUser.displayName || currentUser.email || "").slice(0, 100)
+      : "",
+    actorRole: tournamentAuditActorRole_(lastTournamentState),
+    at: srvTimestamp(),
+    details: a && "object" == typeof a ? a : {},
+  };
+}
+function writeTournamentAudit_(e, t, a, n) {
+  if (!tournamentAuditCollectionRef_)
+    throw new Error("El historial de auditoria no esta disponible");
+  e.set(
+    tournamentAuditCollectionRef_.doc(tournamentAuditEventId_()),
+    tournamentAuditRecord_(t, a, n),
+  );
+}
+function formatTournamentAuditTime_(e) {
+  const t = getTimestampMs(e);
+  return t
+    ? new Date(t).toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "Sin hora";
+}
+function renderTournamentDecisionBanner_(e) {
+  const t = document.getElementById("tournament-decision-banner"),
+    a = document.getElementById("tournament-decision-text");
+  if (!t || !a) return;
+  (clearTimeout(tournamentDecisionBannerTimer_),
+    e && e.message
+      ? ((a.textContent = e.message),
+        (t.style.display = ""),
+        (tournamentDecisionBannerTimer_ = setTimeout(() => {
+          t.style.display = "none";
+        }, 1e4)))
+      : (t.style.display = "none"));
+}
+function tournamentAuditTypeLabel_(e) {
+  return (
+    {
+      wo: "W.O.",
+      wo_correction: "Correccion de W.O.",
+      sanction: "Sancion",
+      sanction_reversed: "Revision de sancion",
+      match_suspended: "Suspension",
+      match_resumed: "Reanudacion",
+      round_closed: "Cierre de ronda",
+      tournament_closed: "Cierre de torneo",
+      tournament_reopened: "Reapertura de torneo",
+    }[e] || "Decision"
+  );
+}
+function renderTournamentAuditHistory_() {
+  const e = document.getElementById("tournament-audit-panel"),
+    t = document.getElementById("tournament-audit-list"),
+    a = document.getElementById("tournament-audit-count"),
+    o = document.getElementById("tournament-official-audit-tab-count");
+  if (!e || !t) return;
+  const n = isCurrentUserOfficial(lastTournamentState);
+  if (!n) return void (e.style.display = "none");
+  ((e.style.display = ""),
+    a && (a.textContent = tournamentAuditHistory_.length),
+    o && (o.textContent = tournamentAuditHistory_.length));
+  if (!tournamentAuditHistory_.length)
+    return void (t.innerHTML =
+      '<p class="muted" style="margin:0">Todavia no hay decisiones registradas.</p>');
+  t.innerHTML = tournamentAuditHistory_
+    .map((e) => {
+      const a = escapeAnnouncementHtml_(e.message),
+        n = escapeAnnouncementHtml_(
+          e.actorName || e.actorEmail || "Autoridad del torneo",
+        ),
+        o = escapeAnnouncementHtml_(tournamentAuditTypeLabel_(e.type)),
+        r = escapeAnnouncementHtml_(formatTournamentAuditTime_(e.at));
+      return `<article class="tournament-audit-item">
+        <div class="tournament-audit-item-heading">
+          <span class="tournament-audit-type">${o}</span>
+          <time>${r}</time>
+        </div>
+        <p>${a}</p>
+        <small>${n}${e.actorRole ? ` - ${escapeAnnouncementHtml_(e.actorRole)}` : ""}</small>
+      </article>`;
+    })
+    .join("");
+}
+function subscribeTournamentAudit_() {
+  (tournamentAuditUnsub_ &&
+      (tournamentAuditUnsub_(), (tournamentAuditUnsub_ = null)),
+    (tournamentAuditHistory_ = []),
+    (tournamentAuditSeenIds_ = new Set()));
+  if (!tournamentAuditCollectionRef_) return;
+  let e = !0;
+  tournamentAuditUnsub_ = tournamentAuditCollectionRef_
+    .orderBy("at", "desc")
+    .limit(100)
+    .onSnapshot(
+      (t) => {
+        const a = t.docs.map((e) => ({ id: e.id, ...e.data() })),
+          n = e
+            ? []
+            : a
+                .filter((e) => !tournamentAuditSeenIds_.has(e.id))
+                .reverse();
+        ((tournamentAuditHistory_ = a),
+          (tournamentAuditSeenIds_ = new Set(a.map((e) => e.id))),
+          renderTournamentAuditHistory_());
+        n.forEach((e) => {
+          (renderTournamentDecisionBanner_(e),
+            toast("Decision del torneo: " + (e.message || ""), 8e3),
+            SoundFX.announcement());
+        });
+        n.length &&
+          setTimeout(() => {
+            "function" == typeof refreshTournament && refreshTournament();
+          }, 100);
+        e = !1;
+      },
+      (e) => {
+        console.warn("No se pudo sincronizar la auditoria del torneo:", e);
+      },
     );
 }
 let announcementBannerTimer_ = null;
@@ -1067,6 +1218,7 @@ function connectFirebase(e, t) {
   ((fbRoomRef = fbDb.collection("torneos").doc(t || "main")),
     (gamesCollectionRef = fbRoomRef.collection("games")),
     (announcementsCollectionRef = fbRoomRef.collection("announcements")),
+    (tournamentAuditCollectionRef_ = fbRoomRef.collection("audit")),
     (subscribedRound_ = void 0),
     (lastRoundGames = []),
     (document.getElementById("tournament-auth-box").style.display = ""),
@@ -1082,19 +1234,27 @@ function connectFirebase(e, t) {
           : null),
           updateAuthUI(),
           currentUser
-            ? (subscribeTournament(), subscribeAnnouncements())
+            ? (subscribeTournament(),
+              subscribeAnnouncements(),
+              subscribeTournamentAudit_())
             : (tournamentUnsub &&
                 (tournamentUnsub(), (tournamentUnsub = null)),
               gamesRoundUnsub &&
                 (gamesRoundUnsub(), (gamesRoundUnsub = null)),
               announcementsUnsub &&
                 (announcementsUnsub(), (announcementsUnsub = null)),
+              tournamentAuditUnsub_ &&
+                (tournamentAuditUnsub_(), (tournamentAuditUnsub_ = null)),
               tournamentMatchActive && exitTournamentMatch(),
               unsubscribeMatchChat(),
               unsubscribeCallSignaling(),
               (announcementHistory_ = []),
+              (tournamentAuditHistory_ = []),
+              (tournamentAuditSeenIds_ = new Set()),
               renderAnnouncementHistory_(),
+              renderTournamentAuditHistory_(),
               renderAnnouncementBanner_(null),
+              renderTournamentDecisionBanner_(null),
               (lastTournamentState = null),
               (lastRoundGames = []),
               renderTournamentState(null)));

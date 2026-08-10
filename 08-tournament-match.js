@@ -1310,6 +1310,22 @@ configSignoutBtn &&
       }
     }),
   document
+    .getElementById("tournament-export-audit-pdf-btn")
+    .addEventListener("click", async (e) => {
+      const t = e.currentTarget;
+      t.disabled = !0;
+      try {
+        const e = await exportTournamentAuditPDF();
+        toast(
+          `PDF de auditoría generado con ${e} registro${1 === e ? "" : "s"}.`,
+        );
+      } catch (e) {
+        showError(e);
+      } finally {
+        t.disabled = !1;
+      }
+    }),
+  document
     .getElementById("tournament-reset-btn")
     .addEventListener("click", async () => {
       if (
@@ -1358,15 +1374,29 @@ function openTournamentAdministration_() {
     return void toast(
       "Iniciá sesión con la cuenta administradora para gestionar el torneo.",
     );
+  const activeTournament =
+    lastTournamentState &&
+    ("active" === lastTournamentState.meta.status ||
+      "finished" === lastTournamentState.meta.status);
+  if (
+    activeTournament &&
+    "function" == typeof renderTournamentOfficialTabs_
+  ) {
+    renderTournamentOfficialTabs_(lastTournamentState);
+    const workspace = document.getElementById("tournament-official-tabs"),
+      adminTab = document.getElementById("tournament-official-admin-tab"),
+      adminContent = document.getElementById(
+        "tournament-official-admin-content",
+      );
+    (workspace && (workspace.style.display = ""),
+      adminTab && (adminTab.hidden = !1),
+      "function" == typeof activateTournamentOfficialTab_ &&
+        activateTournamentOfficialTab_("admin", !1),
+      adminContent && (adminContent.hidden = !1));
+  }
   const e = document.getElementById("tournament-admin-panel"),
     t = document.getElementById("tournament-setup-box"),
-    a =
-      e &&
-      lastTournamentState &&
-      ("active" === lastTournamentState.meta.status ||
-        "finished" === lastTournamentState.meta.status)
-        ? e
-        : t;
+    a = e && activeTournament ? e : t;
   if (!a) return;
   ((a.style.display = ""),
     (a.tabIndex = -1),
@@ -1400,6 +1430,8 @@ tournamentAdminEntryBtn &&
 const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {
+    "function" == typeof activateTournamentOfficialTab_ &&
+      activateTournamentOfficialTab_("referee", !1);
     const e = document.getElementById("tournament-players-card");
     e && e.scrollIntoView({ behavior: "smooth", block: "start" });
   }),

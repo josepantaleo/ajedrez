@@ -1,4 +1,86 @@
 /* Tournament subscriptions, persistence, pairing, ranking, and exports. Generated from the verified legacy bundle. */
+let tournamentFinishedGamesSyncBusy_ = !1,
+  tournamentFinishedGamesSyncQueued_ = !1,
+  tournamentFinishedGamesSyncNoticeKey_ = "";
+async function reconcileFinishedGamesForTournament_() {
+  if (tournamentFinishedGamesSyncBusy_)
+    return void (tournamentFinishedGamesSyncQueued_ = !0);
+  const e = lastTournamentState;
+  if (
+    !e ||
+    !e.meta ||
+    "active" !== e.meta.status ||
+    "playing" !== e.meta.roundStatus ||
+    !isCurrentUserOfficial(e)
+  )
+    return;
+  const t = Number(e.meta.round),
+    a = new Map(
+      (e.pairings || [])
+        .filter((e) => e.round === t)
+        .map((e) => [Number(e.board), e]),
+    ),
+    n = lastRoundGames.filter((e) => {
+      const n = a.get(Number(e.board));
+      return (
+        Number(e.round) === t &&
+        n &&
+        !n.result &&
+        "finished" === e.status &&
+        ["1-0", "0-1", "1/2-1/2"].includes(e.result)
+      );
+    });
+  if (!n.length) return;
+  tournamentFinishedGamesSyncBusy_ = !0;
+  let o = 0;
+  try {
+    for (const e of n) {
+      const t =
+        lastTournamentState &&
+        (lastTournamentState.pairings || []).find(
+          (t) =>
+            Number(t.round) === Number(e.round) &&
+            Number(t.board) === Number(e.board),
+        );
+      if (t && !t.result) {
+        const t = await fbSubmitResult(e.round, e.board, e.result);
+        ((lastTournamentState = t), o++);
+      }
+    }
+    if (o) {
+      const e = await getTournamentStateOnce();
+      ((lastTournamentState = e),
+        tournamentMatchActive || renderTournamentState(e),
+        "function" == typeof renderPublicScreen && renderPublicScreen(e),
+        refreshPublicScreenActiveMiniBoard_(),
+        renderPublicScreenZoomBoard_(),
+        handleLiveMatchUpdate(e));
+      if ("pending_approval" === e.meta.roundStatus) {
+        const a = `${e.meta.round}:${e.meta.pendingApprovalAt || ""}`;
+        a !== tournamentFinishedGamesSyncNoticeKey_ &&
+          ((tournamentFinishedGamesSyncNoticeKey_ = a),
+          toast(
+            `Ya termino la ultima mesa de la ronda ${e.meta.round}. La tabla y el torneo se actualizaron automaticamente.`,
+            7e3,
+          ),
+          SoundFX.announcement());
+      }
+    }
+  } catch (e) {
+    (recordTournamentFirebaseError_(e),
+      console.warn(
+        "No se pudo confirmar automaticamente un resultado terminado:",
+        e,
+      ));
+  } finally {
+    ((tournamentFinishedGamesSyncBusy_ = !1),
+      tournamentFinishedGamesSyncQueued_ &&
+        ((tournamentFinishedGamesSyncQueued_ = !1),
+        setTimeout(() => {
+          reconcileFinishedGamesForTournament_();
+        }, 0)));
+  }
+}
 function subscribeRoundGames(e) {
   (subscribedRound_ !== e || (!gamesRoundUnsub && null != e)) &&
     (gamesRoundUnsub && (gamesRoundUnsub(), (gamesRoundUnsub = null)),
@@ -54,7 +136,9 @@ function subscribeRoundGames(e) {
                     renderTournamentState(lastTournamentState),
                   refreshPublicScreenActiveMiniBoard_(),
                   renderPublicScreenZoomBoard_(),
-                  handleLiveMatchUpdate(lastTournamentState));
+                  handleLiveMatchUpdate(lastTournamentState),
+                  (!e.metadata || !e.metadata.hasPendingWrites) &&
+                    reconcileFinishedGamesForTournament_());
               } catch (e) {
                 console.error(
                   "[subscribeRoundGames] error procesando snapshot:",
@@ -85,6 +169,7 @@ function subscribeTournament() {
         n = lastKnownTournamentStatus_;
       ((lastKnownTournamentStatus_ = a.meta.status),
         (lastTournamentState = a),
+        "function" == typeof updateAuthUI && updateAuthUI(),
         currentUser &&
           isCurrentUserAdmin(a) &&
           fbBackfillGameAccessFields_(a).catch((e) =>
@@ -125,6 +210,23 @@ async function getTournamentStateOnce() {
     const e = await fbRoomRef.get();
     return (recordTournamentFirebaseSync_("room"),
     normalizeTournamentState(e.exists ? e.data() : null));
+  } catch (e) {
+    throw (recordTournamentFirebaseError_(e), e);
+  }
+}
+async function getRoundGamesOnce_(e) {
+  if (!gamesCollectionRef || null == e) return [];
+  try {
+    const t = await gamesCollectionRef
+      .where("round", "==", Number(e))
+      .get({ source: "server" });
+    return (
+      recordTournamentFirebaseSync_("games"),
+      (lastRoundGames = t.docs.map((e) =>
+        e.data({ serverTimestamps: "estimate" }),
+      )),
+      lastRoundGames
+    );
   } catch (e) {
     throw (recordTournamentFirebaseError_(e), e);
   }
@@ -391,8 +493,10 @@ async function fbSelfRegister(e) {
       const n = await e.get(fbRoomRef);
       if (!n.exists) throw new Error("Todavía no se creó el torneo");
       const o = n.data();
-      if (o.meta && "finished" === o.meta.status)
-        throw new Error("El torneo ya finalizó, no se puede inscribir");
+      if (!o.meta || "active" !== o.meta.status)
+        throw new Error(
+          "Las inscripciones solo están habilitadas mientras el torneo está activo",
+        );
       const r = o.players || [];
       if (r.some((e) => (e.email || "").toLowerCase() === a))
         throw new Error("Ya estás inscripto en este torneo");
@@ -541,7 +645,16 @@ async function fbDeletePlayer(e) {
     getTournamentStateOnce()
   );
 }
-async function fbWithdrawPlayer(e) {
+function requireTournamentDecisionReason_(e, t) {
+  const a = String(e || "").trim();
+  if (!a)
+    throw new Error(`El motivo de ${t || "la decision"} es obligatorio`);
+  if (a.length > 300)
+    throw new Error("El motivo no puede superar los 300 caracteres");
+  return a;
+}
+async function fbWithdrawPlayer(e, reason) {
+  reason = requireTournamentDecisionReason_(reason, "retiro");
   return (
     assertReferee(),
     await fbDb.runTransaction(async (t) => {
@@ -556,7 +669,18 @@ async function fbWithdrawPlayer(e) {
         throw new Error("Este jugador está descalificado, no se puede retirar");
       const r = n.slice();
       ((r[o] = { ...r[o], status: "withdrawn" }),
-        t.update(fbRoomRef, { players: r }));
+        t.update(fbRoomRef, { players: r }),
+        writeTournamentAudit_(
+          t,
+          "sanction",
+          `Se retiro a ${n[o].name} del torneo. Motivo: ${reason}.`,
+          {
+            action: "withdraw",
+            playerId: e,
+            playerName: n[o].name,
+            reason,
+          },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -576,12 +700,19 @@ async function fbReactivatePlayer(e) {
         throw new Error("Un jugador descalificado no puede reincorporarse");
       const r = n.slice();
       ((r[o] = { ...r[o], status: "active" }),
-        t.update(fbRoomRef, { players: r }));
+        t.update(fbRoomRef, { players: r }),
+        writeTournamentAudit_(
+          t,
+          "sanction_reversed",
+          `Se reincorporo a ${n[o].name} al torneo.`,
+          { action: "reactivate", playerId: e, playerName: n[o].name },
+        ));
     }),
     getTournamentStateOnce()
   );
 }
-async function fbDisqualifyPlayer(e) {
+async function fbDisqualifyPlayer(e, reason) {
+  reason = requireTournamentDecisionReason_(reason, "descalificacion");
   return (
     assertReferee(),
     await fbDb.runTransaction(async (t) => {
@@ -594,7 +725,18 @@ async function fbDisqualifyPlayer(e) {
       if (-1 === o) throw new Error("No se encontró ese jugador");
       const r = n.slice();
       ((r[o] = { ...r[o], status: "disqualified" }),
-        t.update(fbRoomRef, { players: r }));
+        t.update(fbRoomRef, { players: r }),
+        writeTournamentAudit_(
+          t,
+          "sanction",
+          `Se descalifico a ${n[o].name} del torneo. Motivo: ${reason}.`,
+          {
+            action: "disqualify",
+            playerId: e,
+            playerName: n[o].name,
+            reason,
+          },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -889,7 +1031,13 @@ async function fbApproveRound() {
           r.forEach((e) => {
             e.round === n.round && (e.locked = !0);
           }),
-          e.update(fbRoomRef, { meta: n, pairings: r }));
+          e.update(fbRoomRef, { meta: n, pairings: r }),
+          writeTournamentAudit_(
+            e,
+            "tournament_closed",
+            `Se cerro el torneo al validar la ronda final ${n.round}.`,
+            { action: "finish-after-final-round", round: n.round },
+          ));
         return;
       }
       const s = {
@@ -947,7 +1095,13 @@ async function fbCloseRound() {
         e.round === n.round ? { ...e, locked: !0 } : e,
       );
       ((n.roundStatus = "closed"),
-        e.update(fbRoomRef, { meta: n, pairings: o }));
+        e.update(fbRoomRef, { meta: n, pairings: o }),
+        writeTournamentAudit_(
+          e,
+          "round_closed",
+          `Se cerro la ronda ${n.round}; sus resultados quedaron bloqueados.`,
+          { action: "close-round", round: n.round },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -977,7 +1131,13 @@ async function fbGenerateRoundFromClosed(e) {
           (o.autoApprovalCancelled = !0),
           (o.finishedAt = syncedNow_()),
           (o.finishedBy = currentUser ? currentUser.email : null),
-          t.update(fbRoomRef, { meta: o }));
+          t.update(fbRoomRef, { meta: o }),
+          writeTournamentAudit_(
+            t,
+            "tournament_closed",
+            `Se cerro el torneo despues de la ronda ${o.round}.`,
+            { action: "finish-after-closed-round", round: o.round },
+          ));
         return;
       }
       const r = (n.players || []).map((e) => ({
@@ -1022,8 +1182,9 @@ async function fbGenerateRoundFromClosed(e) {
     getTournamentStateOnce().then((e) => notifyPublishedRound_(e, t))
   );
 }
-async function fbSetGameSuspended(e, t, a) {
+async function fbSetGameSuspended(e, t, a, reason) {
   (assertReferee(), (e = Number(e)), (t = Number(t)));
+  a && (reason = requireTournamentDecisionReason_(reason, "suspension"));
   if (
     lastTournamentState &&
     "finished" === lastTournamentState.meta.status
@@ -1059,6 +1220,27 @@ async function fbSetGameSuspended(e, t, a) {
         (s.selectedAt = null)),
         (s.status = a ? "suspended" : "ongoing"),
         e.update(n, s));
+      const l = (o.pairings || []).find(
+          (e) => e.round === s.round && e.board === s.board,
+        ),
+        i = l
+          ? `${l.whiteName} vs ${l.blackName}`
+          : `mesa ${s.board} de la ronda ${s.round}`;
+      writeTournamentAudit_(
+        e,
+        a ? "match_suspended" : "match_resumed",
+        a
+          ? `Se suspendio la partida ${i}. Motivo: ${reason}.`
+          : `Se reanudo la partida ${i}.`,
+        {
+          action: a ? "suspend" : "resume",
+          round: s.round,
+          board: s.board,
+          whiteName: l ? l.whiteName : "",
+          blackName: l ? l.blackName : "",
+          reason: a ? reason : "",
+        },
+      );
     }),
     getTournamentStateOnce()
   );
@@ -1097,8 +1279,13 @@ async function fbAutoDeclareForfeits() {
         l.w !== l.b &&
           ((s.status = "finished"),
           (s.resultReason = "wo-auto"),
+          (s.result = l.w ? "wo-black" : "wo-white"),
           (s._woWinnerIsWhite = l.w),
-          t.update(e, { status: s.status, resultReason: s.resultReason }),
+          t.update(e, {
+            status: s.status,
+            result: s.result,
+            resultReason: s.resultReason,
+          }),
           r.push({ round: s.round, board: s.board, whiteJoined: l.w }));
       });
     } catch (e) {
@@ -1147,13 +1334,29 @@ async function fbAutoDeclareForfeits() {
           ((n.roundStatus = "pending_approval"),
           (n.pendingApprovalAt = syncedNow_()),
           (n.autoApprovalCancelled = !1));
-        e.update(fbRoomRef, { players: o, pairings: i, meta: n });
+        (e.update(fbRoomRef, { players: o, pairings: i, meta: n }),
+          s.forEach((t) => {
+            const a = `Vencio el tiempo reglamentario de espera de ${Number(n.woGraceMinutes) || 0} minutos y solo se presento ${t.winner}.`;
+            writeTournamentAudit_(
+              e,
+              "wo",
+              `W.O. automatico en ronda ${n.round}, mesa ${t.board}: gana ${t.winner}; ausente ${t.absent}. Motivo: ${a}`,
+              {
+                action: "wo-auto",
+                round: n.round,
+                board: t.board,
+                winner: t.winner,
+                absent: t.absent,
+                reason: a,
+              },
+            );
+          }));
       }
     }),
     s
   );
 }
-async function fbSubmitResult(e, t, a) {
+async function fbSubmitResult(e, t, a, reason) {
   return (
     (e = Number(e)),
     (t = Number(t)),
@@ -1179,6 +1382,8 @@ async function fbSubmitResult(e, t, a) {
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
         E = ["wo-black", "wo-white", "double-wo"];
+      E.includes(a) &&
+        (reason = requireTournamentDecisionReason_(reason, "W.O."));
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
@@ -1200,7 +1405,8 @@ async function fbSubmitResult(e, t, a) {
         );
       const P = gamesCollectionRef.doc(gameDocId_(e, t)),
         gameSnap = await n.get(P),
-        gameRow = gameSnap.exists ? gameSnap.data() : null;
+        gameRow = gameSnap.exists ? gameSnap.data() : null,
+        previousResult = c.result || "";
       if ("double-wo" === a) {
         const graceMinutes = Number(m.meta.woGraceMinutes) || 0,
           joined = (gameRow && gameRow.joined) || { w: !1, b: !1 };
@@ -1252,6 +1458,22 @@ async function fbSubmitResult(e, t, a) {
         (f.autoApprovalCancelled = !1)),
         n.update(fbRoomRef, { players: s, pairings: i, meta: f }),
         g && n.update(p, g));
+      if (E.includes(a) || E.includes(previousResult)) {
+        const e = E.includes(a) ? "wo" : "wo_correction",
+          o = E.includes(a)
+            ? `Se declaro ${resultLabel(a)} en ronda ${c.round}, mesa ${c.board}: ${c.whiteName} vs ${c.blackName}. Motivo: ${reason}.`
+            : `Se corrigio el W.O. de la ronda ${c.round}, mesa ${c.board}. Nuevo resultado: ${resultLabel(a)}.`;
+        writeTournamentAudit_(n, e, o, {
+          action: E.includes(a) ? "wo-manual" : "wo-correction",
+          round: c.round,
+          board: c.board,
+          whiteName: c.whiteName,
+          blackName: c.blackName,
+          previousResult,
+          result: a,
+          reason: E.includes(a) ? reason : "",
+        });
+      }
     }),
     getTournamentStateOnce()
   );
@@ -1277,7 +1499,13 @@ async function fbFinishTournament() {
         (n.autoApprovalCancelled = !0),
         (n.finishedAt = syncedNow_()),
         (n.finishedBy = currentUser ? currentUser.email : null),
-        e.update(fbRoomRef, { meta: n, pairings: o }));
+        e.update(fbRoomRef, { meta: n, pairings: o }),
+        writeTournamentAudit_(
+          e,
+          "tournament_closed",
+          `Se cerro el torneo en la ronda ${n.round}.`,
+          { action: "finish-tournament", round: n.round },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -1303,7 +1531,17 @@ async function fbReopenTournament() {
         (n.status = "active"),
         (n.roundStatus = o),
         (n.autoApprovalCancelled = !1),
-        e.update(fbRoomRef, { meta: n, pairings: r }));
+        e.update(fbRoomRef, { meta: n, pairings: r }),
+        writeTournamentAudit_(
+          e,
+          "tournament_reopened",
+          `Se reabrio el torneo en la ronda ${n.round}.`,
+          {
+            action: "reopen-tournament",
+            round: n.round,
+            restoredRoundStatus: o,
+          },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -2240,4 +2478,96 @@ async function exportFullTournamentPDF(e) {
     .replace(/[^a-z0-9]+/gi, "_")
     .toLowerCase();
   t.save(`torneo_completo_${d}_ronda${e.meta.round}.pdf`);
+}
+function pdfDrawAuditPageHeader_(e, t, a, n) {
+  (e.setFont(void 0, "bold"),
+    e.setFontSize(16),
+    e.text("Historial completo de auditoría", 14, 17),
+    e.setFontSize(11),
+    e.text(t.meta.name || "Torneo", 14, 24),
+    e.setFont(void 0, "normal"),
+    e.setFontSize(9),
+    e.text(`Generado: ${a}`, 14, 30),
+    e.text(`Registros: ${n}`, 196, 30, { align: "right" }),
+    e.line(14, 34, 196, 34));
+  return 41;
+}
+async function exportTournamentAuditPDF() {
+  assertAdminOrReferee();
+  if (!tournamentAuditCollectionRef_)
+    throw new Error("El historial de auditoría no está disponible");
+  const e = await getTournamentStateOnce();
+  assertAdminOrRefereeForState_(e);
+  const t = await tournamentAuditCollectionRef_.orderBy("at", "asc").get(),
+    a = t.docs.map((e) => ({ id: e.id, ...e.data() }));
+  if (!a.length)
+    throw new Error("Todavía no hay decisiones para exportar");
+  await ensureJsPdfLoaded_();
+  const n = new window.jspdf.jsPDF(),
+    o = new Date().toLocaleString("es-AR");
+  let r = pdfDrawAuditPageHeader_(n, e, o, a.length);
+  const s = (t) => {
+    if (r + t <= 280) return;
+    (n.addPage(), (r = pdfDrawAuditPageHeader_(n, e, o, a.length)));
+  };
+  a.forEach((t, a) => {
+    const l = tournamentAuditTypeLabel_(t.type),
+      i = formatTournamentAuditTime_(t.at),
+      c = t.actorName || t.actorEmail || "Autoridad del torneo",
+      d = [c, t.actorRole, t.actorEmail && t.actorEmail !== c ? t.actorEmail : ""]
+        .filter(Boolean)
+        .join(" - "),
+      u = t.details && "object" == typeof t.details ? t.details : {},
+      m = [];
+    (u.round && m.push(`Ronda ${u.round}`),
+      u.board && m.push(`Mesa ${u.board}`),
+      u.playerName && m.push(`Jugador: ${u.playerName}`),
+      u.whiteName &&
+        u.blackName &&
+        m.push(`${u.whiteName} vs ${u.blackName}`));
+    const g = n.splitTextToSize(String(t.message || "Decisión registrada"), 178),
+      f =
+        u.reason && !String(t.message || "").includes(String(u.reason))
+          ? n.splitTextToSize(`Motivo: ${u.reason}`, 178)
+          : [],
+      h = n.splitTextToSize(d, 178),
+      y = m.length ? n.splitTextToSize(m.join(" · "), 178) : [],
+      p = 15 + 5 * (g.length + f.length + h.length + y.length);
+    (s(p),
+      n.setFont(void 0, "bold"),
+      n.setFontSize(11),
+      n.text(`${a + 1}. ${l}`, 14, r),
+      n.setFont(void 0, "normal"),
+      n.setFontSize(9),
+      n.text(i, 196, r, { align: "right" }),
+      (r += 5),
+      h.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      y.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      n.setFontSize(10),
+      g.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      f.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      (r += 3),
+      n.setDrawColor(210),
+      n.line(14, r, 196, r),
+      (r += 6));
+  });
+  const l = n.getNumberOfPages();
+  for (let e = 1; e <= l; e++)
+    (n.setPage(e),
+      n.setFontSize(8),
+      n.setTextColor(110),
+      n.text(`Página ${e} de ${l}`, 196, 290, { align: "right" }));
+  const i = (e.meta.name || "torneo")
+      .replace(/[^a-z0-9]+/gi, "_")
+      .toLowerCase(),
+    c = new Date().toISOString().slice(0, 10);
+  return (n.save(`auditoria_completa_${i}_${c}.pdf`), a.length);
 }

@@ -4716,6 +4716,11 @@ let announcementsCollectionRef = null,
   announcementsUnsub = null,
   lastAnnouncementId_ = null,
   announcementHistory_ = [],
+  tournamentAuditCollectionRef_ = null,
+  tournamentAuditUnsub_ = null,
+  tournamentAuditHistory_ = [],
+  tournamentAuditSeenIds_ = new Set(),
+  tournamentDecisionBannerTimer_ = null,
   publicScreenActiveGames_ = [],
   publicScreenCycleIndex_ = 0,
   publicScreenCycleTimer_ = null,
@@ -4752,6 +4757,152 @@ function subscribeAnnouncements() {
           (e = !1));
       },
       () => {},
+    );
+}
+function tournamentAuditEventId_() {
+  const e =
+    "undefined" != typeof crypto && crypto.getRandomValues
+      ? crypto.getRandomValues(new Uint32Array(2))
+      : [Math.floor(4294967296 * Math.random()), Date.now() >>> 0];
+  return `audit_${Date.now().toString(36)}_${e[0].toString(36)}${e[1].toString(36)}`;
+}
+function tournamentAuditActorRole_(e) {
+  return isCurrentUserAdmin(e)
+    ? isCurrentUserReferee(e)
+      ? "Administrador y arbitro"
+      : "Administrador"
+    : "Arbitro";
+}
+function tournamentAuditRecord_(e, t, a) {
+  return {
+    type: String(e || "decision").slice(0, 40),
+    message: String(t || "Decision del torneo").slice(0, 500),
+    actorEmail: currentUser ? currentUser.email : "",
+    actorName: currentUser
+      ? String(currentUser.displayName || currentUser.email || "").slice(0, 100)
+      : "",
+    actorRole: tournamentAuditActorRole_(lastTournamentState),
+    at: srvTimestamp(),
+    details: a && "object" == typeof a ? a : {},
+  };
+}
+function writeTournamentAudit_(e, t, a, n) {
+  if (!tournamentAuditCollectionRef_)
+    throw new Error("El historial de auditoria no esta disponible");
+  e.set(
+    tournamentAuditCollectionRef_.doc(tournamentAuditEventId_()),
+    tournamentAuditRecord_(t, a, n),
+  );
+}
+function formatTournamentAuditTime_(e) {
+  const t = getTimestampMs(e);
+  return t
+    ? new Date(t).toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "Sin hora";
+}
+function renderTournamentDecisionBanner_(e) {
+  const t = document.getElementById("tournament-decision-banner"),
+    a = document.getElementById("tournament-decision-text");
+  if (!t || !a) return;
+  (clearTimeout(tournamentDecisionBannerTimer_),
+    e && e.message
+      ? ((a.textContent = e.message),
+        (t.style.display = ""),
+        (tournamentDecisionBannerTimer_ = setTimeout(() => {
+          t.style.display = "none";
+        }, 1e4)))
+      : (t.style.display = "none"));
+}
+function tournamentAuditTypeLabel_(e) {
+  return (
+    {
+      wo: "W.O.",
+      wo_correction: "Correccion de W.O.",
+      sanction: "Sancion",
+      sanction_reversed: "Revision de sancion",
+      match_suspended: "Suspension",
+      match_resumed: "Reanudacion",
+      round_closed: "Cierre de ronda",
+      tournament_closed: "Cierre de torneo",
+      tournament_reopened: "Reapertura de torneo",
+    }[e] || "Decision"
+  );
+}
+function renderTournamentAuditHistory_() {
+  const e = document.getElementById("tournament-audit-panel"),
+    t = document.getElementById("tournament-audit-list"),
+    a = document.getElementById("tournament-audit-count"),
+    o = document.getElementById("tournament-official-audit-tab-count");
+  if (!e || !t) return;
+  const n = isCurrentUserOfficial(lastTournamentState);
+  if (!n) return void (e.style.display = "none");
+  ((e.style.display = ""),
+    a && (a.textContent = tournamentAuditHistory_.length),
+    o && (o.textContent = tournamentAuditHistory_.length));
+  if (!tournamentAuditHistory_.length)
+    return void (t.innerHTML =
+      '<p class="muted" style="margin:0">Todavia no hay decisiones registradas.</p>');
+  t.innerHTML = tournamentAuditHistory_
+    .map((e) => {
+      const a = escapeAnnouncementHtml_(e.message),
+        n = escapeAnnouncementHtml_(
+          e.actorName || e.actorEmail || "Autoridad del torneo",
+        ),
+        o = escapeAnnouncementHtml_(tournamentAuditTypeLabel_(e.type)),
+        r = escapeAnnouncementHtml_(formatTournamentAuditTime_(e.at));
+      return `<article class="tournament-audit-item">
+        <div class="tournament-audit-item-heading">
+          <span class="tournament-audit-type">${o}</span>
+          <time>${r}</time>
+        </div>
+        <p>${a}</p>
+        <small>${n}${e.actorRole ? ` - ${escapeAnnouncementHtml_(e.actorRole)}` : ""}</small>
+      </article>`;
+    })
+    .join("");
+}
+function subscribeTournamentAudit_() {
+  (tournamentAuditUnsub_ &&
+      (tournamentAuditUnsub_(), (tournamentAuditUnsub_ = null)),
+    (tournamentAuditHistory_ = []),
+    (tournamentAuditSeenIds_ = new Set()));
+  if (!tournamentAuditCollectionRef_) return;
+  let e = !0;
+  tournamentAuditUnsub_ = tournamentAuditCollectionRef_
+    .orderBy("at", "desc")
+    .limit(100)
+    .onSnapshot(
+      (t) => {
+        const a = t.docs.map((e) => ({ id: e.id, ...e.data() })),
+          n = e
+            ? []
+            : a
+                .filter((e) => !tournamentAuditSeenIds_.has(e.id))
+                .reverse();
+        ((tournamentAuditHistory_ = a),
+          (tournamentAuditSeenIds_ = new Set(a.map((e) => e.id))),
+          renderTournamentAuditHistory_());
+        n.forEach((e) => {
+          (renderTournamentDecisionBanner_(e),
+            toast("Decision del torneo: " + (e.message || ""), 8e3),
+            SoundFX.announcement());
+        });
+        n.length &&
+          setTimeout(() => {
+            "function" == typeof refreshTournament && refreshTournament();
+          }, 100);
+        e = !1;
+      },
+      (e) => {
+        console.warn("No se pudo sincronizar la auditoria del torneo:", e);
+      },
     );
 }
 let announcementBannerTimer_ = null;
@@ -5758,6 +5909,7 @@ function connectFirebase(e, t) {
   ((fbRoomRef = fbDb.collection("torneos").doc(t || "main")),
     (gamesCollectionRef = fbRoomRef.collection("games")),
     (announcementsCollectionRef = fbRoomRef.collection("announcements")),
+    (tournamentAuditCollectionRef_ = fbRoomRef.collection("audit")),
     (subscribedRound_ = void 0),
     (lastRoundGames = []),
     (document.getElementById("tournament-auth-box").style.display = ""),
@@ -5773,19 +5925,27 @@ function connectFirebase(e, t) {
           : null),
           updateAuthUI(),
           currentUser
-            ? (subscribeTournament(), subscribeAnnouncements())
+            ? (subscribeTournament(),
+              subscribeAnnouncements(),
+              subscribeTournamentAudit_())
             : (tournamentUnsub &&
                 (tournamentUnsub(), (tournamentUnsub = null)),
               gamesRoundUnsub &&
                 (gamesRoundUnsub(), (gamesRoundUnsub = null)),
               announcementsUnsub &&
                 (announcementsUnsub(), (announcementsUnsub = null)),
+              tournamentAuditUnsub_ &&
+                (tournamentAuditUnsub_(), (tournamentAuditUnsub_ = null)),
               tournamentMatchActive && exitTournamentMatch(),
               unsubscribeMatchChat(),
               unsubscribeCallSignaling(),
               (announcementHistory_ = []),
+              (tournamentAuditHistory_ = []),
+              (tournamentAuditSeenIds_ = new Set()),
               renderAnnouncementHistory_(),
+              renderTournamentAuditHistory_(),
               renderAnnouncementBanner_(null),
+              renderTournamentDecisionBanner_(null),
               (lastTournamentState = null),
               (lastRoundGames = []),
               renderTournamentState(null)));
@@ -5861,6 +6021,88 @@ function updateModeBadge() {
 
 
 /* Tournament subscriptions, persistence, pairing, ranking, and exports. Generated from the verified legacy bundle. */
+let tournamentFinishedGamesSyncBusy_ = !1,
+  tournamentFinishedGamesSyncQueued_ = !1,
+  tournamentFinishedGamesSyncNoticeKey_ = "";
+async function reconcileFinishedGamesForTournament_() {
+  if (tournamentFinishedGamesSyncBusy_)
+    return void (tournamentFinishedGamesSyncQueued_ = !0);
+  const e = lastTournamentState;
+  if (
+    !e ||
+    !e.meta ||
+    "active" !== e.meta.status ||
+    "playing" !== e.meta.roundStatus ||
+    !isCurrentUserOfficial(e)
+  )
+    return;
+  const t = Number(e.meta.round),
+    a = new Map(
+      (e.pairings || [])
+        .filter((e) => e.round === t)
+        .map((e) => [Number(e.board), e]),
+    ),
+    n = lastRoundGames.filter((e) => {
+      const n = a.get(Number(e.board));
+      return (
+        Number(e.round) === t &&
+        n &&
+        !n.result &&
+        "finished" === e.status &&
+        ["1-0", "0-1", "1/2-1/2"].includes(e.result)
+      );
+    });
+  if (!n.length) return;
+  tournamentFinishedGamesSyncBusy_ = !0;
+  let o = 0;
+  try {
+    for (const e of n) {
+      const t =
+        lastTournamentState &&
+        (lastTournamentState.pairings || []).find(
+          (t) =>
+            Number(t.round) === Number(e.round) &&
+            Number(t.board) === Number(e.board),
+        );
+      if (t && !t.result) {
+        const t = await fbSubmitResult(e.round, e.board, e.result);
+        ((lastTournamentState = t), o++);
+      }
+    }
+    if (o) {
+      const e = await getTournamentStateOnce();
+      ((lastTournamentState = e),
+        tournamentMatchActive || renderTournamentState(e),
+        "function" == typeof renderPublicScreen && renderPublicScreen(e),
+        refreshPublicScreenActiveMiniBoard_(),
+        renderPublicScreenZoomBoard_(),
+        handleLiveMatchUpdate(e));
+      if ("pending_approval" === e.meta.roundStatus) {
+        const a = `${e.meta.round}:${e.meta.pendingApprovalAt || ""}`;
+        a !== tournamentFinishedGamesSyncNoticeKey_ &&
+          ((tournamentFinishedGamesSyncNoticeKey_ = a),
+          toast(
+            `Ya termino la ultima mesa de la ronda ${e.meta.round}. La tabla y el torneo se actualizaron automaticamente.`,
+            7e3,
+          ),
+          SoundFX.announcement());
+      }
+    }
+  } catch (e) {
+    (recordTournamentFirebaseError_(e),
+      console.warn(
+        "No se pudo confirmar automaticamente un resultado terminado:",
+        e,
+      ));
+  } finally {
+    ((tournamentFinishedGamesSyncBusy_ = !1),
+      tournamentFinishedGamesSyncQueued_ &&
+        ((tournamentFinishedGamesSyncQueued_ = !1),
+        setTimeout(() => {
+          reconcileFinishedGamesForTournament_();
+        }, 0)));
+  }
+}
 function subscribeRoundGames(e) {
   (subscribedRound_ !== e || (!gamesRoundUnsub && null != e)) &&
     (gamesRoundUnsub && (gamesRoundUnsub(), (gamesRoundUnsub = null)),
@@ -5916,7 +6158,9 @@ function subscribeRoundGames(e) {
                     renderTournamentState(lastTournamentState),
                   refreshPublicScreenActiveMiniBoard_(),
                   renderPublicScreenZoomBoard_(),
-                  handleLiveMatchUpdate(lastTournamentState));
+                  handleLiveMatchUpdate(lastTournamentState),
+                  (!e.metadata || !e.metadata.hasPendingWrites) &&
+                    reconcileFinishedGamesForTournament_());
               } catch (e) {
                 console.error(
                   "[subscribeRoundGames] error procesando snapshot:",
@@ -5947,6 +6191,7 @@ function subscribeTournament() {
         n = lastKnownTournamentStatus_;
       ((lastKnownTournamentStatus_ = a.meta.status),
         (lastTournamentState = a),
+        "function" == typeof updateAuthUI && updateAuthUI(),
         currentUser &&
           isCurrentUserAdmin(a) &&
           fbBackfillGameAccessFields_(a).catch((e) =>
@@ -5987,6 +6232,23 @@ async function getTournamentStateOnce() {
     const e = await fbRoomRef.get();
     return (recordTournamentFirebaseSync_("room"),
     normalizeTournamentState(e.exists ? e.data() : null));
+  } catch (e) {
+    throw (recordTournamentFirebaseError_(e), e);
+  }
+}
+async function getRoundGamesOnce_(e) {
+  if (!gamesCollectionRef || null == e) return [];
+  try {
+    const t = await gamesCollectionRef
+      .where("round", "==", Number(e))
+      .get({ source: "server" });
+    return (
+      recordTournamentFirebaseSync_("games"),
+      (lastRoundGames = t.docs.map((e) =>
+        e.data({ serverTimestamps: "estimate" }),
+      )),
+      lastRoundGames
+    );
   } catch (e) {
     throw (recordTournamentFirebaseError_(e), e);
   }
@@ -6253,8 +6515,10 @@ async function fbSelfRegister(e) {
       const n = await e.get(fbRoomRef);
       if (!n.exists) throw new Error("Todavía no se creó el torneo");
       const o = n.data();
-      if (o.meta && "finished" === o.meta.status)
-        throw new Error("El torneo ya finalizó, no se puede inscribir");
+      if (!o.meta || "active" !== o.meta.status)
+        throw new Error(
+          "Las inscripciones solo están habilitadas mientras el torneo está activo",
+        );
       const r = o.players || [];
       if (r.some((e) => (e.email || "").toLowerCase() === a))
         throw new Error("Ya estás inscripto en este torneo");
@@ -6403,7 +6667,16 @@ async function fbDeletePlayer(e) {
     getTournamentStateOnce()
   );
 }
-async function fbWithdrawPlayer(e) {
+function requireTournamentDecisionReason_(e, t) {
+  const a = String(e || "").trim();
+  if (!a)
+    throw new Error(`El motivo de ${t || "la decision"} es obligatorio`);
+  if (a.length > 300)
+    throw new Error("El motivo no puede superar los 300 caracteres");
+  return a;
+}
+async function fbWithdrawPlayer(e, reason) {
+  reason = requireTournamentDecisionReason_(reason, "retiro");
   return (
     assertReferee(),
     await fbDb.runTransaction(async (t) => {
@@ -6418,7 +6691,18 @@ async function fbWithdrawPlayer(e) {
         throw new Error("Este jugador está descalificado, no se puede retirar");
       const r = n.slice();
       ((r[o] = { ...r[o], status: "withdrawn" }),
-        t.update(fbRoomRef, { players: r }));
+        t.update(fbRoomRef, { players: r }),
+        writeTournamentAudit_(
+          t,
+          "sanction",
+          `Se retiro a ${n[o].name} del torneo. Motivo: ${reason}.`,
+          {
+            action: "withdraw",
+            playerId: e,
+            playerName: n[o].name,
+            reason,
+          },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -6438,12 +6722,19 @@ async function fbReactivatePlayer(e) {
         throw new Error("Un jugador descalificado no puede reincorporarse");
       const r = n.slice();
       ((r[o] = { ...r[o], status: "active" }),
-        t.update(fbRoomRef, { players: r }));
+        t.update(fbRoomRef, { players: r }),
+        writeTournamentAudit_(
+          t,
+          "sanction_reversed",
+          `Se reincorporo a ${n[o].name} al torneo.`,
+          { action: "reactivate", playerId: e, playerName: n[o].name },
+        ));
     }),
     getTournamentStateOnce()
   );
 }
-async function fbDisqualifyPlayer(e) {
+async function fbDisqualifyPlayer(e, reason) {
+  reason = requireTournamentDecisionReason_(reason, "descalificacion");
   return (
     assertReferee(),
     await fbDb.runTransaction(async (t) => {
@@ -6456,7 +6747,18 @@ async function fbDisqualifyPlayer(e) {
       if (-1 === o) throw new Error("No se encontró ese jugador");
       const r = n.slice();
       ((r[o] = { ...r[o], status: "disqualified" }),
-        t.update(fbRoomRef, { players: r }));
+        t.update(fbRoomRef, { players: r }),
+        writeTournamentAudit_(
+          t,
+          "sanction",
+          `Se descalifico a ${n[o].name} del torneo. Motivo: ${reason}.`,
+          {
+            action: "disqualify",
+            playerId: e,
+            playerName: n[o].name,
+            reason,
+          },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -6751,7 +7053,13 @@ async function fbApproveRound() {
           r.forEach((e) => {
             e.round === n.round && (e.locked = !0);
           }),
-          e.update(fbRoomRef, { meta: n, pairings: r }));
+          e.update(fbRoomRef, { meta: n, pairings: r }),
+          writeTournamentAudit_(
+            e,
+            "tournament_closed",
+            `Se cerro el torneo al validar la ronda final ${n.round}.`,
+            { action: "finish-after-final-round", round: n.round },
+          ));
         return;
       }
       const s = {
@@ -6809,7 +7117,13 @@ async function fbCloseRound() {
         e.round === n.round ? { ...e, locked: !0 } : e,
       );
       ((n.roundStatus = "closed"),
-        e.update(fbRoomRef, { meta: n, pairings: o }));
+        e.update(fbRoomRef, { meta: n, pairings: o }),
+        writeTournamentAudit_(
+          e,
+          "round_closed",
+          `Se cerro la ronda ${n.round}; sus resultados quedaron bloqueados.`,
+          { action: "close-round", round: n.round },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -6839,7 +7153,13 @@ async function fbGenerateRoundFromClosed(e) {
           (o.autoApprovalCancelled = !0),
           (o.finishedAt = syncedNow_()),
           (o.finishedBy = currentUser ? currentUser.email : null),
-          t.update(fbRoomRef, { meta: o }));
+          t.update(fbRoomRef, { meta: o }),
+          writeTournamentAudit_(
+            t,
+            "tournament_closed",
+            `Se cerro el torneo despues de la ronda ${o.round}.`,
+            { action: "finish-after-closed-round", round: o.round },
+          ));
         return;
       }
       const r = (n.players || []).map((e) => ({
@@ -6884,8 +7204,9 @@ async function fbGenerateRoundFromClosed(e) {
     getTournamentStateOnce().then((e) => notifyPublishedRound_(e, t))
   );
 }
-async function fbSetGameSuspended(e, t, a) {
+async function fbSetGameSuspended(e, t, a, reason) {
   (assertReferee(), (e = Number(e)), (t = Number(t)));
+  a && (reason = requireTournamentDecisionReason_(reason, "suspension"));
   if (
     lastTournamentState &&
     "finished" === lastTournamentState.meta.status
@@ -6921,6 +7242,27 @@ async function fbSetGameSuspended(e, t, a) {
         (s.selectedAt = null)),
         (s.status = a ? "suspended" : "ongoing"),
         e.update(n, s));
+      const l = (o.pairings || []).find(
+          (e) => e.round === s.round && e.board === s.board,
+        ),
+        i = l
+          ? `${l.whiteName} vs ${l.blackName}`
+          : `mesa ${s.board} de la ronda ${s.round}`;
+      writeTournamentAudit_(
+        e,
+        a ? "match_suspended" : "match_resumed",
+        a
+          ? `Se suspendio la partida ${i}. Motivo: ${reason}.`
+          : `Se reanudo la partida ${i}.`,
+        {
+          action: a ? "suspend" : "resume",
+          round: s.round,
+          board: s.board,
+          whiteName: l ? l.whiteName : "",
+          blackName: l ? l.blackName : "",
+          reason: a ? reason : "",
+        },
+      );
     }),
     getTournamentStateOnce()
   );
@@ -6959,8 +7301,13 @@ async function fbAutoDeclareForfeits() {
         l.w !== l.b &&
           ((s.status = "finished"),
           (s.resultReason = "wo-auto"),
+          (s.result = l.w ? "wo-black" : "wo-white"),
           (s._woWinnerIsWhite = l.w),
-          t.update(e, { status: s.status, resultReason: s.resultReason }),
+          t.update(e, {
+            status: s.status,
+            result: s.result,
+            resultReason: s.resultReason,
+          }),
           r.push({ round: s.round, board: s.board, whiteJoined: l.w }));
       });
     } catch (e) {
@@ -7009,13 +7356,29 @@ async function fbAutoDeclareForfeits() {
           ((n.roundStatus = "pending_approval"),
           (n.pendingApprovalAt = syncedNow_()),
           (n.autoApprovalCancelled = !1));
-        e.update(fbRoomRef, { players: o, pairings: i, meta: n });
+        (e.update(fbRoomRef, { players: o, pairings: i, meta: n }),
+          s.forEach((t) => {
+            const a = `Vencio el tiempo reglamentario de espera de ${Number(n.woGraceMinutes) || 0} minutos y solo se presento ${t.winner}.`;
+            writeTournamentAudit_(
+              e,
+              "wo",
+              `W.O. automatico en ronda ${n.round}, mesa ${t.board}: gana ${t.winner}; ausente ${t.absent}. Motivo: ${a}`,
+              {
+                action: "wo-auto",
+                round: n.round,
+                board: t.board,
+                winner: t.winner,
+                absent: t.absent,
+                reason: a,
+              },
+            );
+          }));
       }
     }),
     s
   );
 }
-async function fbSubmitResult(e, t, a) {
+async function fbSubmitResult(e, t, a, reason) {
   return (
     (e = Number(e)),
     (t = Number(t)),
@@ -7041,6 +7404,8 @@ async function fbSubmitResult(e, t, a) {
       const m = normalizeTournamentState(r);
       const v = ["1-0", "0-1", "1/2-1/2"],
         E = ["wo-black", "wo-white", "double-wo"];
+      E.includes(a) &&
+        (reason = requireTournamentDecisionReason_(reason, "W.O."));
       if (!v.includes(a) && !E.includes(a))
         throw new Error("El resultado indicado no es válido");
       if (E.includes(a) && !isCurrentUserReferee(m))
@@ -7062,7 +7427,8 @@ async function fbSubmitResult(e, t, a) {
         );
       const P = gamesCollectionRef.doc(gameDocId_(e, t)),
         gameSnap = await n.get(P),
-        gameRow = gameSnap.exists ? gameSnap.data() : null;
+        gameRow = gameSnap.exists ? gameSnap.data() : null,
+        previousResult = c.result || "";
       if ("double-wo" === a) {
         const graceMinutes = Number(m.meta.woGraceMinutes) || 0,
           joined = (gameRow && gameRow.joined) || { w: !1, b: !1 };
@@ -7114,6 +7480,22 @@ async function fbSubmitResult(e, t, a) {
         (f.autoApprovalCancelled = !1)),
         n.update(fbRoomRef, { players: s, pairings: i, meta: f }),
         g && n.update(p, g));
+      if (E.includes(a) || E.includes(previousResult)) {
+        const e = E.includes(a) ? "wo" : "wo_correction",
+          o = E.includes(a)
+            ? `Se declaro ${resultLabel(a)} en ronda ${c.round}, mesa ${c.board}: ${c.whiteName} vs ${c.blackName}. Motivo: ${reason}.`
+            : `Se corrigio el W.O. de la ronda ${c.round}, mesa ${c.board}. Nuevo resultado: ${resultLabel(a)}.`;
+        writeTournamentAudit_(n, e, o, {
+          action: E.includes(a) ? "wo-manual" : "wo-correction",
+          round: c.round,
+          board: c.board,
+          whiteName: c.whiteName,
+          blackName: c.blackName,
+          previousResult,
+          result: a,
+          reason: E.includes(a) ? reason : "",
+        });
+      }
     }),
     getTournamentStateOnce()
   );
@@ -7139,7 +7521,13 @@ async function fbFinishTournament() {
         (n.autoApprovalCancelled = !0),
         (n.finishedAt = syncedNow_()),
         (n.finishedBy = currentUser ? currentUser.email : null),
-        e.update(fbRoomRef, { meta: n, pairings: o }));
+        e.update(fbRoomRef, { meta: n, pairings: o }),
+        writeTournamentAudit_(
+          e,
+          "tournament_closed",
+          `Se cerro el torneo en la ronda ${n.round}.`,
+          { action: "finish-tournament", round: n.round },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -7165,7 +7553,17 @@ async function fbReopenTournament() {
         (n.status = "active"),
         (n.roundStatus = o),
         (n.autoApprovalCancelled = !1),
-        e.update(fbRoomRef, { meta: n, pairings: r }));
+        e.update(fbRoomRef, { meta: n, pairings: r }),
+        writeTournamentAudit_(
+          e,
+          "tournament_reopened",
+          `Se reabrio el torneo en la ronda ${n.round}.`,
+          {
+            action: "reopen-tournament",
+            round: n.round,
+            restoredRoundStatus: o,
+          },
+        ));
     }),
     getTournamentStateOnce()
   );
@@ -8103,6 +8501,98 @@ async function exportFullTournamentPDF(e) {
     .toLowerCase();
   t.save(`torneo_completo_${d}_ronda${e.meta.round}.pdf`);
 }
+function pdfDrawAuditPageHeader_(e, t, a, n) {
+  (e.setFont(void 0, "bold"),
+    e.setFontSize(16),
+    e.text("Historial completo de auditoría", 14, 17),
+    e.setFontSize(11),
+    e.text(t.meta.name || "Torneo", 14, 24),
+    e.setFont(void 0, "normal"),
+    e.setFontSize(9),
+    e.text(`Generado: ${a}`, 14, 30),
+    e.text(`Registros: ${n}`, 196, 30, { align: "right" }),
+    e.line(14, 34, 196, 34));
+  return 41;
+}
+async function exportTournamentAuditPDF() {
+  assertAdminOrReferee();
+  if (!tournamentAuditCollectionRef_)
+    throw new Error("El historial de auditoría no está disponible");
+  const e = await getTournamentStateOnce();
+  assertAdminOrRefereeForState_(e);
+  const t = await tournamentAuditCollectionRef_.orderBy("at", "asc").get(),
+    a = t.docs.map((e) => ({ id: e.id, ...e.data() }));
+  if (!a.length)
+    throw new Error("Todavía no hay decisiones para exportar");
+  await ensureJsPdfLoaded_();
+  const n = new window.jspdf.jsPDF(),
+    o = new Date().toLocaleString("es-AR");
+  let r = pdfDrawAuditPageHeader_(n, e, o, a.length);
+  const s = (t) => {
+    if (r + t <= 280) return;
+    (n.addPage(), (r = pdfDrawAuditPageHeader_(n, e, o, a.length)));
+  };
+  a.forEach((t, a) => {
+    const l = tournamentAuditTypeLabel_(t.type),
+      i = formatTournamentAuditTime_(t.at),
+      c = t.actorName || t.actorEmail || "Autoridad del torneo",
+      d = [c, t.actorRole, t.actorEmail && t.actorEmail !== c ? t.actorEmail : ""]
+        .filter(Boolean)
+        .join(" - "),
+      u = t.details && "object" == typeof t.details ? t.details : {},
+      m = [];
+    (u.round && m.push(`Ronda ${u.round}`),
+      u.board && m.push(`Mesa ${u.board}`),
+      u.playerName && m.push(`Jugador: ${u.playerName}`),
+      u.whiteName &&
+        u.blackName &&
+        m.push(`${u.whiteName} vs ${u.blackName}`));
+    const g = n.splitTextToSize(String(t.message || "Decisión registrada"), 178),
+      f =
+        u.reason && !String(t.message || "").includes(String(u.reason))
+          ? n.splitTextToSize(`Motivo: ${u.reason}`, 178)
+          : [],
+      h = n.splitTextToSize(d, 178),
+      y = m.length ? n.splitTextToSize(m.join(" · "), 178) : [],
+      p = 15 + 5 * (g.length + f.length + h.length + y.length);
+    (s(p),
+      n.setFont(void 0, "bold"),
+      n.setFontSize(11),
+      n.text(`${a + 1}. ${l}`, 14, r),
+      n.setFont(void 0, "normal"),
+      n.setFontSize(9),
+      n.text(i, 196, r, { align: "right" }),
+      (r += 5),
+      h.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      y.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      n.setFontSize(10),
+      g.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      f.forEach((e) => {
+        (n.text(e, 14, r), (r += 5));
+      }),
+      (r += 3),
+      n.setDrawColor(210),
+      n.line(14, r, 196, r),
+      (r += 6));
+  });
+  const l = n.getNumberOfPages();
+  for (let e = 1; e <= l; e++)
+    (n.setPage(e),
+      n.setFontSize(8),
+      n.setTextColor(110),
+      n.text(`Página ${e} de ${l}`, 196, 290, { align: "right" }));
+  const i = (e.meta.name || "torneo")
+      .replace(/[^a-z0-9]+/gi, "_")
+      .toLowerCase(),
+    c = new Date().toISOString().slice(0, 10);
+  return (n.save(`auditoria_completa_${i}_${c}.pdf`), a.length);
+}
 
 
 /* Tournament timers, rendering, public screen, and result UI. Generated from the verified legacy bundle. */
@@ -8354,6 +8844,17 @@ function renderSelfRegisterCard(e, t) {
     e.value || (e.value = currentUser.displayName || "");
   }
 }
+function promptTournamentDecisionReason_(e) {
+  const t = prompt(
+    `${e}\n\nIngresá el motivo obligatorio (máximo 300 caracteres):`,
+  );
+  if (null === t) return null;
+  try {
+    return requireTournamentDecisionReason_(t, e.toLowerCase());
+  } catch (e) {
+    return (showError(e), null);
+  }
+}
 let pairingsDelegationSetup_ = !1;
 function setupPairingsListDelegation_(e) {
   pairingsDelegationSetup_ ||
@@ -8378,6 +8879,7 @@ function setupPairingsListDelegation_(e) {
               if ("1" !== e.dataset.isAdmin && !isCurrentUserReferee())
                 throw new Error("No tenés permiso para cargar resultados");
               const t = n.dataset.result;
+              let r = "";
               if (
                 ["wo-black", "wo-white", "double-wo"].includes(t) &&
                 !confirm(
@@ -8387,10 +8889,19 @@ function setupPairingsListDelegation_(e) {
                 )
               )
                 return void (tournamentBusy = !1);
+              if (["wo-black", "wo-white", "double-wo"].includes(t)) {
+                r = promptTournamentDecisionReason_("Motivo del W.O.");
+                if (null === r) return;
+              }
               const a =
                   lastTournamentState &&
                   "pending_approval" === lastTournamentState.meta.roundStatus,
-                o = await fbSubmitResult(n.dataset.round, n.dataset.board, t);
+                o = await fbSubmitResult(
+                  n.dataset.round,
+                  n.dataset.board,
+                  t,
+                  r,
+                );
               a || "pending_approval" !== o.meta.roundStatus
                 ? a ||
                   "finished" !== o.meta.status ||
@@ -8411,11 +8922,16 @@ function setupPairingsListDelegation_(e) {
           if (!tournamentBusy) {
             tournamentBusy = !0;
             try {
-              const e = "suspend" === o.dataset.suspendAction;
+              const e = "suspend" === o.dataset.suspendAction,
+                t = e
+                  ? promptTournamentDecisionReason_("Motivo de la suspensión")
+                  : "";
+              if (e && null === t) return;
               (await fbSetGameSuspended(
                 o.dataset.suspendRound,
                 o.dataset.suspendBoard,
                 e,
+                t,
               ),
                 toast(e ? "⏸️ Partida suspendida" : "▶️ Partida reanudada"));
             } catch (e) {
@@ -8571,11 +9087,214 @@ function renderTournamentRoundCompleteNotice_(e) {
       SoundFX.announcement(),
       toast(`Atención: todas las mesas de la ronda ${e.meta.round} finalizaron.`, 7000)));
 }
+let tournamentOfficialTabsReady_ = !1,
+  tournamentOfficialActiveTab_ = "admin",
+  tournamentOfficialLastStatus_ = "";
+function activateTournamentOfficialTab_(e, t) {
+  if (!tournamentOfficialTabsReady_) setupTournamentOfficialTabs_();
+  const a = document.getElementById("tournament-official-tabs");
+  if (!a) return;
+  const n = Array.from(
+      a.querySelectorAll("[data-tournament-official-tab]"),
+    ).filter((e) => !e.hidden),
+    o = n.find((t) => t.dataset.tournamentOfficialTab === e) || n[0];
+  if (!o) return;
+  ((tournamentOfficialActiveTab_ = o.dataset.tournamentOfficialTab),
+    n.forEach((e) => {
+      const t = e === o;
+      (e.setAttribute("aria-selected", t ? "true" : "false"),
+        (e.tabIndex = t ? 0 : -1),
+        e.classList.toggle("is-active", t));
+    }),
+    a.querySelectorAll("[data-tournament-official-panel]").forEach((e) => {
+      e.hidden =
+        e.dataset.tournamentOfficialPanel !== tournamentOfficialActiveTab_;
+    }),
+    t && o.focus());
+}
+function setupTournamentOfficialTabs_() {
+  if (tournamentOfficialTabsReady_) return;
+  const e = document.getElementById("tournament-audit-panel"),
+    t = e && e.parentElement;
+  if (!e || !t) return;
+  const a = document.createElement("section");
+  ((a.id = "tournament-official-tabs"),
+    (a.className = "tournament-official-workspace"),
+    (a.style.display = "none"),
+    (a.innerHTML = `
+      <div class="tournament-official-tabs-heading">
+        <div>
+          <h3>Gestión oficial</h3>
+          <p class="muted">Las herramientas están agrupadas por responsabilidad.</p>
+        </div>
+        <div class="tournament-official-tablist" role="tablist" aria-label="Opciones de gestión oficial">
+          <button
+            class="tournament-official-tab"
+            id="tournament-official-admin-tab"
+            type="button"
+            role="tab"
+            aria-controls="tournament-official-admin-content"
+            data-tournament-official-tab="admin"
+          >Administrador</button>
+          <button
+            class="tournament-official-tab"
+            id="tournament-official-referee-tab"
+            type="button"
+            role="tab"
+            aria-controls="tournament-official-referee-content"
+            data-tournament-official-tab="referee"
+          >Árbitro / control</button>
+          <button
+            class="tournament-official-tab"
+            id="tournament-official-audit-tab"
+            type="button"
+            role="tab"
+            aria-controls="tournament-official-audit-content"
+            data-tournament-official-tab="audit"
+          >Auditoría <span class="tournament-official-tab-count" id="tournament-official-audit-tab-count">0</span></button>
+        </div>
+      </div>
+      <div
+        class="tournament-official-tab-content"
+        id="tournament-official-admin-content"
+        role="tabpanel"
+        aria-labelledby="tournament-official-admin-tab"
+        data-tournament-official-panel="admin"
+      ></div>
+      <div
+        class="tournament-official-tab-content"
+        id="tournament-official-referee-content"
+        role="tabpanel"
+        aria-labelledby="tournament-official-referee-tab"
+        data-tournament-official-panel="referee"
+        hidden
+      ></div>
+      <div
+        class="tournament-official-tab-content"
+        id="tournament-official-audit-content"
+        role="tabpanel"
+        aria-labelledby="tournament-official-audit-tab"
+        data-tournament-official-panel="audit"
+        hidden
+      ></div>
+    `),
+    t.insertBefore(a, e));
+  const n = a.querySelector('[data-tournament-official-panel="admin"]'),
+    o = a.querySelector('[data-tournament-official-panel="referee"]'),
+    s = a.querySelector('[data-tournament-official-panel="audit"]');
+  [
+    "tournament-admin-panel",
+    "tournament-settings-panel",
+    "tournament-roles-panel",
+  ].forEach((e) => {
+    const t = document.getElementById(e);
+    t && n.appendChild(t);
+  });
+  [
+    "tournament-round-command-center",
+    "tournament-announcement-composer",
+    "tournament-round-countdown-composer",
+    "tournament-approval-panel",
+    "tournament-referee-panel",
+    "tournament-players-card",
+    "tournament-diagnostics-panel",
+  ].forEach((e) => {
+    const t = document.getElementById(e);
+    t && o.appendChild(t);
+  });
+  const l = document.getElementById("tournament-audit-panel");
+  l && s.appendChild(l);
+  const r = Array.from(
+    a.querySelectorAll("[data-tournament-official-tab]"),
+  );
+  (r.forEach((e) => {
+    (e.addEventListener("click", () =>
+      activateTournamentOfficialTab_(
+        e.dataset.tournamentOfficialTab,
+        !1,
+      ),
+    ),
+      e.addEventListener("keydown", (e) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
+          return;
+        e.preventDefault();
+        const t = r.filter((e) => !e.hidden);
+        if (!t.length) return;
+        const a = t.indexOf(e.currentTarget);
+        let n =
+          "Home" === e.key
+            ? 0
+            : "End" === e.key
+              ? t.length - 1
+              : (a + ("ArrowRight" === e.key ? 1 : -1) + t.length) %
+                t.length;
+        activateTournamentOfficialTab_(
+          t[n].dataset.tournamentOfficialTab,
+          !0,
+        );
+      }));
+  }),
+    (tournamentOfficialTabsReady_ = !0),
+    activateTournamentOfficialTab_(tournamentOfficialActiveTab_, !1));
+}
+function renderTournamentOfficialTabs_(e) {
+  setupTournamentOfficialTabs_();
+  const t = document.getElementById("tournament-official-tabs"),
+    a = document.getElementById("tournament-official-admin-tab"),
+    n = document.getElementById("tournament-official-referee-tab"),
+    l = document.getElementById("tournament-official-audit-tab"),
+    o = isCurrentUserAdmin(e),
+    r = isCurrentUserReferee(e),
+    s = Boolean(currentUser && (o || r)),
+    i = e && e.meta ? e.meta.status || "" : "",
+    c = "finished" === i && "finished" !== tournamentOfficialLastStatus_;
+  if (!t || !a || !n || !l) return;
+  ((t.style.display = s ? "" : "none"),
+    (a.hidden = !o),
+    (n.hidden = !s),
+    (l.hidden = !s),
+    (tournamentOfficialLastStatus_ = i));
+  if (!s) return;
+  const d = c
+    ? "audit"
+    : "admin" === tournamentOfficialActiveTab_ && !o
+      ? "referee"
+      : tournamentOfficialActiveTab_;
+  activateTournamentOfficialTab_(d, !1);
+}
+function renderTournamentAdminSummary_(e) {
+  const t = document.getElementById("tournament-admin-status-title"),
+    a = document.getElementById("tournament-admin-status-detail"),
+    n = document.getElementById("tournament-admin-mode-pill");
+  if (!t || !a || !n || !e || !e.meta) return;
+  const o = Number(e.meta.round || 0),
+    r = e.players.filter((e) => "active" === (e.status || "active")).length,
+    s = e.players.filter((e) => "pending" === e.status).length,
+    l = (e.pairings || []).filter(
+      (t) => t.round === o && "" !== t.blackId && !t.result,
+    ).length,
+    i = "auto" === e.meta.roundApprovalMode,
+    c =
+      "finished" === e.meta.status
+        ? "Torneo finalizado"
+        : 0 === o
+          ? "Ronda inicial pendiente"
+          : "pending_approval" === e.meta.roundStatus
+            ? `Ronda ${o} lista para validar`
+            : "closed" === e.meta.roundStatus
+              ? `Ronda ${o} cerrada`
+              : `Ronda ${o} en juego`;
+  ((t.textContent = c),
+    (a.textContent = `${r} jugador${1 === r ? "" : "es"} activo${1 === r ? "" : "s"} · ${s} pendiente${1 === s ? "" : "s"} · ${l} mesa${1 === l ? "" : "s"} sin resultado`),
+    (n.textContent = i ? "Avance automático" : "Avance manual"),
+    (n.dataset.mode = i ? "auto" : "manual"));
+}
 function renderTournamentState(e) {
   const t = document.getElementById("tournament-setup-box"),
     a = document.getElementById("tournament-active-box");
   if ((updateModeBadge(), !currentUser))
     return (
+      renderTournamentOfficialTabs_(null),
       (t.style.display = "none"),
       (a.style.display = "none"),
       stopWOGraceTimer(),
@@ -8600,9 +9319,12 @@ function renderTournamentState(e) {
       ("pending_approval" === e.meta.roundStatus ||
         "closed" === e.meta.roundStatus),
     s = e.meta.totalRounds ? ` de ${e.meta.totalRounds}` : "";
+  renderTournamentOfficialTabs_(e);
+  renderTournamentAdminSummary_(e);
   renderTournamentDiagnostics_(e);
   renderTournamentOfficialRoles_(e);
   renderTournamentRoundCompleteNotice_(e);
+  renderTournamentAuditHistory_();
   ((document.getElementById("tournament-title-display").textContent =
     "🏆 " + e.meta.name),
     (document.getElementById("tournament-round-display").textContent = o
@@ -9245,7 +9967,10 @@ function setupPlayersListDelegation_(e) {
             )
           )
             try {
-              (await fbWithdrawPlayer(e), toast("🚪 Jugador retirado"));
+              const a =
+                promptTournamentDecisionReason_("Motivo del retiro");
+              if (null === a) return;
+              (await fbWithdrawPlayer(e, a), toast("🚪 Jugador retirado"));
             } catch (e) {
               showError(e);
             }
@@ -9273,7 +9998,12 @@ function setupPlayersListDelegation_(e) {
             )
           )
             try {
-              (await fbDisqualifyPlayer(e), toast("⛔ Jugador descalificado"));
+              const a = promptTournamentDecisionReason_(
+                "Motivo de la descalificación",
+              );
+              if (null === a) return;
+              (await fbDisqualifyPlayer(e, a),
+                toast("⛔ Jugador descalificado"));
             } catch (e) {
               showError(e);
             }
@@ -9362,24 +10092,48 @@ function renderPlayersPanel(e, t) {
     })
     .join("");
 }
-async function refreshTournament() {
-  if (fbRoomRef)
-    try {
-      const e = await getTournamentStateOnce();
-      ((lastTournamentState = e),
-        subscribeRoundGames(
-          "active" === e.meta.status || "finished" === e.meta.status
-            ? e.meta.round
-            : null,
-        ),
-        renderTournamentState(e));
-    } catch (e) {
-      ((document.getElementById("tournament-connect-status").textContent =
-        "❌ No se pudo conectar: " + e.message),
-        document
-          .getElementById("tournament-connect-status")
-          .classList.remove("correct"));
-    }
+async function refreshTournament(e) {
+  const t = Boolean(e && "click" === e.type),
+    a = document.getElementById("tournament-refresh-btn"),
+    n = document.getElementById("tournament-connect-status");
+  if (!fbRoomRef)
+    return void (t && toast("Primero conectate al servicio del torneo."));
+  t &&
+    a &&
+    ((a.disabled = !0),
+    (a.dataset.originalText = a.textContent),
+    (a.textContent = "Actualizando..."));
+  try {
+    const e = await getTournamentStateOnce(),
+      o =
+        "active" === e.meta.status || "finished" === e.meta.status
+          ? Number(e.meta.round)
+          : null;
+    ((lastTournamentState = e),
+      null == o ? (lastRoundGames = []) : await getRoundGamesOnce_(o),
+      subscribeRoundGames(o),
+      tournamentMatchActive || renderTournamentState(e),
+      "function" == typeof renderPublicScreen && renderPublicScreen(e),
+      refreshPublicScreenActiveMiniBoard_(),
+      renderPublicScreenZoomBoard_(),
+      handleLiveMatchUpdate(e),
+      await reconcileFinishedGamesForTournament_(),
+      n &&
+        ((n.textContent = "✓ Datos actualizados y sincronizados."),
+        n.classList.add("correct")),
+      t && toast("Torneo y partidas actualizados.", 3e3));
+  } catch (e) {
+    (n &&
+      ((n.textContent = "❌ No se pudo actualizar: " + e.message),
+      n.classList.remove("correct")),
+      t && showError(e));
+  } finally {
+    t &&
+      a &&
+      ((a.disabled = !1),
+      (a.textContent = a.dataset.originalText || "🔄 Actualizar"),
+      delete a.dataset.originalText);
+  }
 }
 function tournamentResultMessage(e, t) {
   const a = tournamentMatchCtx,
@@ -11049,6 +11803,22 @@ configSignoutBtn &&
       }
     }),
   document
+    .getElementById("tournament-export-audit-pdf-btn")
+    .addEventListener("click", async (e) => {
+      const t = e.currentTarget;
+      t.disabled = !0;
+      try {
+        const e = await exportTournamentAuditPDF();
+        toast(
+          `PDF de auditoría generado con ${e} registro${1 === e ? "" : "s"}.`,
+        );
+      } catch (e) {
+        showError(e);
+      } finally {
+        t.disabled = !1;
+      }
+    }),
+  document
     .getElementById("tournament-reset-btn")
     .addEventListener("click", async () => {
       if (
@@ -11097,15 +11867,29 @@ function openTournamentAdministration_() {
     return void toast(
       "Iniciá sesión con la cuenta administradora para gestionar el torneo.",
     );
+  const activeTournament =
+    lastTournamentState &&
+    ("active" === lastTournamentState.meta.status ||
+      "finished" === lastTournamentState.meta.status);
+  if (
+    activeTournament &&
+    "function" == typeof renderTournamentOfficialTabs_
+  ) {
+    renderTournamentOfficialTabs_(lastTournamentState);
+    const workspace = document.getElementById("tournament-official-tabs"),
+      adminTab = document.getElementById("tournament-official-admin-tab"),
+      adminContent = document.getElementById(
+        "tournament-official-admin-content",
+      );
+    (workspace && (workspace.style.display = ""),
+      adminTab && (adminTab.hidden = !1),
+      "function" == typeof activateTournamentOfficialTab_ &&
+        activateTournamentOfficialTab_("admin", !1),
+      adminContent && (adminContent.hidden = !1));
+  }
   const e = document.getElementById("tournament-admin-panel"),
     t = document.getElementById("tournament-setup-box"),
-    a =
-      e &&
-      lastTournamentState &&
-      ("active" === lastTournamentState.meta.status ||
-        "finished" === lastTournamentState.meta.status)
-        ? e
-        : t;
+    a = e && activeTournament ? e : t;
   if (!a) return;
   ((a.style.display = ""),
     (a.tabIndex = -1),
@@ -11139,6 +11923,8 @@ tournamentAdminEntryBtn &&
 const pendingBadgeBtn = document.getElementById("tournament-pending-badge");
 (pendingBadgeBtn &&
   pendingBadgeBtn.addEventListener("click", () => {
+    "function" == typeof activateTournamentOfficialTab_ &&
+      activateTournamentOfficialTab_("referee", !1);
     const e = document.getElementById("tournament-players-card");
     e && e.scrollIntoView({ behavior: "smooth", block: "start" });
   }),

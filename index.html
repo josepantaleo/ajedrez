@@ -12,7 +12,7 @@
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20260809-10" />
+    <link rel="stylesheet" href="styles.css?v=20260810-1" />
   </head>
 
   <body>
@@ -2440,6 +2440,18 @@
               </div>
 
               <div
+                id="tournament-decision-banner"
+                class="card tournament-decision-banner"
+                role="alert"
+                aria-live="assertive"
+                style="display: none"
+              >
+                <p style="margin: 0; font-weight: 700">
+                  Decision oficial: <span id="tournament-decision-text"></span>
+                </p>
+              </div>
+
+              <div
                 id="tournament-round-countdown-banner"
                 class="card round-countdown-banner"
                 role="timer"
@@ -2639,6 +2651,33 @@
                     </p>
                   </div>
                 </div>
+                <p class="muted" style="font-size: 12px; margin: 10px 0 0">
+                  El emparejamiento es un sistema suizo escolar que prioriza puntaje, balance de colores y ausencia de repeticiones.
+                  No implementa el sistema FIDE Dutch estricto por grupos y mitades de puntaje.
+                </p>
+              </section>
+
+              <section
+                class="card tournament-audit-panel"
+                id="tournament-audit-panel"
+                style="display: none"
+                aria-labelledby="tournament-audit-title"
+              >
+                <div class="tournament-audit-heading">
+                  <div>
+                    <h3 id="tournament-audit-title">Historial de auditoria</h3>
+                    <p class="muted">
+                      Registro inmutable con motivo, responsable y hora de cada W.O., sanción, suspensión, cierre y reapertura.
+                    </p>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+                    <span class="tournament-audit-count" id="tournament-audit-count">0</span>
+                    <button class="btn" id="tournament-export-audit-pdf-btn" type="button">
+                      Exportar PDF
+                    </button>
+                  </div>
+                </div>
+                <div id="tournament-audit-list" class="tournament-audit-list"></div>
               </section>
 
               <section
@@ -2713,55 +2752,107 @@
                 </div>
                 <p class="muted" style="font-size: 12px; margin-top: 8px">
                   Te anotás con el email de la cuenta de Google con la que iniciaste sesión (no se puede elegir otro): es la que se
-                  va a usar para asignarte tus partidas.
+                  va a usar para asignarte tus partidas. La inscripción permanece pendiente hasta que la autorice un administrador;
+                  si el torneo ya comenzó, el jugador autorizado participa desde el próximo emparejamiento.
                 </p>
               </div>
 
-              <div class="card" id="tournament-admin-panel" style="display: none; border: 2px solid var(--surface2)">
-                <h3 style="margin: 0 0 10px">🛠️ Panel de administrador</h3>
-                <p class="muted" style="font-size: 12px; margin: 0 0 10px">
-                  Acciones exclusivas de las cuentas configuradas como administradoras del torneo.
-                </p>
-                <div id="tournament-admin-controls" style="display: flex; gap: 8px; flex-wrap: wrap">
-                  <button class="btn primary" id="tournament-next-round-btn">Generar nueva ronda</button>
-                  <button class="btn" id="tournament-finish-btn">🏁 Finalizar torneo</button>
-                  <button class="btn" id="tournament-reopen-btn" style="display: none">↩️ Reabrir torneo</button>
-                  <button class="btn" id="tournament-settings-btn">⚙️ Configuración</button>
-                  <button class="btn" id="tournament-roles-btn">🔐 Administradores y árbitros</button>
-                  <button class="btn" id="tournament-export-full-pdf-btn">📄 Imprimir resultados del torneo (PDF)</button>
-                  <button class="btn" id="tournament-reset-btn">🗑️ Reiniciar torneo</button>
-                </div>
-                <div
-                  id="tournament-auto-round-control"
-                  style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--surface2)"
-                >
-                  <label for="tournament-auto-round-mode" style="display: block; margin-bottom: 6px; font-weight: 600">
-                    Generacion de nueva ronda
-                  </label>
-                  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
-                    <select
-                      id="tournament-auto-round-mode"
-                      style="
-                        min-width: 250px;
-                        padding: 8px 10px;
-                        border-radius: 8px;
-                        border: 1px solid var(--surface2);
-                        background: var(--surface);
-                        color: var(--text);
-                      "
-                    >
-                      <option value="manual">Manual: requiere aprobacion</option>
-                      <option value="auto">Automatica: publicar tras 30 segundos</option>
-                    </select>
-                    <button class="btn primary" id="tournament-auto-round-save-btn" type="button">
-                      Guardar modo
-                    </button>
+              <div class="card tournament-admin-dashboard" id="tournament-admin-panel" style="display: none">
+                <header class="tournament-admin-header">
+                  <div>
+                    <span class="tournament-admin-eyebrow">Administración</span>
+                    <h3>Centro de gestión del torneo</h3>
+                    <p class="muted">
+                      Operaciones institucionales, publicación de rondas y configuración general.
+                    </p>
                   </div>
-                  <p id="tournament-auto-round-status" class="muted" style="font-size: 12px; margin: 8px 0 0"></p>
+                  <span class="tournament-admin-role-badge">Acceso administrativo</span>
+                </header>
+
+                <div class="tournament-admin-overview">
+                  <div class="tournament-admin-state">
+                    <span>Estado actual</span>
+                    <strong id="tournament-admin-status-title">Esperando datos</strong>
+                    <small id="tournament-admin-status-detail">Sin información del torneo.</small>
+                  </div>
+                  <span class="tournament-admin-mode-pill" id="tournament-admin-mode-pill" data-mode="manual">
+                    Avance manual
+                  </span>
+                </div>
+
+                <div id="tournament-admin-controls" class="tournament-admin-sections">
+                  <section class="tournament-admin-section tournament-admin-round-section">
+                    <div class="tournament-admin-section-heading">
+                      <div>
+                        <span class="tournament-admin-section-index">01</span>
+                        <h4>Ronda y publicación</h4>
+                      </div>
+                      <p>Avanzá la competencia o cambiá el estado general del torneo.</p>
+                    </div>
+                    <div class="tournament-admin-action-row">
+                      <button class="btn primary" id="tournament-next-round-btn">Generar nueva ronda</button>
+                      <button class="btn" id="tournament-finish-btn">Finalizar torneo</button>
+                      <button class="btn primary" id="tournament-reopen-btn" style="display: none">Reabrir torneo</button>
+                    </div>
+
+                    <div id="tournament-auto-round-control" class="tournament-admin-auto-control" style="display: none">
+                      <div>
+                        <label for="tournament-auto-round-mode">Publicación de la siguiente ronda</label>
+                        <p id="tournament-auto-round-status" class="muted"></p>
+                      </div>
+                      <div class="tournament-admin-auto-actions">
+                        <select id="tournament-auto-round-mode">
+                          <option value="manual">Manual: requiere aprobación</option>
+                          <option value="auto">Automática: publicar tras 30 segundos</option>
+                        </select>
+                        <button class="btn" id="tournament-auto-round-save-btn" type="button">Guardar modo</button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <div class="tournament-admin-secondary-grid">
+                    <section class="tournament-admin-section">
+                      <div class="tournament-admin-section-heading">
+                        <div>
+                          <span class="tournament-admin-section-index">02</span>
+                          <h4>Configuración y permisos</h4>
+                        </div>
+                        <p>Definí reglas, tiempos y responsables autorizados.</p>
+                      </div>
+                      <div class="tournament-admin-action-stack">
+                        <button class="btn" id="tournament-settings-btn">Configuración del torneo</button>
+                        <button class="btn" id="tournament-roles-btn">Administradores y árbitros</button>
+                      </div>
+                    </section>
+
+                    <section class="tournament-admin-section">
+                      <div class="tournament-admin-section-heading">
+                        <div>
+                          <span class="tournament-admin-section-index">03</span>
+                          <h4>Informes</h4>
+                        </div>
+                        <p>Generá un documento con posiciones, rondas y resultados.</p>
+                      </div>
+                      <div class="tournament-admin-action-stack">
+                        <button class="btn" id="tournament-export-full-pdf-btn">
+                          Exportar resultados completos a PDF
+                        </button>
+                      </div>
+                    </section>
+                  </div>
+
+                  <section class="tournament-admin-danger-zone">
+                    <div>
+                      <span class="tournament-admin-section-index">04</span>
+                      <h4>Zona de riesgo</h4>
+                      <p>Reiniciar borra jugadores, partidas y configuración del torneo actual.</p>
+                    </div>
+                    <button class="btn danger" id="tournament-reset-btn">Reiniciar torneo</button>
+                  </section>
                 </div>
               </div>
 
-              <div class="card" id="tournament-roles-panel" style="display: none">
+              <div class="card tournament-admin-subpanel" id="tournament-roles-panel" style="display: none">
                 <h3 style="margin-top: 0">🔐 Administradores y árbitros</h3>
                 <p class="muted" style="font-size: 13px; margin-bottom: 14px">
                   Escribí un correo por línea. También podés separarlos con comas o espacios.
@@ -2815,7 +2906,7 @@
                 </div>
               </div>
 
-              <div class="card" id="tournament-settings-panel" style="display: none">
+              <div class="card tournament-admin-subpanel" id="tournament-settings-panel" style="display: none">
                 <h3>⚙️ Configuración del torneo (solo administradores)</h3>
                 <label style="display: block; margin-bottom: 6px; font-weight: 600">Nombre del torneo</label>
                 <input
@@ -3867,7 +3958,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 
     <script defer src="utils.js?v=20260805-6"></script>
-    <script defer src="app.js?v=20260809-43"></script>
+    <script defer src="app.js?v=20260810-8"></script>
     <script defer src="theme-toggle.js?v=20260807-1"></script>
   </body>
 </html>

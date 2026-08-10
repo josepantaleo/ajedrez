@@ -154,7 +154,7 @@ service cloud.firestore {
       let oldRegistrations = resource.data.get('registeredUids', {});
       let newRegistrations = request.resource.data.registeredUids;
       return signedIn()
-        && resource.data.meta.status != 'finished'
+        && resource.data.meta.status == 'active'
         && request.resource.data
           .diff(resource.data)
           .affectedKeys()
@@ -363,6 +363,42 @@ service cloud.firestore {
           && request.resource.data.ts == request.time;
         allow update: if false;
         allow delete: if isAdmin(roomId);
+      }
+
+      match /audit/{auditId} {
+        allow read: if signedIn();
+        allow create: if isOfficial(roomId)
+          && request.resource.data.keys().hasOnly([
+            'type',
+            'message',
+            'actorEmail',
+            'actorName',
+            'actorRole',
+            'at',
+            'details'
+          ])
+          && [
+            'wo',
+            'wo_correction',
+            'sanction',
+            'sanction_reversed',
+            'match_suspended',
+            'match_resumed',
+            'round_closed',
+            'tournament_closed',
+            'tournament_reopened'
+          ].hasAny([request.resource.data.type])
+          && request.resource.data.message is string
+          && request.resource.data.message.size() > 0
+          && request.resource.data.message.size() <= 500
+          && request.resource.data.actorEmail == email()
+          && request.resource.data.actorName is string
+          && request.resource.data.actorName.size() <= 100
+          && request.resource.data.actorRole is string
+          && request.resource.data.actorRole.size() <= 50
+          && request.resource.data.at == request.time
+          && request.resource.data.details is map;
+        allow update, delete: if false;
       }
     }
 
